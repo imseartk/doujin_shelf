@@ -12,18 +12,33 @@ This is a personal doujinshi / manga shelf management system.
 - No foreign keys in database schema
 - Use `utf8mb4_unicode_ci`
 
-## Planned tables
+## Current schema
 
-- `books`
-- `book_sources`
-- `shops`
-- `locations`
-- `story_tags`
-- `series_tags`
-- `character_tags`
-- `book_story_tags`
-- `book_series_tags`
-- `book_character_tags`
+Core tables:
+
+- `books`: one row per doujinshi, comic, or related book item
+- `locations`: two-level storage locations using `parent_id`
+- `shops`: known stores or marketplaces
+- `book_sources`: per-book store availability, price, item URL, and last checked time
+
+Classification tables:
+
+- `tags`: general category tags
+- `works`: source/original work tags
+- `characters`: character tags, optionally tied to a work
+
+Pivot tables:
+
+- `book_tags`
+- `book_works`
+- `book_characters`
+
+Important status values for `books.status`:
+
+- `owned`: 已擁有 / Excel `〇`
+- `blacklisted`: 黑名單、不要買 / Excel `✖`
+- `ordered`: 已訂購，等待到貨 / Excel `✓`
+- `wishlist`: 願望清單
 
 ## Coding preference
 
@@ -39,6 +54,7 @@ From the project root on the server:
 ```bash
 composer install --no-dev --optimize-autoloader
 cp env .env
+php spark migrate
 ```
 
 Then edit `.env` for each deployment path:
