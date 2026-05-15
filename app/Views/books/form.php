@@ -78,29 +78,38 @@
 
     <section class="panel">
         <h2>分類</h2>
-        <div class="tag-field">
+        <div class="taxonomy-field js-taxonomy-editor" data-taxonomy="tags">
             <div class="field-label">一般 tag</div>
-            <div class="tag-editor js-tag-editor">
-                <div class="tag-chip-list js-tag-chip-list"></div>
-                <input class="tag-input js-tag-input" type="text" placeholder="輸入後按 Enter 或逗號">
-                <textarea class="js-tag-value" name="tags_text" hidden><?= esc($tagsText) ?></textarea>
+            <div class="taxonomy-add-row">
+                <input class="js-taxonomy-input" type="text" placeholder="輸入分類名稱">
+                <button class="button small js-taxonomy-add" type="button">加入</button>
             </div>
+            <div class="taxonomy-suggestions js-taxonomy-suggestions" hidden></div>
+            <div class="taxonomy-list js-taxonomy-list"></div>
+            <textarea class="js-taxonomy-value" name="tags_text" hidden><?= esc($tagsText) ?></textarea>
+            <div class="field-hint js-taxonomy-status"></div>
         </div>
-        <div class="tag-field">
+        <div class="taxonomy-field js-taxonomy-editor" data-taxonomy="works">
             <div class="field-label">原作</div>
-            <div class="tag-editor js-tag-editor">
-                <div class="tag-chip-list js-tag-chip-list"></div>
-                <input class="tag-input js-tag-input" type="text" placeholder="例如 ブルーアーカイブ">
-                <textarea class="js-tag-value" name="works_text" hidden><?= esc($worksText) ?></textarea>
+            <div class="taxonomy-add-row">
+                <input class="js-taxonomy-input" type="text" placeholder="例如 ブルーアーカイブ">
+                <button class="button small js-taxonomy-add" type="button">加入</button>
             </div>
+            <div class="taxonomy-suggestions js-taxonomy-suggestions" hidden></div>
+            <div class="taxonomy-list js-taxonomy-list"></div>
+            <textarea class="js-taxonomy-value" name="works_text" hidden><?= esc($worksText) ?></textarea>
+            <div class="field-hint js-taxonomy-status"></div>
         </div>
-        <div class="tag-field">
+        <div class="taxonomy-field js-taxonomy-editor" data-taxonomy="characters">
             <div class="field-label">角色</div>
-            <div class="tag-editor js-tag-editor">
-                <div class="tag-chip-list js-tag-chip-list"></div>
-                <input class="tag-input js-tag-input" type="text" placeholder="輸入角色後按 Enter">
-                <textarea class="js-tag-value" name="characters_text" hidden><?= esc($charactersText) ?></textarea>
+            <div class="taxonomy-add-row">
+                <input class="js-taxonomy-input" type="text" placeholder="輸入角色名稱">
+                <button class="button small js-taxonomy-add" type="button">加入</button>
             </div>
+            <div class="taxonomy-suggestions js-taxonomy-suggestions" hidden></div>
+            <div class="taxonomy-list js-taxonomy-list"></div>
+            <textarea class="js-taxonomy-value" name="characters_text" hidden><?= esc($charactersText) ?></textarea>
+            <div class="field-hint js-taxonomy-status"></div>
         </div>
     </section>
 
