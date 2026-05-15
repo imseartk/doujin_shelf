@@ -8,9 +8,9 @@ class Sources extends BaseController
     {
         $rows = db_connect()->table('shops s')
             ->select('s.id, s.name, s.website_url')
-            ->select('COUNT(bs.id) AS source_count')
-            ->select('COUNT(DISTINCT bs.book_id) AS book_count')
-            ->select('SUM(COALESCE(bs.price, 0)) AS total_price')
+            ->select("SUM(CASE WHEN b.id IS NULL THEN 0 ELSE 1 END) AS source_count", false)
+            ->select("COUNT(DISTINCT b.id) AS book_count", false)
+            ->select("SUM(CASE WHEN b.id IS NULL THEN 0 ELSE COALESCE(bs.price, 0) END) AS total_price", false)
             ->join('book_sources bs', 'bs.shop_id = s.id', 'left')
             ->join('books b', "b.id = bs.book_id AND b.status IN ('wishlist', 'ordered')", 'left')
             ->where('s.is_active', 1)
