@@ -8,6 +8,7 @@ use App\Models\LocationModel;
 use App\Models\ShopModel;
 use CodeIgniter\HTTP\Files\UploadedFile;
 use CodeIgniter\HTTP\RedirectResponse;
+use CodeIgniter\HTTP\ResponseInterface;
 use RuntimeException;
 
 class Books extends BaseController
@@ -30,6 +31,12 @@ class Books extends BaseController
         'image/png',
         'image/webp',
         'image/gif',
+    ];
+
+    private const TAXONOMY_OPTIONS = [
+        'tags' => ['table' => 'tags', 'label' => '一般 tag'],
+        'works' => ['table' => 'works', 'label' => '原作'],
+        'characters' => ['table' => 'characters', 'label' => '角色', 'where' => ['work_id' => null], 'insert' => ['work_id' => null]],
     ];
 
     public function index(): string
@@ -129,6 +136,65 @@ class Books extends BaseController
         $db->transComplete();
 
         return redirect()->to('/books')->with('message', '已刪除書本。');
+    }
+
+    public function taxonomySearch(string $group): ResponseInterface
+    {
+        $config = $this->taxonomyConfig($group);
+        if ($config === null) {
+            return $this->response->setStatusCode(404)->setJSON(['message' => '未知的分類類型。']);
+        }
+
+        $q = trim((string) $this->request->getGet('q'));
+        $builder = db_connect()->table($config['table'])->select('id, name');
+        foreach (($config['where'] ?? []) as $column => $value) {
+            $builder->where($column, $value);
+        }
+        if ($q !== '') {
+            $builder->like('name', $q);
+        }
+
+        return $this->response->setJSON([
+            'items' => $builder->orderBy('name', 'ASC')->limit(12)->get()->getResultArray(),
+        ]);
+    }
+
+    public function taxonomyStore(string $group): ResponseInterface
+    {
+        $config = $this->taxonomyConfig($group);
+        if ($config === null) {
+            return $this->response->setStatusCode(404)->setJSON(['message' => '未知的分類類型。']);
+        }
+
+        $name = $this->normalizeTaxonomyName((string) $this->request->getPost('name'));
+        if ($name === '') {
+            return $this->response->setStatusCode(422)->setJSON(['message' => '請輸入分類名稱。']);
+        }
+
+        $db = db_connect();
+        $builder = $db->table($config['table']);
+        foreach (($config['where'] ?? []) as $column => $value) {
+            $builder->where($column, $value);
+        }
+        $row = $builder->where('name', $name)->get()->getRowArray();
+        $created = false;
+
+        if (! $row) {
+            $data = array_merge($config['insert'] ?? [], [
+                'name' => $name,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            $db->table($config['table'])->insert($data);
+            $row = ['id' => (int) $db->insertID(), 'name' => $name];
+            $created = true;
+        }
+
+        return $this->response->setJSON([
+            'item' => ['id' => (int) $row['id'], 'name' => $row['name']],
+            'created' => $created,
+            'csrf' => csrf_hash(),
+        ]);
     }
 
     private function saveBook(?int $id = null): RedirectResponse|string
@@ -420,5 +486,15 @@ class Books extends BaseController
         }
 
         return $options;
+    }
+
+    private function taxonomyConfig(string $group): ?array
+    {
+        return self::TAXONOMY_OPTIONS[$group] ?? null;
+    }
+
+    private function normalizeTaxonomyName(string $value): string
+    {
+        return preg_replace('/\s+/u', ' ', trim($value)) ?? '';
     }
 }
