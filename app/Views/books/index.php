@@ -4,7 +4,7 @@
 <section class="page-head">
     <div>
         <h1>書本清單</h1>
-        <p>最多顯示 300 筆；用關鍵字快速查重，或用狀態和店鋪篩選願望清單。</p>
+        <p>用關鍵字快速查重，或用狀態和店鋪篩選願望清單。點欄位標題可以排序目前顯示的結果。</p>
     </div>
     <a class="button primary" href="/books/new">新增書本</a>
 </section>
@@ -28,46 +28,50 @@
 </form>
 
 <div class="table-wrap">
-    <table class="data-table books-table">
+    <table class="data-table books-table js-sortable-table">
         <thead>
             <tr>
-                <th class="cover-col">封面</th>
-                <th>書名</th>
-                <th>社團 / 作者</th>
-                <th>狀態</th>
-                <th>分類</th>
-                <th>原作 / 角色</th>
-                <th>位置</th>
-                <th>來源</th>
+                <th data-sort="status">狀態</th>
+                <th class="cover-col" data-sort="cover" data-sort-type="number">封面</th>
+                <th data-sort="title">書名</th>
+                <th data-sort="circle">社團 / 作者</th>
+                <th data-sort="tags">分類</th>
+                <th data-sort="works">原作 / 角色</th>
+                <th data-sort="location">位置</th>
+                <th data-sort="source" data-sort-type="number">來源</th>
                 <th></th>
             </tr>
         </thead>
         <tbody>
         <?php foreach ($books as $book): ?>
+            <?php
+                $locationText = trim(($book['parent_location_name'] ? $book['parent_location_name'] . ' / ' : '') . ($book['location_name'] ?? ''));
+                $sourceSort = $book['min_price'] !== null ? (int) $book['min_price'] : 999999999;
+            ?>
             <tr>
-                <td>
+                <td data-sort-value="<?= esc($statusOptions[$book['status']] ?? $book['status']) ?>"><span class="status status-<?= esc($book['status']) ?>"><?= esc($statusOptions[$book['status']] ?? $book['status']) ?></span></td>
+                <td data-sort-value="<?= ! empty($book['cover_url']) ? 1 : 0 ?>">
                     <?php if (! empty($book['cover_url'])): ?>
                         <img class="cover-thumb" src="<?= esc($book['cover_url']) ?>" alt="">
                     <?php else: ?>
                         <div class="cover-empty">no image</div>
                     <?php endif; ?>
                 </td>
-                <td>
+                <td data-sort-value="<?= esc($book['title']) ?>">
                     <div class="title-main"><?= esc($book['title']) ?></div>
                     <div class="muted"><?= esc($book['type']) ?><?= $book['circle_kana'] ? ' / ' . esc($book['circle_kana']) : '' ?></div>
                 </td>
-                <td>
+                <td data-sort-value="<?= esc(trim(($book['circle'] ?? '') . ' ' . ($book['author'] ?? ''))) ?>">
                     <div><?= esc($book['circle'] ?? '') ?></div>
                     <div class="muted"><?= esc($book['author'] ?? '') ?></div>
                 </td>
-                <td><span class="status status-<?= esc($book['status']) ?>"><?= esc($statusOptions[$book['status']] ?? $book['status']) ?></span></td>
-                <td><?= esc($book['tag_names'] ?? '') ?></td>
-                <td>
+                <td data-sort-value="<?= esc($book['tag_names'] ?? '') ?>"><?= esc($book['tag_names'] ?? '') ?></td>
+                <td data-sort-value="<?= esc(trim(($book['work_names'] ?? '') . ' ' . ($book['character_names'] ?? ''))) ?>">
                     <div><?= esc($book['work_names'] ?? '') ?></div>
                     <div class="muted"><?= esc($book['character_names'] ?? '') ?></div>
                 </td>
-                <td><?= esc(trim(($book['parent_location_name'] ? $book['parent_location_name'] . ' / ' : '') . ($book['location_name'] ?? ''))) ?></td>
-                <td>
+                <td data-sort-value="<?= esc($locationText) ?>"><?= esc($locationText) ?></td>
+                <td data-sort-value="<?= $sourceSort ?>">
                     <?php if ((int) $book['source_count'] > 0): ?>
                         <span class="pill"><?= (int) $book['source_count'] ?> 件</span>
                         <?php if ($book['min_price'] !== null): ?>
