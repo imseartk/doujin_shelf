@@ -12,6 +12,17 @@ This is a personal doujinshi / manga shelf management system.
 - No foreign keys in database schema
 - Use `utf8mb4_unicode_ci`
 
+Required PHP extensions:
+
+- `curl`
+- `fileinfo`
+- `gd`
+- `intl`
+- `mbstring`
+- `mysqli`
+- `xml`
+- `zip`
+
 ## Current schema
 
 Core tables:
@@ -40,6 +51,11 @@ Important status values for `books.status`:
 - `ordered`: 已訂購，等待到貨 / Excel `✓`
 - `wishlist`: 願望清單
 
+## Uploads
+
+Cover uploads are stored under `public/uploads/covers/` and `books.cover_url` stores the public URL path.
+Uploaded image files are ignored by Git; keep them on the server or back them up separately.
+
 ## Coding preference
 
 - Keep implementation simple
@@ -55,6 +71,13 @@ From the project root on the server:
 composer install --no-dev --optimize-autoloader
 cp env .env
 php spark migrate
+```
+
+Install required PHP extensions on Ubuntu:
+
+```bash
+sudo apt install -y php8.3-curl php8.3-gd php8.3-intl php8.3-mbstring php8.3-mysql php8.3-xml php8.3-zip
+sudo systemctl restart php8.3-fpm
 ```
 
 Then edit `.env` for each deployment path:
