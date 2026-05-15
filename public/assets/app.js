@@ -79,65 +79,156 @@ $(function () {
         return raw.toLocaleLowerCase();
     }
 
-    $('.js-tag-editor').each(function () {
+    $('.js-taxonomy-editor').each(function () {
         var $editor = $(this);
-        var $input = $editor.find('.js-tag-input');
-        var $value = $editor.find('.js-tag-value');
-        var $list = $editor.find('.js-tag-chip-list');
-        var tags = splitTags($value.val());
+        var taxonomy = $editor.data('taxonomy');
+        var $input = $editor.find('.js-taxonomy-input');
+        var $add = $editor.find('.js-taxonomy-add');
+        var $value = $editor.find('.js-taxonomy-value');
+        var $list = $editor.find('.js-taxonomy-list');
+        var $suggestions = $editor.find('.js-taxonomy-suggestions');
+        var $status = $editor.find('.js-taxonomy-status');
+        var items = splitTaxonomyNames($value.val());
+        var searchTimer = null;
 
         function render() {
             $list.empty();
-            tags.forEach(function (tag) {
-                $('<button type="button" class="tag-chip" aria-label="移除 ' + tag + '"></button>')
-                    .text(tag)
-                    .append('<span aria-hidden="true">×</span>')
+            items.forEach(function (name) {
+                var $box = $('<div class="taxonomy-item"></div>');
+                $('<span></span>').text(name).appendTo($box);
+                $('<button type="button" class="taxonomy-remove" aria-label="解除綁定"></button>')
+                    .text('刪除')
                     .on('click', function () {
-                        tags = tags.filter(function (item) { return item !== tag; });
+                        items = items.filter(function (item) { return item !== name; });
+                        setStatus('已從這本書解除綁定，儲存後生效。');
                         render();
                     })
-                    .appendTo($list);
+                    .appendTo($box);
+                $box.appendTo($list);
             });
-            $value.val(tags.join(', '));
+            $value.val(items.join(', '));
         }
 
-        function addTag(text) {
-            splitTags(text).forEach(function (tag) {
-                if (tags.indexOf(tag) === -1) tags.push(tag);
-            });
+        function addExisting(name) {
+            name = normalizeTaxonomyName(name);
+            if (!name) return;
+            if (items.indexOf(name) === -1) items.push(name);
             $input.val('');
+            $suggestions.prop('hidden', true).empty();
+            setStatus('已加入，儲存後會綁定到這本書。');
             render();
         }
 
+        function createAndAdd() {
+            var name = normalizeTaxonomyName($input.val());
+            if (!name) {
+                setStatus('請先輸入名稱。');
+                return;
+            }
+
+            $add.prop('disabled', true);
+            setStatus('確認分類中...');
+
+            $.ajax({
+                url: '/books/taxonomy/' + taxonomy,
+                method: 'POST',
+                data: withCsrf({ name: name }),
+                dataType: 'json'
+            }).done(function (response) {
+                refreshCsrf(response);
+                if (response && response.item && response.item.name) {
+                    addExisting(response.item.name);
+                    setStatus(response.created ? '已新增分類並加入。' : '已找到既有分類並加入。');
+                }
+            }).fail(function (xhr) {
+                var message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : '分類加入失敗。';
+                setStatus(message);
+            }).always(function () {
+                $add.prop('disabled', false);
+            });
+        }
+
+        function search() {
+            var q = normalizeTaxonomyName($input.val());
+            if (!q) {
+                $suggestions.prop('hidden', true).empty();
+                return;
+            }
+
+            $.getJSON('/books/taxonomy/' + taxonomy + '/search', { q: q })
+                .done(function (response) {
+                    renderSuggestions(response.items || []);
+                });
+        }
+
+        function renderSuggestions(results) {
+            $suggestions.empty();
+            if (results.length === 0) {
+                $suggestions.prop('hidden', true);
+                return;
+            }
+
+            results.forEach(function (item) {
+                $('<button type="button" class="taxonomy-suggestion"></button>')
+                    .text(item.name)
+                    .on('click', function () {
+                        addExisting(item.name);
+                    })
+                    .appendTo($suggestions);
+            });
+            $suggestions.prop('hidden', false);
+        }
+
+        function setStatus(message) {
+            $status.text(message || '');
+        }
+
+        $add.on('click', createAndAdd);
         $input.on('keydown', function (event) {
-            if (event.key === 'Enter' || event.key === ',') {
+            if (event.key === 'Enter') {
                 event.preventDefault();
-                addTag($input.val());
+                createAndAdd();
             }
-            if (event.key === 'Backspace' && !$input.val() && tags.length > 0) {
-                tags.pop();
-                render();
+            if (event.key === 'Escape') {
+                $suggestions.prop('hidden', true).empty();
             }
         });
-
+        $input.on('input', function () {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(search, 180);
+        });
         $input.on('blur', function () {
-            if ($input.val().trim()) addTag($input.val());
-        });
-
-        $editor.on('click', function () {
-            $input.trigger('focus');
+            setTimeout(function () { $suggestions.prop('hidden', true); }, 160);
         });
 
         render();
     });
 
-    function splitTags(value) {
+    function splitTaxonomyNames(value) {
         return String(value || '')
             .split(/[,
 ，、]+/)
-            .map(function (tag) { return tag.trim(); })
-            .filter(function (tag, index, all) {
-                return tag && all.indexOf(tag) === index;
+            .map(normalizeTaxonomyName)
+            .filter(function (name, index, all) {
+                return name && all.indexOf(name) === index;
             });
+    }
+
+    function normalizeTaxonomyName(value) {
+        return String(value || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function csrfField() {
+        return $('form input[type="hidden"][name*="csrf"]').first();
+    }
+
+    function withCsrf(data) {
+        var $csrf = csrfField();
+        if ($csrf.length) data[$csrf.attr('name')] = $csrf.val();
+        return data;
+    }
+
+    function refreshCsrf(response) {
+        if (response && response.csrf) csrfField().val(response.csrf);
     }
 });
