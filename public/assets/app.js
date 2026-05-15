@@ -12,8 +12,7 @@ $(function () {
         $('.js-source-list').append(template.innerHTML);
     });
 
-    function updateCoverPreview() {
-        var url = $('.js-cover-url').val();
+    function showCoverPreview(url) {
         var $preview = $('.js-cover-preview');
         var $empty = $('.js-cover-empty');
 
@@ -27,6 +26,18 @@ $(function () {
         $empty.hide();
     }
 
+    function updateCoverPreview() {
+        showCoverPreview($('.js-cover-url').val());
+    }
+
     $('.js-cover-url').on('input', updateCoverPreview);
+    $('.js-cover-file').on('change', function () {
+        var file = this.files && this.files[0];
+        if (!file) {
+            updateCoverPreview();
+            return;
+        }
+        showCoverPreview(URL.createObjectURL(file));
+    });
     updateCoverPreview();
 });
