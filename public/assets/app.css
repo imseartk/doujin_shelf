@@ -171,6 +171,12 @@ label input, label select, label textarea { font-weight: 400; }
 .data-table th.sort-desc::after { content: "↓"; color: var(--accent-dark); }
 .data-table th[data-sort]:hover { background: #e3e9e3; }
 .data-table tr:last-child td { border-bottom: 0; }
+.books-table th:first-child, .books-table td:first-child {
+    width: 88px;
+    min-width: 88px;
+    max-width: 88px;
+    white-space: nowrap;
+}
 .books-table .cover-col { width: 76px; }
 .title-main { font-weight: 700; line-height: 1.45; }
 .muted { color: var(--muted); font-size: 13px; line-height: 1.5; }
