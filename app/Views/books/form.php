@@ -1,0 +1,152 @@
+<?= $this->extend('layouts/app') ?>
+
+<?= $this->section('content') ?>
+<?php $isEdit = ! empty($book['id']); ?>
+<section class="page-head">
+    <div>
+        <h1><?= $isEdit ? '編輯書本' : '新增書本' ?></h1>
+        <p>維護基本資料、分類、原作、角色，以及願望清單來源。</p>
+    </div>
+    <a class="button ghost" href="/books">回清單</a>
+</section>
+
+<?php if ($errors): ?>
+    <div class="notice error">
+        <?php foreach ($errors as $error): ?><div><?= esc($error) ?></div><?php endforeach; ?>
+    </div>
+<?php endif; ?>
+
+<form class="form-grid" method="post" action="<?= $isEdit ? '/books/' . (int) $book['id'] : '/books' ?>">
+    <?= csrf_field() ?>
+
+    <section class="panel wide">
+        <h2>基本資料</h2>
+        <div class="fields two">
+            <label>標題
+                <input name="title" value="<?= esc($book['title'] ?? '') ?>" required maxlength="255">
+            </label>
+            <label>狀態
+                <select name="status">
+                    <?php foreach ($statusOptions as $value => $label): ?>
+                        <option value="<?= esc($value) ?>" <?= ($book['status'] ?? '') === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>類型
+                <select name="type">
+                    <?php foreach ($typeOptions as $value => $label): ?>
+                        <option value="<?= esc($value) ?>" <?= ($book['type'] ?? 'doujin') === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label>社團首字
+                <input name="circle_kana" value="<?= esc($book['circle_kana'] ?? '') ?>" maxlength="20">
+            </label>
+            <label>社團
+                <input name="circle" value="<?= esc($book['circle'] ?? '') ?>" maxlength="255">
+            </label>
+            <label>作者
+                <input name="author" value="<?= esc($book['author'] ?? '') ?>" maxlength="255">
+            </label>
+            <label>活動 / 來源事件
+                <input name="event" value="<?= esc($book['event'] ?? '') ?>" maxlength="100">
+            </label>
+            <label>放置位置
+                <select name="location_id">
+                    <option value="0">未設定</option>
+                    <?php foreach ($locations as $location): ?>
+                        <option value="<?= (int) $location['id'] ?>" <?= (int) ($book['location_id'] ?? 0) === (int) $location['id'] ? 'selected' : '' ?>><?= esc($location['label']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <label class="span-2">封面圖片 URL
+                <input class="js-cover-url" name="cover_url" value="<?= esc($book['cover_url'] ?? '') ?>" maxlength="500" placeholder="之後可由上傳功能自動填入">
+            </label>
+            <label class="span-2">備註
+                <textarea name="note" rows="3"><?= esc($book['note'] ?? '') ?></textarea>
+            </label>
+        </div>
+        <div class="cover-preview-wrap">
+            <div class="cover-empty js-cover-empty">cover preview</div>
+            <img class="cover-preview js-cover-preview" src="<?= esc($book['cover_url'] ?? '') ?>" alt="">
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>分類</h2>
+        <label>一般 tag
+            <textarea name="tags_text" rows="3" placeholder="催眠系, 睡姦系"><?= esc($tagsText) ?></textarea>
+        </label>
+        <label>原作
+            <textarea name="works_text" rows="3" placeholder="ブルーアーカイブ, 東方Project"><?= esc($worksText) ?></textarea>
+        </label>
+        <label>角色
+            <textarea name="characters_text" rows="3" placeholder="角色名用逗號或換行分隔"><?= esc($charactersText) ?></textarea>
+        </label>
+    </section>
+
+    <section class="panel wide">
+        <div class="panel-head">
+            <h2>願望清單來源</h2>
+            <button class="button small js-add-source" type="button">新增來源列</button>
+        </div>
+        <div class="source-list js-source-list">
+            <?php $sourceRows = $sources ?: [['id' => '', 'shop_id' => '', 'price' => '', 'item_url' => '', 'note' => '']]; ?>
+            <?php foreach ($sourceRows as $source): ?>
+                <div class="source-row">
+                    <input type="hidden" name="source_id[]" value="<?= esc($source['id'] ?? '') ?>">
+                    <label>店鋪
+                        <select name="source_shop_id[]">
+                            <option value="0">未設定</option>
+                            <?php foreach ($shops as $shop): ?>
+                                <option value="<?= (int) $shop['id'] ?>" <?= (int) ($source['shop_id'] ?? 0) === (int) $shop['id'] ? 'selected' : '' ?>><?= esc($shop['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label>價格
+                        <input name="source_price[]" inputmode="numeric" value="<?= esc($source['price'] ?? '') ?>" placeholder="JPY">
+                    </label>
+                    <label class="url-field">商品 URL
+                        <input name="source_item_url[]" value="<?= esc($source['item_url'] ?? '') ?>">
+                    </label>
+                    <label>備註
+                        <input name="source_note[]" value="<?= esc($source['note'] ?? '') ?>">
+                    </label>
+                    <?php if (! empty($source['id'])): ?>
+                        <label class="checkline"><input type="checkbox" name="source_delete[]" value="<?= (int) $source['id'] ?>"> 刪除</label>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+
+    <div class="form-actions">
+        <button class="button primary" type="submit">儲存</button>
+        <a class="button ghost" href="/books">取消</a>
+    </div>
+</form>
+
+<?php if ($isEdit): ?>
+<form class="danger-form" method="post" action="/books/<?= (int) $book['id'] ?>/delete" data-confirm="確定要刪除這本書？">
+    <?= csrf_field() ?>
+    <button class="button danger" type="submit">刪除這本書</button>
+</form>
+<?php endif; ?>
+
+<template id="source-row-template">
+    <div class="source-row">
+        <input type="hidden" name="source_id[]" value="">
+        <label>店鋪
+            <select name="source_shop_id[]">
+                <option value="0">未設定</option>
+                <?php foreach ($shops as $shop): ?>
+                    <option value="<?= (int) $shop['id'] ?>"><?= esc($shop['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label>價格<input name="source_price[]" inputmode="numeric" placeholder="JPY"></label>
+        <label class="url-field">商品 URL<input name="source_item_url[]"></label>
+        <label>備註<input name="source_note[]"></label>
+    </div>
+</template>
+<?= $this->endSection() ?>
