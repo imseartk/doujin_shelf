@@ -87,7 +87,6 @@ $(function () {
         var $value = $editor.find('.js-taxonomy-value');
         var $list = $editor.find('.js-taxonomy-list');
         var $suggestions = $editor.find('.js-taxonomy-suggestions');
-        var $status = $editor.find('.js-taxonomy-status');
         var items = splitTaxonomyNames($value.val());
         var searchTimer = null;
 
@@ -100,7 +99,6 @@ $(function () {
                     .text('刪除')
                     .on('click', function () {
                         items = items.filter(function (item) { return item !== name; });
-                        setStatus('已從這本書解除綁定，儲存後生效。');
                         render();
                     })
                     .appendTo($box);
@@ -115,19 +113,14 @@ $(function () {
             if (items.indexOf(name) === -1) items.push(name);
             $input.val('');
             $suggestions.prop('hidden', true).empty();
-            setStatus('已加入，儲存後會綁定到這本書。');
             render();
         }
 
         function createAndAdd() {
             var name = normalizeTaxonomyName($input.val());
-            if (!name) {
-                setStatus('請先輸入名稱。');
-                return;
-            }
+            if (!name) return;
 
             $add.prop('disabled', true);
-            setStatus('確認分類中...');
 
             $.ajax({
                 url: '/books/taxonomy/' + taxonomy,
@@ -138,11 +131,7 @@ $(function () {
                 refreshCsrf(response);
                 if (response && response.item && response.item.name) {
                     addExisting(response.item.name);
-                    setStatus(response.created ? '已新增分類並加入。' : '已找到既有分類並加入。');
                 }
-            }).fail(function (xhr) {
-                var message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : '分類加入失敗。';
-                setStatus(message);
             }).always(function () {
                 $add.prop('disabled', false);
             });
@@ -177,10 +166,6 @@ $(function () {
                     .appendTo($suggestions);
             });
             $suggestions.prop('hidden', false);
-        }
-
-        function setStatus(message) {
-            $status.text(message || '');
         }
 
         $add.on('click', createAndAdd);
