@@ -76,7 +76,6 @@ class Books extends BaseController
             ->groupBy('b.id')
             ->orderBy('b.updated_at', 'DESC')
             ->orderBy('b.id', 'DESC')
-            ->limit(300)
             ->get()
             ->getResultArray();
 
