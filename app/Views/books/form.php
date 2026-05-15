@@ -78,15 +78,30 @@
 
     <section class="panel">
         <h2>分類</h2>
-        <label>一般 tag
-            <textarea name="tags_text" rows="3" placeholder="催眠系, 睡姦系"><?= esc($tagsText) ?></textarea>
-        </label>
-        <label>原作
-            <textarea name="works_text" rows="3" placeholder="ブルーアーカイブ, 東方Project"><?= esc($worksText) ?></textarea>
-        </label>
-        <label>角色
-            <textarea name="characters_text" rows="3" placeholder="角色名用逗號或換行分隔"><?= esc($charactersText) ?></textarea>
-        </label>
+        <div class="tag-field">
+            <div class="field-label">一般 tag</div>
+            <div class="tag-editor js-tag-editor">
+                <div class="tag-chip-list js-tag-chip-list"></div>
+                <input class="tag-input js-tag-input" type="text" placeholder="輸入後按 Enter 或逗號">
+                <textarea class="js-tag-value" name="tags_text" hidden><?= esc($tagsText) ?></textarea>
+            </div>
+        </div>
+        <div class="tag-field">
+            <div class="field-label">原作</div>
+            <div class="tag-editor js-tag-editor">
+                <div class="tag-chip-list js-tag-chip-list"></div>
+                <input class="tag-input js-tag-input" type="text" placeholder="例如 ブルーアーカイブ">
+                <textarea class="js-tag-value" name="works_text" hidden><?= esc($worksText) ?></textarea>
+            </div>
+        </div>
+        <div class="tag-field">
+            <div class="field-label">角色</div>
+            <div class="tag-editor js-tag-editor">
+                <div class="tag-chip-list js-tag-chip-list"></div>
+                <input class="tag-input js-tag-input" type="text" placeholder="輸入角色後按 Enter">
+                <textarea class="js-tag-value" name="characters_text" hidden><?= esc($charactersText) ?></textarea>
+            </div>
+        </div>
     </section>
 
     <section class="panel wide">
