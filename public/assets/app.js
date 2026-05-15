@@ -206,8 +206,7 @@ $(function () {
 
     function splitTaxonomyNames(value) {
         return String(value || '')
-            .split(/[,
-，、]+/)
+            .split(new RegExp('[,\\n，、]+'))
             .map(normalizeTaxonomyName)
             .filter(function (name, index, all) {
                 return name && all.indexOf(name) === index;
