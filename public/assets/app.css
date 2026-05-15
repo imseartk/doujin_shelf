@@ -105,6 +105,8 @@ input, select, textarea {
 textarea { resize: vertical; }
 label { display: grid; gap: 6px; color: #37424a; font-weight: 600; }
 label input, label select, label textarea { font-weight: 400; }
+.field-label { color: #37424a; font-weight: 600; margin-bottom: 6px; }
+.field-hint { color: var(--muted); font-size: 13px; font-weight: 400; }
 
 .button {
     display: inline-flex;
@@ -152,6 +154,22 @@ label input, label select, label textarea { font-weight: 400; }
     font-size: 13px;
     white-space: nowrap;
 }
+.data-table th[data-sort] {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 24px;
+}
+.data-table th[data-sort]::after {
+    content: "↕";
+    position: absolute;
+    right: 8px;
+    color: #8a949a;
+    font-size: 12px;
+}
+.data-table th.sort-asc::after { content: "↑"; color: var(--accent-dark); }
+.data-table th.sort-desc::after { content: "↓"; color: var(--accent-dark); }
+.data-table th[data-sort]:hover { background: #e3e9e3; }
 .data-table tr:last-child td { border-bottom: 0; }
 .books-table .cover-col { width: 76px; }
 .title-main { font-weight: 700; line-height: 1.45; }
@@ -215,6 +233,43 @@ label input, label select, label textarea { font-weight: 400; }
 .span-2 { grid-column: span 2; }
 .form-actions { grid-column: 1 / -1; display: flex; gap: 10px; }
 .danger-form { margin-top: 20px; }
+
+.tag-field { display: grid; gap: 6px; margin-bottom: 14px; }
+.tag-editor {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 7px;
+    border: 1px solid #c7cec8;
+    border-radius: 6px;
+    background: #fff;
+    cursor: text;
+}
+.tag-chip-list { display: contents; }
+.tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 4px 8px;
+    border: 1px solid #b9d2cf;
+    border-radius: 999px;
+    background: #e9f4f1;
+    color: #244d50;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+.tag-chip span { color: #5b7374; font-weight: 700; }
+.tag-input {
+    flex: 1 1 150px;
+    min-width: 120px;
+    border: 0;
+    padding: 4px;
+    outline: none;
+}
 
 .source-list { display: grid; gap: 10px; }
 .source-row {
