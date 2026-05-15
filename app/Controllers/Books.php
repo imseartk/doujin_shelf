@@ -6,7 +6,9 @@ use App\Models\BookModel;
 use App\Models\BookSourceModel;
 use App\Models\LocationModel;
 use App\Models\ShopModel;
+use CodeIgniter\HTTP\Files\UploadedFile;
 use CodeIgniter\HTTP\RedirectResponse;
+use RuntimeException;
 
 class Books extends BaseController
 {
@@ -21,6 +23,13 @@ class Books extends BaseController
         'doujin' => '同人誌',
         'comic' => '漫畫/單行本',
         'other' => '其他',
+    ];
+
+    private const COVER_MIME_TYPES = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif',
     ];
 
     public function index(): string
@@ -151,6 +160,17 @@ class Books extends BaseController
             'note' => $this->nullablePost('note'),
         ];
 
+        try {
+            $uploadedCoverUrl = $this->storeCoverUpload($this->request->getFile('cover_file'));
+            if ($uploadedCoverUrl !== null) {
+                $data['cover_url'] = $uploadedCoverUrl;
+            }
+        } catch (RuntimeException $exception) {
+            $book = $this->request->getPost();
+            $book['id'] = $id;
+            return $this->renderForm($book, ['cover_file' => $exception->getMessage()]);
+        }
+
         $db = db_connect();
         $db->transStart();
 
@@ -187,6 +207,37 @@ class Books extends BaseController
             'worksText' => $id > 0 ? $this->relationText($id, 'book_works', 'works', 'work_id') : (string) ($book['works_text'] ?? ''),
             'charactersText' => $id > 0 ? $this->relationText($id, 'book_characters', 'characters', 'character_id') : (string) ($book['characters_text'] ?? ''),
         ]);
+    }
+
+    private function storeCoverUpload(?UploadedFile $file): ?string
+    {
+        if (! $file || $file->getError() === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
+        if (! $file->isValid()) {
+            throw new RuntimeException('封面上傳失敗，請重新選擇檔案。');
+        }
+
+        if ($file->getSizeByUnit('mb') > 8) {
+            throw new RuntimeException('封面圖片不可超過 8MB。');
+        }
+
+        if (! in_array($file->getMimeType(), self::COVER_MIME_TYPES, true)) {
+            throw new RuntimeException('封面只支援 JPG、PNG、WEBP 或 GIF。');
+        }
+
+        $extension = $file->guessExtension() ?: $file->getExtension() ?: 'jpg';
+        $fileName = date('YmdHis') . '_' . bin2hex(random_bytes(6)) . '.' . $extension;
+        $uploadPath = FCPATH . 'uploads/covers';
+
+        if (! is_dir($uploadPath) && ! mkdir($uploadPath, 0775, true) && ! is_dir($uploadPath)) {
+            throw new RuntimeException('無法建立封面上傳目錄。');
+        }
+
+        $file->move($uploadPath, $fileName);
+
+        return '/uploads/covers/' . $fileName;
     }
 
     private function nullablePost(string $key): ?string
