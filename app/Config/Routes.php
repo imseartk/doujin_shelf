@@ -7,6 +7,8 @@ $routes->get('/', 'Books::index');
 
 $routes->get('books', 'Books::index');
 $routes->get('books/new', 'Books::new');
+$routes->get('books/taxonomy/(:segment)/search', 'Books::taxonomySearch/$1');
+$routes->post('books/taxonomy/(:segment)', 'Books::taxonomyStore/$1');
 $routes->post('books', 'Books::create');
 $routes->get('books/(:num)/edit', 'Books::edit/$1');
 $routes->post('books/(:num)', 'Books::update/$1');
