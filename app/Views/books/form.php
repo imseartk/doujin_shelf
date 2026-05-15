@@ -16,7 +16,7 @@
     </div>
 <?php endif; ?>
 
-<form class="form-grid" method="post" action="<?= $isEdit ? '/books/' . (int) $book['id'] : '/books' ?>">
+<form class="form-grid" method="post" action="<?= $isEdit ? '/books/' . (int) $book['id'] : '/books' ?>" enctype="multipart/form-data">
     <?= csrf_field() ?>
 
     <section class="panel wide">
@@ -60,7 +60,11 @@
                 </select>
             </label>
             <label class="span-2">封面圖片 URL
-                <input class="js-cover-url" name="cover_url" value="<?= esc($book['cover_url'] ?? '') ?>" maxlength="500" placeholder="之後可由上傳功能自動填入">
+                <input class="js-cover-url" name="cover_url" value="<?= esc($book['cover_url'] ?? '') ?>" maxlength="500" placeholder="可貼外部 URL，或使用下方上傳">
+            </label>
+            <label class="span-2">上傳封面
+                <input class="js-cover-file" type="file" name="cover_file" accept="image/jpeg,image/png,image/webp,image/gif">
+                <span class="field-hint">支援 JPG、PNG、WEBP、GIF，最大 8MB。上傳後會自動覆蓋封面 URL。</span>
             </label>
             <label class="span-2">備註
                 <textarea name="note" rows="3"><?= esc($book['note'] ?? '') ?></textarea>
