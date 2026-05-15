@@ -1,6 +1,13 @@
 .env
 vendor/
 
+# Runtime/public uploaded files
+/public/uploads/*
+!/public/uploads/.gitkeep
+!/public/uploads/covers/
+/public/uploads/covers/*
+!/public/uploads/covers/.gitkeep
+
 # Writable runtime files
 /writable/cache/*
 !/writable/cache/index.html
