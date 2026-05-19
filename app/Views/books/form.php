@@ -7,7 +7,10 @@
         <h1><?= $isEdit ? '編輯書本' : '新增書本' ?></h1>
         <p>維護基本資料、分類、原作、角色，以及願望清單來源。</p>
     </div>
-    <a class="button ghost" href="/books">回清單</a>
+    <div class="page-actions">
+        <button class="button primary" type="submit" form="book-form">儲存</button>
+        <a class="button ghost" href="/books">回清單</a>
+    </div>
 </section>
 
 <?php if ($errors): ?>
@@ -16,7 +19,7 @@
     </div>
 <?php endif; ?>
 
-<form class="form-grid" method="post" action="<?= $isEdit ? '/books/' . (int) $book['id'] : '/books' ?>" enctype="multipart/form-data">
+<form id="book-form" class="form-grid" method="post" action="<?= $isEdit ? '/books/' . (int) $book['id'] : '/books' ?>" enctype="multipart/form-data">
     <?= csrf_field() ?>
 
     <section class="panel wide">
