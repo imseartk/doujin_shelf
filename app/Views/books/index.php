@@ -1,12 +1,22 @@
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
+<?php
+    $request = service('request');
+    $uri = $request->getUri();
+    $returnTo = '/' . ltrim($uri->getPath(), '/');
+    $query = $uri->getQuery();
+    if ($query !== '') {
+        $returnTo .= '?' . $query;
+    }
+    $encodedReturnTo = rawurlencode($returnTo);
+?>
 <section class="page-head">
     <div>
         <h1>書本清單</h1>
         <p>用關鍵字快速查重，或用狀態和店鋪篩選願望清單。點欄位標題可以排序目前顯示的結果。</p>
     </div>
-    <a class="button primary" href="/books/new">新增書本</a>
+    <a class="button primary" href="/books/new?return_to=<?= $encodedReturnTo ?>">新增書本</a>
 </section>
 
 <form class="toolbar" method="get" action="/books">
@@ -79,7 +89,7 @@
                         <?php endif; ?>
                     <?php endif; ?>
                 </td>
-                <td class="actions"><a class="button small" href="/books/<?= (int) $book['id'] ?>/edit">編輯</a></td>
+                <td class="actions"><a class="button small" href="/books/<?= (int) $book['id'] ?>/edit?return_to=<?= $encodedReturnTo ?>">編輯</a></td>
             </tr>
         <?php endforeach; ?>
         <?php if ($books === []): ?>
