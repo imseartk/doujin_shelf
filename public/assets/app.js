@@ -6,6 +6,9 @@ $(function () {
         }
     });
 
+    initBookListState();
+    initBookReturnTo();
+
     $('.js-add-source').on('click', function () {
         var template = document.getElementById('source-row-template');
         if (!template) return;
@@ -41,12 +44,40 @@ $(function () {
     });
     updateCoverPreview();
 
+    function initBookListState() {
+        var $table = $('.js-sortable-table');
+        if (!$table.length) return;
+
+        var params = new URLSearchParams(window.location.search);
+        var initialSort = params.get('sort');
+        var initialDirection = params.get('dir') === 'desc' ? 'desc' : 'asc';
+
+        if (initialSort) {
+            var $initialHeader = $table.find('th[data-sort="' + cssEscape(initialSort) + '"]').first();
+            if ($initialHeader.length) sortTableByHeader($initialHeader, initialDirection, false);
+        }
+
+        updateBookReturnLinks();
+        restoreBookScrollPosition();
+
+        $(window).on('pagehide', saveBookScrollPosition);
+        $('.books-table .actions a, .page-head a[href="/books/new"]').on('click', function () {
+            saveBookScrollPosition();
+            updateBookReturnLinks();
+        });
+    }
+
     $('.js-sortable-table th[data-sort]').on('click', function () {
         var $header = $(this);
+        var direction = $header.hasClass('sort-asc') ? 'desc' : 'asc';
+        sortTableByHeader($header, direction, true);
+        updateBookReturnLinks();
+    });
+
+    function sortTableByHeader($header, direction, updateUrl) {
         var $table = $header.closest('table');
         var index = $header.index();
         var type = $header.data('sort-type') || 'text';
-        var direction = $header.hasClass('sort-asc') ? 'desc' : 'asc';
         var rows = $table.find('tbody tr').not(function () {
             return $(this).find('.empty').length > 0;
         }).get();
@@ -63,7 +94,14 @@ $(function () {
         $table.find('th').removeClass('sort-asc sort-desc');
         $header.addClass(direction === 'asc' ? 'sort-asc' : 'sort-desc');
         $table.find('tbody').append(rows);
-    });
+
+        if (updateUrl) {
+            var url = new URL(window.location.href);
+            url.searchParams.set('sort', $header.data('sort'));
+            url.searchParams.set('dir', direction);
+            window.history.replaceState(null, '', url.pathname + url.search);
+        }
+    }
 
     function getSortValue(row, index, type) {
         var $cell = $(row).children('td').eq(index);
@@ -77,6 +115,77 @@ $(function () {
         }
 
         return raw.toLocaleLowerCase();
+    }
+
+    function initBookReturnTo() {
+        var returnTo = getReturnToFromUrl();
+        var $form = $('#book-form');
+
+        if (!returnTo || !$form.length) return;
+
+        $('.page-actions a[href="/books"], .form-actions a[href="/books"]').attr('href', returnTo);
+
+        if ($form.find('input[name="return_to"]').length === 0) {
+            $('<input>', {
+                type: 'hidden',
+                name: 'return_to',
+                value: returnTo
+            }).appendTo($form);
+        }
+    }
+
+    function getReturnToFromUrl() {
+        var params = new URLSearchParams(window.location.search);
+        var returnTo = params.get('return_to') || '';
+        return isSafeBookReturnPath(returnTo) ? returnTo : '';
+    }
+
+    function updateBookReturnLinks() {
+        var returnTo = currentBookListPath();
+
+        $('.books-table .actions a[href*="/edit"], .page-head a[href="/books/new"]').each(function () {
+            var url = new URL(this.getAttribute('href'), window.location.origin);
+            url.searchParams.set('return_to', returnTo);
+            this.setAttribute('href', url.pathname + url.search);
+        });
+    }
+
+    function currentBookListPath() {
+        return window.location.pathname + window.location.search;
+    }
+
+    function bookScrollKey() {
+        return 'doujin.books.scroll:' + currentBookListPath();
+    }
+
+    function saveBookScrollPosition() {
+        try {
+            window.sessionStorage.setItem(bookScrollKey(), String(window.scrollY || window.pageYOffset || 0));
+        } catch (error) {
+            // Ignore private browsing/session storage limitations.
+        }
+    }
+
+    function restoreBookScrollPosition() {
+        try {
+            var scrollY = parseInt(window.sessionStorage.getItem(bookScrollKey()) || '', 10);
+            if (!Number.isNaN(scrollY) && scrollY > 0) {
+                setTimeout(function () {
+                    window.scrollTo(0, scrollY);
+                }, 80);
+            }
+        } catch (error) {
+            // Ignore private browsing/session storage limitations.
+        }
+    }
+
+    function isSafeBookReturnPath(path) {
+        return path.indexOf('/books') === 0 && path.indexOf('//') !== 0;
+    }
+
+    function cssEscape(value) {
+        if (window.CSS && window.CSS.escape) return window.CSS.escape(value);
+        return String(value).replace(/"/g, '\\"');
     }
 
     $('.js-taxonomy-editor').each(function () {
