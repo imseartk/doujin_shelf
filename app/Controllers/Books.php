@@ -253,7 +253,20 @@ class Books extends BaseController
 
         $db->transComplete();
 
-        return redirect()->to('/books')->with('message', '已儲存。');
+        return redirect()->to($this->safeReturnTo((string) $this->request->getPost('return_to')))->with('message', '已儲存。');
+    }
+
+    private function safeReturnTo(string $path): string
+    {
+        if ($path === '' || str_starts_with($path, '//') || ! str_starts_with($path, '/books')) {
+            return '/books';
+        }
+
+        if (preg_match('#^/books/\d+/edit#', $path) === 1) {
+            return '/books';
+        }
+
+        return $path;
     }
 
     private function renderForm(array $book, array $errors = []): string
