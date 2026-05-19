@@ -253,7 +253,7 @@ class Books extends BaseController
 
         $db->transComplete();
 
-        return redirect()->to('/books/' . $id . '/edit')->with('message', '已儲存。');
+        return redirect()->to('/books')->with('message', '已儲存。');
     }
 
     private function renderForm(array $book, array $errors = []): string
