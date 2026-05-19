@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($title ?? 'Doujin Shelf') ?></title>
-    <link rel="stylesheet" href="/assets/app.css">
+    <link rel="stylesheet" href="/assets/app.css?v=<?= filemtime(FCPATH . 'assets/app.css') ?>">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 <body>
@@ -30,6 +30,6 @@
         <?= $this->renderSection('content') ?>
     </main>
 
-    <script src="/assets/app.js"></script>
+    <script src="/assets/app.js?v=<?= filemtime(FCPATH . 'assets/app.js') ?>"></script>
 </body>
 </html>
