@@ -1,7 +1,13 @@
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
-<?php $isEdit = ! empty($book['id']); ?>
+<?php
+    $isEdit = ! empty($book['id']);
+    $returnTo = (string) service('request')->getGet('return_to');
+    if ($returnTo === '' || str_starts_with($returnTo, '//') || ! str_starts_with($returnTo, '/books') || preg_match('#^/books/\d+/edit#', $returnTo) === 1) {
+        $returnTo = '/books';
+    }
+?>
 <section class="page-head">
     <div>
         <h1><?= $isEdit ? '編輯書本' : '新增書本' ?></h1>
@@ -9,7 +15,7 @@
     </div>
     <div class="page-actions">
         <button class="button primary" type="submit" form="book-form">儲存</button>
-        <a class="button ghost" href="/books">回清單</a>
+        <a class="button ghost" href="<?= esc($returnTo) ?>">回清單</a>
     </div>
 </section>
 
@@ -21,6 +27,7 @@
 
 <form id="book-form" class="form-grid" method="post" action="<?= $isEdit ? '/books/' . (int) $book['id'] : '/books' ?>" enctype="multipart/form-data">
     <?= csrf_field() ?>
+    <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
 
     <section class="panel wide">
         <h2>基本資料</h2>
@@ -153,7 +160,7 @@
 
     <div class="form-actions">
         <button class="button primary" type="submit">儲存</button>
-        <a class="button ghost" href="/books">取消</a>
+        <a class="button ghost" href="<?= esc($returnTo) ?>">取消</a>
     </div>
 </form>
 
