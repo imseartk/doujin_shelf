@@ -172,6 +172,7 @@ label input, label select, label textarea { font-weight: 400; }
 .data-table th.sort-desc::after { content: "↓"; color: var(--accent-dark); }
 .data-table th[data-sort]:hover { background: #e3e9e3; }
 .data-table tr:last-child td { border-bottom: 0; }
+.books-table { min-width: 1380px; }
 .books-table th:first-child, .books-table td:first-child {
     width: 88px;
     min-width: 88px;
@@ -183,6 +184,25 @@ label input, label select, label textarea { font-weight: 400; }
 .muted { color: var(--muted); font-size: 13px; line-height: 1.5; }
 .empty { color: var(--muted); text-align: center; padding: 32px; }
 .actions { text-align: right; }
+.list-tag-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 160px;
+}
+.list-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 4px 8px;
+    border: 1px solid #b9d2cf;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #223236;
+    font-size: 13px;
+    line-height: 1.35;
+    box-shadow: 0 1px 0 rgba(20, 35, 32, .04);
+}
 
 .cover-thumb, .cover-preview {
     width: 54px;
