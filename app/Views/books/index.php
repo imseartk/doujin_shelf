@@ -10,6 +10,19 @@
         $returnTo .= '?' . $query;
     }
     $encodedReturnTo = rawurlencode($returnTo);
+
+    $renderTagList = static function (?string $value): string {
+        $names = array_filter(array_map('trim', explode(',', (string) $value)));
+        if ($names === []) {
+            return '';
+        }
+
+        $html = '<div class="list-tag-group">';
+        foreach ($names as $name) {
+            $html .= '<span class="list-tag">' . esc($name) . '</span>';
+        }
+        return $html . '</div>';
+    };
 ?>
 <section class="page-head">
     <div>
@@ -44,9 +57,11 @@
                 <th data-sort="status">狀態</th>
                 <th class="cover-col" data-sort="cover" data-sort-type="number">封面</th>
                 <th data-sort="title">書名</th>
-                <th data-sort="circle">社團 / 作者</th>
+                <th data-sort="circle">社團</th>
+                <th data-sort="author">作者</th>
                 <th data-sort="tags">分類</th>
-                <th data-sort="works">原作 / 角色</th>
+                <th data-sort="works">原作</th>
+                <th data-sort="characters">角色</th>
                 <th data-sort="location">位置</th>
                 <th data-sort="source" data-sort-type="number">來源</th>
                 <th></th>
@@ -71,15 +86,11 @@
                     <div class="title-main"><?= esc($book['title']) ?></div>
                     <div class="muted"><?= esc($book['type']) ?><?= $book['circle_kana'] ? ' / ' . esc($book['circle_kana']) : '' ?></div>
                 </td>
-                <td data-sort-value="<?= esc(trim(($book['circle'] ?? '') . ' ' . ($book['author'] ?? ''))) ?>">
-                    <div><?= esc($book['circle'] ?? '') ?></div>
-                    <div class="muted"><?= esc($book['author'] ?? '') ?></div>
-                </td>
-                <td data-sort-value="<?= esc($book['tag_names'] ?? '') ?>"><?= esc($book['tag_names'] ?? '') ?></td>
-                <td data-sort-value="<?= esc(trim(($book['work_names'] ?? '') . ' ' . ($book['character_names'] ?? ''))) ?>">
-                    <div><?= esc($book['work_names'] ?? '') ?></div>
-                    <div class="muted"><?= esc($book['character_names'] ?? '') ?></div>
-                </td>
+                <td data-sort-value="<?= esc($book['circle'] ?? '') ?>"><?= esc($book['circle'] ?? '') ?></td>
+                <td data-sort-value="<?= esc($book['author'] ?? '') ?>"><?= esc($book['author'] ?? '') ?></td>
+                <td data-sort-value="<?= esc($book['tag_names'] ?? '') ?>"><?= $renderTagList($book['tag_names'] ?? '') ?></td>
+                <td data-sort-value="<?= esc($book['work_names'] ?? '') ?>"><?= $renderTagList($book['work_names'] ?? '') ?></td>
+                <td data-sort-value="<?= esc($book['character_names'] ?? '') ?>"><?= $renderTagList($book['character_names'] ?? '') ?></td>
                 <td data-sort-value="<?= esc($locationText) ?>"><?= esc($locationText) ?></td>
                 <td data-sort-value="<?= $sourceSort ?>">
                     <?php if ((int) $book['source_count'] > 0): ?>
@@ -93,7 +104,7 @@
             </tr>
         <?php endforeach; ?>
         <?php if ($books === []): ?>
-            <tr><td colspan="9" class="empty">沒有符合條件的書本。</td></tr>
+            <tr><td colspan="11" class="empty">沒有符合條件的書本。</td></tr>
         <?php endif; ?>
         </tbody>
     </table>
