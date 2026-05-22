@@ -2,16 +2,23 @@
 
 <?= $this->section('content') ?>
 <style>
-.wishlist-table { min-width: 1180px; }
+.wishlist-table { min-width: 1120px; }
 .wishlist-table .title-main + .muted { margin-bottom: 8px; }
-.wishlist-sources { display: grid; gap: 6px; min-width: 620px; }
-.wishlist-source-form { display: grid; grid-template-columns: minmax(130px, 170px) 88px minmax(180px, 1fr) minmax(120px, 180px) auto; gap: 6px; align-items: center; }
+.wishlist-sources { display: grid; gap: 8px; min-width: 520px; }
+.wishlist-source-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #edf0ed; }
+.wishlist-source-text { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; line-height: 1.5; }
+.wishlist-source-text .shop { font-weight: 700; }
+.wishlist-source-text .price { white-space: nowrap; }
+.wishlist-source-actions, .wishlist-book-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.wishlist-source-form { display: grid; grid-template-columns: minmax(130px, 170px) 88px minmax(180px, 1fr) minmax(120px, 180px) auto auto; gap: 6px; align-items: center; }
 .wishlist-source-form input, .wishlist-source-form select { min-width: 0; padding: 6px 8px; }
 .wishlist-source-form.add { border-top: 1px solid #edf0ed; margin-top: 3px; padding-top: 8px; }
-.wishlist-source-delete { display: flex; justify-content: flex-end; margin: -2px 0 4px; }
+.wishlist-source-actions form { margin: 0; }
 .compact-tags { min-width: 0; margin-top: 8px; }
 @media (max-width: 900px) {
-    .wishlist-sources { min-width: 360px; }
+    .wishlist-sources { min-width: 340px; }
+    .wishlist-source-summary { grid-template-columns: 1fr; }
+    .wishlist-source-actions { justify-content: flex-start; }
     .wishlist-source-form { grid-template-columns: 1fr; }
 }
 </style>
@@ -71,7 +78,11 @@
         </thead>
         <tbody>
         <?php foreach ($books as $book): ?>
-            <?php $bookSources = $sourcesByBook[(int) $book['id']] ?? []; ?>
+            <?php
+                $bookId = (int) $book['id'];
+                $bookSources = $sourcesByBook[$bookId] ?? [];
+                $addFormId = 'wishlist-add-' . $bookId;
+            ?>
             <tr>
                 <td data-sort-value="<?= ! empty($book['cover_url']) ? 1 : 0 ?>">
                     <?php if (! empty($book['cover_url'])): ?>
@@ -90,7 +101,28 @@
                 <td data-sort-value="<?= $book['min_price'] !== null ? (int) $book['min_price'] : 999999999 ?>">
                     <div class="wishlist-sources">
                         <?php foreach ($bookSources as $source): ?>
-                            <form class="wishlist-source-form" method="post" action="/wishlist/sources/<?= (int) $source['id'] ?>">
+                            <?php
+                                $sourceId = (int) $source['id'];
+                                $summaryId = 'wishlist-source-summary-' . $sourceId;
+                                $editId = 'wishlist-source-edit-' . $sourceId;
+                            ?>
+                            <div id="<?= esc($summaryId) ?>" class="wishlist-source-summary">
+                                <div class="wishlist-source-text">
+                                    <span class="shop"><?= esc($source['shop_name'] ?? '') ?></span>
+                                    <?php if ($source['price'] !== null): ?><span class="price">¥<?= number_format((int) $source['price']) ?></span><?php endif; ?>
+                                    <?php if (! empty($source['item_url'])): ?><a href="<?= esc($source['item_url']) ?>" target="_blank" rel="noreferrer">商品頁</a><?php endif; ?>
+                                    <?php if (! empty($source['note'])): ?><span class="muted"><?= esc($source['note']) ?></span><?php endif; ?>
+                                </div>
+                                <div class="wishlist-source-actions">
+                                    <button class="button small js-wishlist-source-edit" type="button" data-summary="#<?= esc($summaryId) ?>" data-form="#<?= esc($editId) ?>">編輯</button>
+                                    <form method="post" action="/wishlist/sources/<?= $sourceId ?>/delete" data-confirm="確定刪除這筆來源？">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
+                                        <button class="button small danger" type="submit">刪除</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <form id="<?= esc($editId) ?>" class="wishlist-source-form" method="post" action="/wishlist/sources/<?= $sourceId ?>" hidden>
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
                                 <select name="shop_id" aria-label="來源店鋪">
@@ -102,14 +134,10 @@
                                 <input name="item_url" value="<?= esc($source['item_url'] ?? '') ?>" placeholder="商品 URL" aria-label="商品 URL">
                                 <input name="note" value="<?= esc($source['note'] ?? '') ?>" placeholder="備註" aria-label="備註">
                                 <button class="button small" type="submit">儲存</button>
-                            </form>
-                            <form class="wishlist-source-delete" method="post" action="/wishlist/sources/<?= (int) $source['id'] ?>/delete" data-confirm="確定刪除這筆來源？">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
-                                <button class="button small danger" type="submit">刪除</button>
+                                <button class="button small ghost js-wishlist-source-cancel" type="button" data-summary="#<?= esc($summaryId) ?>" data-form="#<?= esc($editId) ?>">取消</button>
                             </form>
                         <?php endforeach; ?>
-                        <form class="wishlist-source-form add" method="post" action="/wishlist/books/<?= (int) $book['id'] ?>/sources">
+                        <form id="<?= esc($addFormId) ?>" class="wishlist-source-form add" method="post" action="/wishlist/books/<?= $bookId ?>/sources" hidden>
                             <?= csrf_field() ?>
                             <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
                             <select name="shop_id" aria-label="新增來源店鋪" required>
@@ -122,10 +150,16 @@
                             <input name="item_url" placeholder="商品 URL" aria-label="新增商品 URL">
                             <input name="note" placeholder="備註" aria-label="新增備註">
                             <button class="button small primary" type="submit">加入</button>
+                            <button class="button small ghost js-wishlist-add-cancel" type="button" data-form="#<?= esc($addFormId) ?>">取消</button>
                         </form>
                     </div>
                 </td>
-                <td class="actions"><a class="button small" href="/books/<?= (int) $book['id'] ?>/edit?return_to=<?= $encodedReturnTo ?>">編輯書本</a></td>
+                <td class="actions">
+                    <div class="wishlist-book-actions">
+                        <button class="button small js-wishlist-add-toggle" type="button" data-form="#<?= esc($addFormId) ?>">加入來源</button>
+                        <a class="button small" href="/books/<?= $bookId ?>/edit?return_to=<?= $encodedReturnTo ?>">編輯書本</a>
+                    </div>
+                </td>
             </tr>
         <?php endforeach; ?>
         <?php if ($books === []): ?>
