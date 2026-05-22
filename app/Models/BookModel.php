@@ -20,6 +20,7 @@ class BookModel extends Model
         'event',
         'cover_url',
         'status',
+        'order_id',
         'location_id',
         'note',
     ];
