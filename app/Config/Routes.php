@@ -20,6 +20,10 @@ $routes->post('wishlist/sources/(:num)', 'Wishlist::updateSource/$1');
 $routes->post('wishlist/sources/(:num)/delete', 'Wishlist::deleteSource/$1');
 $routes->get('sources', 'Sources::index');
 
+$routes->get('orders', 'Orders::index');
+$routes->post('orders', 'Orders::create');
+$routes->get('orders/(:num)', 'Orders::show/$1');
+
 $routes->get('shops', 'Shops::index');
 $routes->post('shops', 'Shops::create');
 $routes->post('shops/(:num)', 'Shops::update/$1');
