@@ -89,4 +89,41 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
         </tbody>
     </table>
 </div>
+<script>
+$(function () {
+    function syncOrderRow($row) {
+        var total = 0;
+        var visibleItems = 0;
+
+        $row.find('.js-cart-item').each(function () {
+            var $item = $(this);
+            if ($item.prop('hidden')) return;
+
+            visibleItems += 1;
+            total += parseInt($item.data('price'), 10) || 0;
+        });
+
+        $row.find('.js-cart-total').text(total.toLocaleString());
+        $row.find('.js-cart-order-submit').prop('disabled', visibleItems === 0);
+    }
+
+    $('.js-cart-remove').on('click', function () {
+        var $item = $(this).closest('.js-cart-item');
+        var $row = $item.closest('.js-cart-shop-row');
+        $item.find('.js-cart-book-id').prop('disabled', true);
+        syncOrderRow($row);
+    });
+
+    $('.js-cart-restore').on('click', function () {
+        var $row = $(this).closest('.js-cart-shop-row');
+        $row.find('.js-cart-item').prop('hidden', false);
+        $row.find('.js-cart-book-id').prop('disabled', false);
+        syncOrderRow($row);
+    });
+
+    $('.js-cart-shop-row').each(function () {
+        syncOrderRow($(this));
+    });
+});
+</script>
 <?= $this->endSection() ?>
