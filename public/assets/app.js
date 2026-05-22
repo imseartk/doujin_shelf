@@ -36,6 +36,29 @@ $(function () {
         $($(this).data('form')).prop('hidden', true);
     });
 
+    $('.js-cart-remove').on('click', function () {
+        var $item = $(this).closest('.js-cart-item');
+        var $row = $item.closest('.js-cart-shop-row');
+        $item.prop('hidden', true);
+        updateCartRow($row);
+    });
+
+    function updateCartRow($row) {
+        var total = 0;
+        var visibleItems = 0;
+
+        $row.find('.js-cart-item').each(function () {
+            var $item = $(this);
+            if ($item.prop('hidden')) return;
+
+            visibleItems += 1;
+            total += parseInt($item.data('price'), 10) || 0;
+        });
+
+        $row.find('.js-cart-total').text(total.toLocaleString());
+        $row.find('.js-cart-shop-empty').prop('hidden', visibleItems > 0);
+    }
+
     function showCoverPreview(url) {
         var $preview = $('.js-cover-preview');
         var $empty = $('.js-cover-empty');
