@@ -6,40 +6,39 @@ class Sources extends BaseController
 {
     public function index(): string
     {
-        $rows = db_connect()->table('shops s')
-            ->select('s.id, s.name, s.website_url')
-            ->select("SUM(CASE WHEN b.id IS NULL THEN 0 ELSE 1 END) AS source_count", false)
-            ->select("COUNT(DISTINCT b.id) AS book_count", false)
-            ->select("SUM(CASE WHEN b.id IS NULL THEN 0 ELSE COALESCE(bs.price, 0) END) AS total_price", false)
-            ->join('book_sources bs', 'bs.shop_id = s.id', 'left')
-            ->join('books b', "b.id = bs.book_id AND b.status IN ('wishlist', 'ordered')", 'left')
+        $sources = db_connect()->table('book_sources bs')
+            ->select('bs.id AS source_id, bs.price, bs.item_url')
+            ->select('b.id AS book_id, b.title, b.cover_url')
+            ->select('s.id AS shop_id, s.name AS shop_name, s.website_url')
+            ->join('books b', 'b.id = bs.book_id')
+            ->join('shops s', 's.id = bs.shop_id')
+            ->where('b.status', 'wishlist')
             ->where('s.is_active', 1)
-            ->groupBy('s.id')
-            ->orderBy('book_count', 'DESC')
-            ->orderBy('s.sort_order', 'ASC')
             ->orderBy('s.name', 'ASC')
+            ->orderBy('bs.price', 'ASC')
+            ->orderBy('b.title', 'ASC')
             ->get()
             ->getResultArray();
 
-        $shopId = (int) $this->request->getGet('shop_id');
-        $books = [];
-        if ($shopId > 0) {
-            $books = db_connect()->table('book_sources bs')
-                ->select('bs.*, b.title, b.circle, b.author, b.status, s.name AS shop_name')
-                ->join('books b', 'b.id = bs.book_id')
-                ->join('shops s', 's.id = bs.shop_id')
-                ->where('bs.shop_id', $shopId)
-                ->whereIn('b.status', ['wishlist', 'ordered'])
-                ->orderBy('bs.price', 'ASC')
-                ->orderBy('b.title', 'ASC')
-                ->get()
-                ->getResultArray();
+        $shops = [];
+        foreach ($sources as $source) {
+            $shopId = (int) $source['shop_id'];
+            if (! isset($shops[$shopId])) {
+                $shops[$shopId] = [
+                    'id' => $shopId,
+                    'name' => $source['shop_name'],
+                    'website_url' => $source['website_url'],
+                    'total_price' => 0,
+                    'items' => [],
+                ];
+            }
+
+            $shops[$shopId]['items'][] = $source;
+            $shops[$shopId]['total_price'] += (int) ($source['price'] ?? 0);
         }
 
         return view('sources/index', [
-            'rows' => $rows,
-            'books' => $books,
-            'shopId' => $shopId,
+            'shops' => array_values($shops),
         ]);
     }
 }
