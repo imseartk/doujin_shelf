@@ -8,6 +8,10 @@ class CreateLibrarySchema extends Migration
 {
     public function up(): void
     {
+        if ($this->db->tableExists('books')) {
+            return;
+        }
+
         $this->createLocations();
         $this->createShops();
         $this->createBooks();
