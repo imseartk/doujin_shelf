@@ -11,9 +11,9 @@
     <header class="topbar">
         <a class="brand" href="/books">Doujin Shelf</a>
         <nav class="nav">
-            <a href="/books">書本</a>
-            <a href="/books/new">新增</a>
-            <a href="/sources">來源統計</a>
+            <a href="/books">藏書清單</a>
+            <a href="/wishlist">願望清單</a>
+            <a href="/sources">購物車</a>
             <a href="/shops">店鋪</a>
             <a href="/locations">位置</a>
         </nav>
