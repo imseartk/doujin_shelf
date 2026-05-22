@@ -18,6 +18,7 @@ $routes->get('sources', 'Sources::index');
 
 $routes->get('shops', 'Shops::index');
 $routes->post('shops', 'Shops::create');
+$routes->post('shops/(:num)', 'Shops::update/$1');
 $routes->post('shops/(:num)/delete', 'Shops::delete/$1');
 
 $routes->get('locations', 'Locations::index');
