@@ -110,6 +110,7 @@ $(function () {
     $('.js-cart-remove').on('click', function () {
         var $item = $(this).closest('.js-cart-item');
         var $row = $item.closest('.js-cart-shop-row');
+        $item.prop('hidden', true);
         $item.find('.js-cart-book-id').prop('disabled', true);
         syncOrderRow($row);
     });
