@@ -15,6 +15,27 @@ $(function () {
         $('.js-source-list').append(template.innerHTML);
     });
 
+    $('.js-wishlist-source-edit, .js-wishlist-add-toggle').on('click', function () {
+        var $form = $($(this).data('form'));
+        var $summary = $($(this).data('summary'));
+        if (!$form.length) return;
+
+        $form.prop('hidden', false);
+        if ($summary.length) $summary.prop('hidden', true);
+        $form.find('select, input').filter(':visible').first().trigger('focus');
+    });
+
+    $('.js-wishlist-source-cancel').on('click', function () {
+        var $form = $($(this).data('form'));
+        var $summary = $($(this).data('summary'));
+        $form.prop('hidden', true);
+        if ($summary.length) $summary.prop('hidden', false);
+    });
+
+    $('.js-wishlist-add-cancel').on('click', function () {
+        $($(this).data('form')).prop('hidden', true);
+    });
+
     function showCoverPreview(url) {
         var $preview = $('.js-cover-preview');
         var $empty = $('.js-cover-empty');
