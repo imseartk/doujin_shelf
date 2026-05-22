@@ -14,6 +14,7 @@ $routes->get('books/(:num)/edit', 'Books::edit/$1');
 $routes->post('books/(:num)', 'Books::update/$1');
 $routes->post('books/(:num)/delete', 'Books::delete/$1');
 
+$routes->get('wishlist', 'Wishlist::index');
 $routes->get('sources', 'Sources::index');
 
 $routes->get('shops', 'Shops::index');
