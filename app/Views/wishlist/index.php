@@ -1,6 +1,20 @@
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
+<style>
+.wishlist-table { min-width: 1180px; }
+.wishlist-table .title-main + .muted { margin-bottom: 8px; }
+.wishlist-sources { display: grid; gap: 6px; min-width: 620px; }
+.wishlist-source-form { display: grid; grid-template-columns: minmax(130px, 170px) 88px minmax(180px, 1fr) minmax(120px, 180px) auto; gap: 6px; align-items: center; }
+.wishlist-source-form input, .wishlist-source-form select { min-width: 0; padding: 6px 8px; }
+.wishlist-source-form.add { border-top: 1px solid #edf0ed; margin-top: 3px; padding-top: 8px; }
+.wishlist-source-delete { display: flex; justify-content: flex-end; margin: -2px 0 4px; }
+.compact-tags { min-width: 0; margin-top: 8px; }
+@media (max-width: 900px) {
+    .wishlist-sources { min-width: 360px; }
+    .wishlist-source-form { grid-template-columns: 1fr; }
+}
+</style>
 <?php
     $request = service('request');
     $uri = $request->getUri();
