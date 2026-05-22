@@ -10,7 +10,7 @@ class Shops extends BaseController
     public function index(): string
     {
         return view('shops/index', [
-            'shops' => (new ShopModel())->orderBy('sort_order', 'ASC')->orderBy('name', 'ASC')->findAll(),
+            'shops' => (new ShopModel())->orderBy('name', 'ASC')->findAll(),
         ]);
     }
 
