@@ -4,6 +4,12 @@
 <?php
     $request = service('request');
     $uri = $request->getUri();
+    $listMode = $listMode ?? 'books';
+    $listPath = $listMode === 'wishlist' ? '/wishlist' : '/books';
+    $listTitle = $listMode === 'wishlist' ? '願望清單' : '藏書清單';
+    $listIntro = $listMode === 'wishlist'
+        ? '管理還在尋找或等待購入的書本，先從目前已記錄的店鋪來源開始整理。'
+        : '用關鍵字快速查重，或用狀態和店鋪篩選願望清單。點欄位標題可以排序目前顯示的結果。';
     $returnTo = '/' . ltrim($uri->getPath(), '/');
     $query = $uri->getQuery();
     if ($query !== '') {
@@ -26,20 +32,24 @@
 ?>
 <section class="page-head">
     <div>
-        <h1>書本清單</h1>
-        <p>用關鍵字快速查重，或用狀態和店鋪篩選願望清單。點欄位標題可以排序目前顯示的結果。</p>
+        <h1><?= esc($listTitle) ?></h1>
+        <p><?= esc($listIntro) ?></p>
     </div>
     <a class="button primary" href="/books/new?return_to=<?= $encodedReturnTo ?>">新增書本</a>
 </section>
 
-<form class="toolbar" method="get" action="/books">
+<form class="toolbar" method="get" action="<?= esc($listPath) ?>">
     <input type="search" name="q" value="<?= esc($q) ?>" placeholder="搜尋標題、社團、作者、首字、tag、原作、角色">
-    <select name="status">
-        <option value="">所有狀態</option>
-        <?php foreach ($statusOptions as $value => $label): ?>
-            <option value="<?= esc($value) ?>" <?= $status === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
-        <?php endforeach; ?>
-    </select>
+    <?php if ($listMode === 'wishlist'): ?>
+        <input type="hidden" name="status" value="wishlist">
+    <?php else: ?>
+        <select name="status">
+            <option value="">所有狀態</option>
+            <?php foreach ($statusOptions as $value => $label): ?>
+                <option value="<?= esc($value) ?>" <?= $status === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
+            <?php endforeach; ?>
+        </select>
+    <?php endif; ?>
     <select name="shop_id">
         <option value="0">所有店鋪來源</option>
         <?php foreach ($shops as $shop): ?>
@@ -47,7 +57,7 @@
         <?php endforeach; ?>
     </select>
     <button class="button" type="submit">搜尋</button>
-    <a class="button ghost" href="/books">清除</a>
+    <a class="button ghost" href="<?= esc($listPath) ?>">清除</a>
 </form>
 
 <div class="table-wrap">
