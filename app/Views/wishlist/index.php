@@ -6,6 +6,7 @@
 .wishlist-table .title-main + .muted { margin-bottom: 8px; }
 .wishlist-sources { display: grid; gap: 8px; min-width: 520px; }
 .wishlist-source-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid #edf0ed; }
+.wishlist-source-summary[hidden], .wishlist-source-form[hidden] { display: none; }
 .wishlist-source-text { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; line-height: 1.5; }
 .wishlist-source-text .shop { font-weight: 700; }
 .wishlist-source-text .price { white-space: nowrap; }
