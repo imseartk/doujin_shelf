@@ -2,9 +2,9 @@
 
 <?= $this->section('content') ?>
 <style>
-.cart-table { min-width: 980px; }
+.cart-table { min-width: 1080px; }
 .cart-table .shop-col { width: 205px; }
-.cart-table .total-col { width: 130px; text-align: right; }
+.cart-table .total-col { width: 180px; text-align: right; }
 .cart-table td.total-col { font-size: 16px; font-weight: 700; white-space: nowrap; }
 .cart-shop-name { font-size: 16px; font-weight: 700; }
 .cart-items { display: flex; gap: 14px; flex-wrap: wrap; align-items: start; min-height: 166px; }
@@ -17,8 +17,11 @@
 .cart-title { display: -webkit-box; overflow: hidden; color: var(--text); font-size: 13px; font-weight: 700; line-height: 1.35; text-decoration: none; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 a.cart-title { color: var(--accent-dark); text-decoration: underline; }
 .cart-price { font-weight: 700; white-space: nowrap; line-height: 1.25; }
+.cart-actions { display: grid; gap: 8px; justify-items: end; margin-top: 10px; }
+.cart-actions form { margin: 0; }
+.cart-actions .button { width: 100%; justify-content: center; }
 @media (max-width: 900px) {
-    .cart-table { min-width: 760px; }
+    .cart-table { min-width: 820px; }
     .cart-items { min-height: 0; }
 }
 </style>
@@ -40,6 +43,7 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
         </thead>
         <tbody>
         <?php foreach ($shops as $shop): ?>
+            <?php $formId = 'cart-order-' . (int) $shop['id']; ?>
             <tr class="js-cart-shop-row">
                 <td>
                     <div class="cart-shop-name"><?= esc($shop['name']) ?></div>
@@ -49,6 +53,7 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
                     <div class="cart-items">
                         <?php foreach ($shop['items'] as $item): ?>
                             <article class="cart-item js-cart-item" data-price="<?= (int) ($item['price'] ?? 0) ?>">
+                                <input class="js-cart-book-id" type="hidden" name="book_ids[]" value="<?= (int) $item['book_id'] ?>" form="<?= esc($formId) ?>">
                                 <button class="cart-remove js-cart-remove" type="button" aria-label="從本頁試算移除">取消</button>
                                 <?php if (! empty($item['cover_url'])): ?>
                                     <img class="cart-cover" src="<?= esc($item['cover_url']) ?>" alt="">
@@ -65,7 +70,17 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
                         <?php endforeach; ?>
                     </div>
                 </td>
-                <td class="total-col">¥<span class="js-cart-total"><?= number_format((int) $shop['total_price']) ?></span></td>
+                <td class="total-col">
+                    ¥<span class="js-cart-total"><?= number_format((int) $shop['total_price']) ?></span>
+                    <div class="cart-actions">
+                        <button class="button small ghost js-cart-restore" type="button">恢復全部</button>
+                        <form id="<?= esc($formId) ?>" method="post" action="/orders" data-confirm="確定要把目前保留的這批書建立成訂單？">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="shop_id" value="<?= (int) $shop['id'] ?>">
+                            <button class="button small primary js-cart-order-submit" type="submit">建立訂單</button>
+                        </form>
+                    </div>
+                </td>
             </tr>
         <?php endforeach; ?>
         <?php if ($shops === []): ?>
