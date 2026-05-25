@@ -12,6 +12,7 @@ $routes->post('books/taxonomy/(:segment)', 'Books::taxonomyStore/$1');
 $routes->post('books', 'Books::create');
 $routes->get('books/(:num)/edit', 'Books::edit/$1');
 $routes->post('books/(:num)', 'Books::update/$1');
+$routes->post('books/(:num)/cover', 'BookCovers::upload/$1');
 $routes->post('books/(:num)/delete', 'Books::delete/$1');
 
 $routes->get('wishlist', 'Wishlist::index');
