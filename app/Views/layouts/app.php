@@ -8,6 +8,13 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 <body>
+    <?php
+        $request = service('request');
+        $currentPath = '/' . ltrim($request->getUri()->getPath(), '/');
+        $currentQuery = $request->getUri()->getQuery();
+        $returnTo = $currentPath . ($currentQuery !== '' ? '?' . $currentQuery : '');
+        $headerSearch = $currentPath === '/books' ? (string) $request->getGet('q') : '';
+    ?>
     <header class="topbar">
         <a class="brand" href="/books">Doujin Shelf</a>
         <nav class="nav">
@@ -18,6 +25,18 @@
             <a href="/shops">店鋪</a>
             <a href="/locations">位置</a>
         </nav>
+        <div class="topbar-tools">
+            <form class="topbar-search" method="get" action="/books">
+                <input type="search" name="q" value="<?= esc($headerSearch) ?>" placeholder="搜尋藏書">
+                <button class="button small" type="submit">搜尋</button>
+            </form>
+            <form class="cover-privacy-form" method="post" action="/preferences/cover-privacy">
+                <?= csrf_field() ?>
+                <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
+                <input type="hidden" name="hide_covers" value="<?= covers_hidden() ? '0' : '1' ?>">
+                <button class="button small <?= covers_hidden() ? 'primary' : 'ghost' ?>" type="submit"><?= covers_hidden() ? '顯示圖片' : '遮蔽圖片' ?></button>
+            </form>
+        </div>
     </header>
 
     <main class="page">
