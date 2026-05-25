@@ -59,11 +59,12 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
                         <td>
                             <div class="cart-items">
                                 <?php foreach ($shop['items'] as $item): ?>
+                                    <?php $displayCoverUrl = cover_display_url($item['cover_url'] ?? ''); ?>
                                     <article class="cart-item js-cart-item" data-price="<?= (int) ($item['price'] ?? 0) ?>">
                                         <input class="js-cart-book-id" type="hidden" name="book_ids[]" value="<?= (int) $item['book_id'] ?>" form="<?= esc($formId) ?>">
                                         <button class="cart-remove js-cart-remove" type="button" aria-label="從本頁試算移除">取消</button>
                                         <?php if (! empty($item['cover_url'])): ?>
-                                            <img class="cart-cover" src="<?= esc($item['cover_url']) ?>" alt="">
+                                            <img class="cart-cover" src="<?= esc($displayCoverUrl) ?>" alt="">
                                         <?php else: ?>
                                             <div class="cart-cover-empty">no image</div>
                                         <?php endif; ?>
