@@ -15,6 +15,8 @@ $routes->post('books/(:num)', 'Books::update/$1');
 $routes->post('books/(:num)/cover', 'BookCovers::upload/$1');
 $routes->post('books/(:num)/delete', 'Books::delete/$1');
 
+$routes->post('preferences/cover-privacy', 'Preferences::coverPrivacy');
+
 $routes->get('wishlist', 'Wishlist::index');
 $routes->post('wishlist/books/(:num)/sources', 'Wishlist::createSource/$1');
 $routes->post('wishlist/sources/(:num)', 'Wishlist::updateSource/$1');
