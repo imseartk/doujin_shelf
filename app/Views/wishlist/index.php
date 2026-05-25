@@ -83,11 +83,12 @@
                 $bookId = (int) $book['id'];
                 $bookSources = $sourcesByBook[$bookId] ?? [];
                 $addFormId = 'wishlist-add-' . $bookId;
+                $displayCoverUrl = cover_display_url($book['cover_url'] ?? '');
             ?>
             <tr>
                 <td data-sort-value="<?= ! empty($book['cover_url']) ? 1 : 0 ?>">
                     <?php if (! empty($book['cover_url'])): ?>
-                        <img class="cover-thumb" src="<?= esc($book['cover_url']) ?>" alt="">
+                        <img class="cover-thumb" src="<?= esc($displayCoverUrl) ?>" alt="">
                     <?php else: ?>
                         <div class="cover-empty">no image</div>
                     <?php endif; ?>
