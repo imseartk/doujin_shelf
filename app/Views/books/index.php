@@ -124,4 +124,83 @@
 <div class="cover-lightbox js-cover-lightbox" hidden>
     <img class="js-cover-lightbox-image" src="" alt="">
 </div>
+
+<script>
+$(function () {
+    var $lightbox = $('.js-cover-lightbox');
+    var $lightboxImage = $('.js-cover-lightbox-image');
+
+    $('.js-cover-lightbox-open').on('click', function () {
+        $lightboxImage.attr('src', $(this).data('cover-url'));
+        $lightbox.prop('hidden', false);
+    });
+
+    $lightbox.on('click', function (event) {
+        if (event.target !== this) return;
+        $lightbox.prop('hidden', true);
+        $lightboxImage.attr('src', '');
+    });
+
+    $(document).on('keydown', function (event) {
+        if (event.key === 'Escape') {
+            $lightbox.prop('hidden', true);
+            $lightboxImage.attr('src', '');
+        }
+    });
+
+    $('.js-cover-upload-trigger').on('click', function () {
+        var bookId = $(this).data('book-id');
+        $('.js-cover-upload-file[data-book-id="' + bookId + '"]').trigger('click');
+    });
+
+    $('.js-cover-upload-file').on('change', function () {
+        var input = this;
+        var bookId = $(input).data('book-id');
+        var file = input.files && input.files[0];
+        if (!file) return;
+
+        var $cell = $(input).closest('td');
+        var $status = $cell.find('.js-cover-upload-status');
+        var $trigger = $cell.find('.js-cover-upload-trigger');
+        var $csrf = $('.js-book-cover-upload-csrf input[type="hidden"]').first();
+        var formData = new FormData();
+
+        formData.append('cover_file', file);
+        if ($csrf.length) formData.append($csrf.attr('name'), $csrf.val());
+
+        $status.removeClass('error').text('上傳中...');
+        $trigger.prop('disabled', true);
+
+        $.ajax({
+            url: '/books/' + bookId + '/cover',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json'
+        }).done(function (response) {
+            if (response && response.csrf && $csrf.length) $csrf.val(response.csrf);
+            if (!response || !response.cover_url) return;
+
+            $cell.attr('data-sort-value', '1');
+            $cell.empty().append(
+                $('<button type="button" class="cover-action js-cover-lightbox-open" aria-label="檢視封面大圖"></button>')
+                    .attr('data-cover-url', response.cover_url)
+                    .append($('<img class="cover-thumb" alt="">').attr('src', response.cover_url))
+                    .on('click', function () {
+                        $lightboxImage.attr('src', response.cover_url);
+                        $lightbox.prop('hidden', false);
+                    })
+            );
+        }).fail(function (xhr) {
+            var response = xhr.responseJSON || {};
+            if (response.csrf && $csrf.length) $csrf.val(response.csrf);
+            $status.addClass('error').text(response.message || '上傳失敗');
+        }).always(function () {
+            input.value = '';
+            $trigger.prop('disabled', false);
+        });
+    });
+});
+</script>
 <?= $this->endSection() ?>
