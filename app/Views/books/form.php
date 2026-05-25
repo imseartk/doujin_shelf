@@ -7,6 +7,9 @@
     if ($returnTo === '' || str_starts_with($returnTo, '//') || ! str_starts_with($returnTo, '/books') || preg_match('#^/books/\d+/edit#', $returnTo) === 1) {
         $returnTo = '/books';
     }
+    $coverInputClass = covers_hidden() ? '' : 'js-cover-url';
+    $coverFileClass = covers_hidden() ? '' : 'js-cover-file';
+    $displayCoverUrl = cover_display_url($book['cover_url'] ?? '');
 ?>
 <section class="page-head">
     <div>
@@ -70,10 +73,10 @@
                 </select>
             </label>
             <label class="span-2">封面圖片 URL
-                <input class="js-cover-url" name="cover_url" value="<?= esc($book['cover_url'] ?? '') ?>" maxlength="500" placeholder="可貼外部 URL，或使用下方上傳">
+                <input class="<?= esc($coverInputClass) ?>" name="cover_url" value="<?= esc($book['cover_url'] ?? '') ?>" maxlength="500" placeholder="可貼外部 URL，或使用下方上傳">
             </label>
             <label class="span-2">上傳封面
-                <input class="js-cover-file" type="file" name="cover_file" accept="image/jpeg,image/png,image/webp,image/gif">
+                <input class="<?= esc($coverFileClass) ?>" type="file" name="cover_file" accept="image/jpeg,image/png,image/webp,image/gif">
                 <span class="field-hint">支援 JPG、PNG、WEBP、GIF，最大 8MB。上傳後會自動覆蓋封面 URL。</span>
             </label>
             <label class="span-2">備註
@@ -82,7 +85,7 @@
         </div>
         <div class="cover-preview-wrap">
             <div class="cover-empty js-cover-empty">cover preview</div>
-            <img class="cover-preview js-cover-preview" src="<?= esc($book['cover_url'] ?? '') ?>" alt="">
+            <img class="cover-preview js-cover-preview" src="<?= esc($displayCoverUrl) ?>" alt="">
         </div>
     </section>
 
