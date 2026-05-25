@@ -41,6 +41,7 @@ class BookCovers extends BaseController
 
         return $this->response->setJSON([
             'cover_url' => $coverUrl,
+            'display_cover_url' => cover_display_url($coverUrl),
             'csrf' => csrf_hash(),
         ]);
     }
