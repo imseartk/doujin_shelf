@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/assets/app.css?v=<?= filemtime(FCPATH . 'assets/app.css') ?>">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
-<body>
+<body data-hide-covers="<?= covers_hidden() ? '1' : '0' ?>" data-cover-placeholder="<?= esc(cover_placeholder_url()) ?>">
     <?php
         $request = service('request');
         $currentPath = '/' . ltrim($request->getUri()->getPath(), '/');
