@@ -24,6 +24,15 @@
         return $html . '</div>';
     };
 ?>
+<style>
+.cover-action { display: inline-grid; place-items: center; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.cover-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.cover-upload-status { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.25; }
+.cover-upload-status.error { color: #b42318; }
+.cover-lightbox { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 24px; background: rgba(15, 23, 20, 0.72); }
+.cover-lightbox[hidden] { display: none; }
+.cover-lightbox img { max-width: min(92vw, 720px); max-height: 88vh; object-fit: contain; border-radius: 8px; box-shadow: 0 20px 70px rgba(0, 0, 0, 0.35); background: #fff; }
+</style>
 <section class="page-head">
     <div>
         <h1>藏書清單</h1>
@@ -43,6 +52,8 @@
     <button class="button" type="submit">搜尋</button>
     <a class="button ghost" href="/books">清除</a>
 </form>
+
+<div class="js-book-cover-upload-csrf" hidden><?= csrf_field() ?></div>
 
 <div class="table-wrap">
     <table class="data-table books-table js-sortable-table">
@@ -71,9 +82,15 @@
                 <td data-sort-value="<?= esc($statusOptions[$book['status']] ?? $book['status']) ?>"><span class="status status-<?= esc($book['status']) ?>"><?= esc($statusOptions[$book['status']] ?? $book['status']) ?></span></td>
                 <td data-sort-value="<?= ! empty($book['cover_url']) ? 1 : 0 ?>">
                     <?php if (! empty($book['cover_url'])): ?>
-                        <img class="cover-thumb" src="<?= esc($book['cover_url']) ?>" alt="">
+                        <button class="cover-action js-cover-lightbox-open" type="button" data-cover-url="<?= esc($book['cover_url']) ?>" aria-label="檢視封面大圖">
+                            <img class="cover-thumb" src="<?= esc($book['cover_url']) ?>" alt="">
+                        </button>
                     <?php else: ?>
-                        <div class="cover-empty">no image</div>
+                        <button class="cover-action js-cover-upload-trigger" type="button" data-book-id="<?= (int) $book['id'] ?>" aria-label="上傳封面">
+                            <span class="cover-empty">no image</span>
+                        </button>
+                        <input class="js-cover-upload-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-book-id="<?= (int) $book['id'] ?>" hidden>
+                        <span class="cover-upload-status js-cover-upload-status" data-book-id="<?= (int) $book['id'] ?>"></span>
                     <?php endif; ?>
                 </td>
                 <td data-sort-value="<?= esc($book['title']) ?>">
@@ -102,5 +119,9 @@
         <?php endif; ?>
         </tbody>
     </table>
+</div>
+
+<div class="cover-lightbox js-cover-lightbox" hidden>
+    <img class="js-cover-lightbox-image" src="" alt="">
 </div>
 <?= $this->endSection() ?>
