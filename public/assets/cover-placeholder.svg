@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="336" viewBox="0 0 240 336" role="img" aria-label="Cover hidden">
+  <rect width="240" height="336" rx="12" fill="#edf2ef"/>
+  <rect x="28" y="36" width="184" height="264" rx="8" fill="#ffffff" stroke="#bcc8c1" stroke-width="4"/>
+  <path d="M58 92h124M58 124h124M58 156h82" stroke="#8ca09a" stroke-width="12" stroke-linecap="round"/>
+  <rect x="58" y="202" width="124" height="54" rx="8" fill="#d8e4df"/>
+  <path d="M82 229h76" stroke="#7f928c" stroke-width="10" stroke-linecap="round"/>
+  <text x="120" y="286" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#4c5a56">IMAGE OFF</text>
+</svg>
