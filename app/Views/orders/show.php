@@ -29,9 +29,10 @@
     <h2>這批書</h2>
     <div class="order-books">
         <?php foreach ($books as $book): ?>
+            <?php $displayCoverUrl = cover_display_url($book['cover_url'] ?? ''); ?>
             <article class="order-book">
                 <?php if (! empty($book['cover_url'])): ?>
-                    <img class="order-book-cover" src="<?= esc($book['cover_url']) ?>" alt="">
+                    <img class="order-book-cover" src="<?= esc($displayCoverUrl) ?>" alt="">
                 <?php else: ?>
                     <div class="order-book-empty">no image</div>
                 <?php endif; ?>
