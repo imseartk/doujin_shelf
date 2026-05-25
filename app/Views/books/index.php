@@ -77,13 +77,14 @@
             <?php
                 $locationText = trim(($book['parent_location_name'] ? $book['parent_location_name'] . ' / ' : '') . ($book['location_name'] ?? ''));
                 $sourceSort = $book['min_price'] !== null ? (int) $book['min_price'] : 999999999;
+                $displayCoverUrl = cover_display_url($book['cover_url'] ?? '');
             ?>
             <tr>
                 <td data-sort-value="<?= esc($statusOptions[$book['status']] ?? $book['status']) ?>"><span class="status status-<?= esc($book['status']) ?>"><?= esc($statusOptions[$book['status']] ?? $book['status']) ?></span></td>
                 <td data-sort-value="<?= ! empty($book['cover_url']) ? 1 : 0 ?>">
                     <?php if (! empty($book['cover_url'])): ?>
-                        <button class="cover-action js-cover-lightbox-open" type="button" data-cover-url="<?= esc($book['cover_url']) ?>" aria-label="檢視封面大圖">
-                            <img class="cover-thumb" src="<?= esc($book['cover_url']) ?>" alt="">
+                        <button class="cover-action js-cover-lightbox-open" type="button" data-cover-url="<?= esc($displayCoverUrl) ?>" aria-label="檢視封面大圖">
+                            <img class="cover-thumb" src="<?= esc($displayCoverUrl) ?>" alt="">
                         </button>
                     <?php else: ?>
                         <button class="cover-action js-cover-upload-trigger" type="button" data-book-id="<?= (int) $book['id'] ?>" aria-label="上傳封面">
@@ -180,15 +181,16 @@ $(function () {
             dataType: 'json'
         }).done(function (response) {
             if (response && response.csrf && $csrf.length) $csrf.val(response.csrf);
-            if (!response || !response.cover_url) return;
+            var displayCoverUrl = response && (response.display_cover_url || response.cover_url);
+            if (!displayCoverUrl) return;
 
             $cell.attr('data-sort-value', '1');
             $cell.empty().append(
                 $('<button type="button" class="cover-action js-cover-lightbox-open" aria-label="檢視封面大圖"></button>')
-                    .attr('data-cover-url', response.cover_url)
-                    .append($('<img class="cover-thumb" alt="">').attr('src', response.cover_url))
+                    .attr('data-cover-url', displayCoverUrl)
+                    .append($('<img class="cover-thumb" alt="">').attr('src', displayCoverUrl))
                     .on('click', function () {
-                        $lightboxImage.attr('src', response.cover_url);
+                        $lightboxImage.attr('src', displayCoverUrl);
                         $lightbox.prop('hidden', false);
                     })
             );
