@@ -27,7 +27,7 @@ a { color: var(--accent-dark); }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 24px;
+    gap: 18px;
     min-height: 56px;
     padding: 0 24px;
     background: #233235;
@@ -50,6 +50,28 @@ a { color: var(--accent-dark); }
     border-radius: 6px;
 }
 .nav a:hover { background: rgba(255,255,255,.1); color: #fff; }
+.topbar-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.topbar-search {
+    display: grid;
+    grid-template-columns: minmax(160px, 240px) auto;
+    gap: 6px;
+    align-items: center;
+}
+.topbar-search input[type="search"] {
+    min-height: 30px;
+    padding: 5px 8px;
+    border-color: rgba(255,255,255,.32);
+    background: rgba(255,255,255,.96);
+}
+.cover-privacy-form { margin: 0; }
+.cover-privacy-form .button.ghost { color: #dbe7e4; border-color: rgba(255,255,255,.32); }
+.cover-privacy-form .button.primary { border-color: #c9dfd9; }
 
 .page {
     width: min(1500px, calc(100% - 32px));
@@ -384,6 +406,9 @@ label input, label select, label textarea { font-weight: 400; }
 
 @media (max-width: 900px) {
     .topbar, .page-head { flex-direction: column; align-items: stretch; }
+    .topbar-tools, .topbar-search { width: 100%; }
+    .topbar-search { grid-template-columns: minmax(0, 1fr) auto; }
+    .cover-privacy-form .button { width: 100%; }
     .page { width: min(100% - 20px, 1500px); margin-top: 14px; }
     .form-grid { grid-template-columns: 1fr; }
     .fields.two { grid-template-columns: 1fr; }
