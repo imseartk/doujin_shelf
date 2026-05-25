@@ -2,11 +2,14 @@
 
 <?= $this->section('content') ?>
 <style>
-.cart-table { min-width: 1080px; }
-.cart-table .shop-col { width: 205px; }
+.cart-shop-block { margin-bottom: 24px; }
+.cart-shop-block .table-wrap { margin-top: 0; }
+.cart-table { min-width: 940px; }
+.cart-table .shop-col { width: 220px; }
 .cart-table .total-col { width: 180px; text-align: right; }
 .cart-table td.total-col { font-size: 16px; font-weight: 700; white-space: nowrap; }
 .cart-shop-name { font-size: 16px; font-weight: 700; }
+.cart-shop-meta { display: grid; gap: 4px; margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.45; }
 .cart-items { display: flex; gap: 14px; flex-wrap: wrap; align-items: start; min-height: 166px; }
 .cart-item { position: relative; display: grid; gap: 2px; width: 138px; text-align: center; }
 .cart-item[hidden] { display: none; }
@@ -21,7 +24,7 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
 .cart-actions form { margin: 0; }
 .cart-actions .button { width: 100%; justify-content: center; }
 @media (max-width: 900px) {
-    .cart-table { min-width: 820px; }
+    .cart-table { min-width: 760px; }
     .cart-items { min-height: 0; }
 }
 </style>
@@ -32,63 +35,73 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
     </div>
 </section>
 
-<div class="table-wrap">
-    <table class="data-table cart-table">
-        <thead>
-            <tr>
-                <th class="shop-col">店鋪</th>
-                <th>願望清單</th>
-                <th class="total-col">合計價格</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php foreach ($shops as $shop): ?>
-            <?php $formId = 'cart-order-' . (int) $shop['id']; ?>
-            <tr class="js-cart-shop-row">
-                <td>
-                    <div class="cart-shop-name"><?= esc($shop['name']) ?></div>
-                    <?php if (! empty($shop['website_url'])): ?><div class="muted"><a href="<?= esc($shop['website_url']) ?>" target="_blank" rel="noreferrer">店鋪網站</a></div><?php endif; ?>
-                </td>
-                <td>
-                    <div class="cart-items">
-                        <?php foreach ($shop['items'] as $item): ?>
-                            <article class="cart-item js-cart-item" data-price="<?= (int) ($item['price'] ?? 0) ?>">
-                                <input class="js-cart-book-id" type="hidden" name="book_ids[]" value="<?= (int) $item['book_id'] ?>" form="<?= esc($formId) ?>">
-                                <button class="cart-remove js-cart-remove" type="button" aria-label="從本頁試算移除">取消</button>
-                                <?php if (! empty($item['cover_url'])): ?>
-                                    <img class="cart-cover" src="<?= esc($item['cover_url']) ?>" alt="">
-                                <?php else: ?>
-                                    <div class="cart-cover-empty">no image</div>
-                                <?php endif; ?>
-                                <?php if (! empty($item['item_url'])): ?>
-                                    <a class="cart-title" href="<?= esc($item['item_url']) ?>" target="_blank" rel="noreferrer" title="<?= esc($item['title']) ?>"><?= esc($item['title']) ?></a>
-                                <?php else: ?>
-                                    <span class="cart-title" title="<?= esc($item['title']) ?>"><?= esc($item['title']) ?></span>
-                                <?php endif; ?>
-                                <span class="cart-price"><?= $item['price'] === null ? '未填價格' : '¥' . number_format((int) $item['price']) ?></span>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
-                </td>
-                <td class="total-col">
-                    ¥<span class="js-cart-total"><?= number_format((int) $shop['total_price']) ?></span>
-                    <div class="cart-actions">
-                        <button class="button small ghost js-cart-restore" type="button">恢復全部</button>
-                        <form id="<?= esc($formId) ?>" method="post" action="/orders" data-confirm="確定要把目前保留的這批書建立成訂單？">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="shop_id" value="<?= (int) $shop['id'] ?>">
-                            <button class="button small primary js-cart-order-submit" type="submit">建立訂單</button>
-                        </form>
-                    </div>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-        <?php if ($shops === []): ?>
-            <tr><td colspan="3" class="empty">目前沒有已記錄店鋪來源的願望清單。</td></tr>
-        <?php endif; ?>
-        </tbody>
-    </table>
-</div>
+<?php foreach ($shops as $shop): ?>
+    <?php $formId = 'cart-order-' . (int) $shop['id']; ?>
+    <section class="cart-shop-block js-cart-shop-row">
+        <div class="table-wrap">
+            <table class="data-table cart-table">
+                <thead>
+                    <tr>
+                        <th class="shop-col">店鋪</th>
+                        <th>願望清單</th>
+                        <th class="total-col">合計價格</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="cart-shop-name"><?= esc($shop['name']) ?></div>
+                            <div class="cart-shop-meta">
+                                <span>目前保留 <strong class="js-cart-count"><?= number_format(count($shop['items'])) ?></strong> 本</span>
+                                <?php if (! empty($shop['website_url'])): ?><a href="<?= esc($shop['website_url']) ?>" target="_blank" rel="noreferrer">店鋪網站</a><?php endif; ?>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="cart-items">
+                                <?php foreach ($shop['items'] as $item): ?>
+                                    <article class="cart-item js-cart-item" data-price="<?= (int) ($item['price'] ?? 0) ?>">
+                                        <input class="js-cart-book-id" type="hidden" name="book_ids[]" value="<?= (int) $item['book_id'] ?>" form="<?= esc($formId) ?>">
+                                        <button class="cart-remove js-cart-remove" type="button" aria-label="從本頁試算移除">取消</button>
+                                        <?php if (! empty($item['cover_url'])): ?>
+                                            <img class="cart-cover" src="<?= esc($item['cover_url']) ?>" alt="">
+                                        <?php else: ?>
+                                            <div class="cart-cover-empty">no image</div>
+                                        <?php endif; ?>
+                                        <?php if (! empty($item['item_url'])): ?>
+                                            <a class="cart-title" href="<?= esc($item['item_url']) ?>" target="_blank" rel="noreferrer" title="<?= esc($item['title']) ?>"><?= esc($item['title']) ?></a>
+                                        <?php else: ?>
+                                            <span class="cart-title" title="<?= esc($item['title']) ?>"><?= esc($item['title']) ?></span>
+                                        <?php endif; ?>
+                                        <span class="cart-price"><?= $item['price'] === null ? '未填價格' : '¥' . number_format((int) $item['price']) ?></span>
+                                    </article>
+                                <?php endforeach; ?>
+                            </div>
+                        </td>
+                        <td class="total-col">
+                            ¥<span class="js-cart-total"><?= number_format((int) $shop['total_price']) ?></span>
+                            <div class="cart-actions">
+                                <button class="button small ghost js-cart-restore" type="button">恢復全部</button>
+                                <form id="<?= esc($formId) ?>" method="post" action="/orders" data-confirm="確定要把目前保留的這批書建立成訂單？">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="shop_id" value="<?= (int) $shop['id'] ?>">
+                                    <button class="button small primary js-cart-order-submit" type="submit">建立訂單</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+<?php endforeach; ?>
+<?php if ($shops === []): ?>
+    <div class="table-wrap">
+        <table class="data-table">
+            <tbody><tr><td class="empty">目前沒有已記錄店鋪來源的願望清單。</td></tr></tbody>
+        </table>
+    </div>
+<?php endif; ?>
+
 <script>
 $(function () {
     function syncOrderRow($row) {
@@ -104,6 +117,7 @@ $(function () {
         });
 
         $row.find('.js-cart-total').text(total.toLocaleString());
+        $row.find('.js-cart-count').text(visibleItems.toLocaleString());
         $row.find('.js-cart-order-submit').prop('disabled', visibleItems === 0);
     }
 
