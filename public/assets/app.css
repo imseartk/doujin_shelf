@@ -379,6 +379,9 @@ label input, label select, label textarea { font-weight: 400; }
     background: #fff;
     box-shadow: 0 8px 20px rgba(20, 35, 32, .12);
 }
+.taxonomy-suggestions[hidden] {
+    display: none;
+}
 .taxonomy-suggestion {
     border: 0;
     border-radius: 4px;
