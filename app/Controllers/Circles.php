@@ -17,6 +17,10 @@ class Circles extends BaseController
     public function index(): string
     {
         $q = trim((string) $this->request->getGet('q'));
+        $tracked = trim((string) $this->request->getGet('tracked'));
+        $priority = trim((string) $this->request->getGet('priority'));
+        $page = max(1, (int) $this->request->getGet('page'));
+        $perPage = 30;
         $db = db_connect();
 
         $builder = $db->table('circles c')
@@ -33,18 +37,53 @@ class Circles extends BaseController
                 ->groupEnd();
         }
 
+        if ($tracked === '1' || $tracked === '0') {
+            $builder->where('c.is_tracked', (int) $tracked);
+        }
+
+        if ($priority !== '' && array_key_exists($priority, self::PRIORITY_OPTIONS)) {
+            $builder->where('c.priority', $priority);
+        }
+
+        $countBuilder = $db->table('circles c')->select('COUNT(*) AS total', false);
+        if ($q !== '') {
+            $countBuilder->groupStart()
+                ->like('c.name', $q)
+                ->orLike('c.name_kana', $q)
+                ->orLike('c.note', $q)
+                ->groupEnd();
+        }
+        if ($tracked === '1' || $tracked === '0') {
+            $countBuilder->where('c.is_tracked', (int) $tracked);
+        }
+        if ($priority !== '' && array_key_exists($priority, self::PRIORITY_OPTIONS)) {
+            $countBuilder->where('c.priority', $priority);
+        }
+
+        $total = (int) $countBuilder->get()->getRow('total');
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page = min($page, $totalPages);
+        $offset = ($page - 1) * $perPage;
+
         $circles = $builder
             ->groupBy('c.id')
             ->orderBy('c.is_tracked', 'DESC')
             ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
             ->orderBy('c.name', 'ASC')
+            ->limit($perPage, $offset)
             ->get()
             ->getResultArray();
 
         return view('circles/index', [
             'circles' => $circles,
             'q' => $q,
+            'tracked' => $tracked,
+            'priority' => $priority,
             'priorityOptions' => self::PRIORITY_OPTIONS,
+            'page' => $page,
+            'perPage' => $perPage,
+            'total' => $total,
+            'totalPages' => $totalPages,
         ]);
     }
 

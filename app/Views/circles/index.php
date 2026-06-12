@@ -3,8 +3,14 @@
 <?= $this->section('content') ?>
 <?php
     $returnTo = '/circles';
-    if ($q !== '') {
-        $returnTo .= '?q=' . rawurlencode($q);
+    $queryParams = array_filter([
+        'q' => $q,
+        'tracked' => $tracked,
+        'priority' => $priority,
+        'page' => $page > 1 ? $page : '',
+    ], static fn ($value) => $value !== '' && $value !== null);
+    if ($queryParams !== []) {
+        $returnTo .= '?' . http_build_query($queryParams);
     }
 
     $socialLinks = static function (array $circle): array {
@@ -17,6 +23,17 @@
             'Tora' => $circle['toranoana_url'] ?? null,
         ], static fn ($url) => ! empty($url));
     };
+
+    $pageUrl = static function (int $targetPage) use ($q, $tracked, $priority): string {
+        $params = array_filter([
+            'q' => $q,
+            'tracked' => $tracked,
+            'priority' => $priority,
+            'page' => $targetPage > 1 ? $targetPage : '',
+        ], static fn ($value) => $value !== '' && $value !== null);
+
+        return '/circles' . ($params === [] ? '' : '?' . http_build_query($params));
+    };
 ?>
 <section class="page-head">
     <div>
@@ -27,9 +44,25 @@
 
 <form class="toolbar" method="get" action="/circles">
     <input type="search" name="q" value="<?= esc($q) ?>" placeholder="搜尋社團、首字、備註">
+    <select name="tracked">
+        <option value="">追蹤狀態</option>
+        <option value="1" <?= $tracked === '1' ? 'selected' : '' ?>>追蹤中</option>
+        <option value="0" <?= $tracked === '0' ? 'selected' : '' ?>>未追蹤</option>
+    </select>
+    <select name="priority">
+        <option value="">全部優先度</option>
+        <?php foreach ($priorityOptions as $value => $label): ?>
+            <option value="<?= esc($value) ?>" <?= $priority === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
+        <?php endforeach; ?>
+    </select>
     <button class="button primary" type="submit">搜尋</button>
     <a class="button ghost" href="/circles">清除</a>
 </form>
+
+<div class="list-summary">
+    <span>共 <?= number_format((int) $total) ?> 個社團</span>
+    <span>第 <?= number_format((int) $page) ?> / <?= number_format((int) $totalPages) ?> 頁</span>
+</div>
 
 <input type="hidden" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>">
 
@@ -118,4 +151,26 @@
         </tbody>
     </table>
 </div>
+
+<?php if ($totalPages > 1): ?>
+    <nav class="pagination">
+        <a class="button small <?= $page <= 1 ? 'disabled' : '' ?>" href="<?= $page <= 1 ? '#' : esc($pageUrl($page - 1)) ?>">上一頁</a>
+        <?php
+            $start = max(1, $page - 3);
+            $end = min($totalPages, $page + 3);
+        ?>
+        <?php if ($start > 1): ?>
+            <a class="button small" href="<?= esc($pageUrl(1)) ?>">1</a>
+            <?php if ($start > 2): ?><span class="pagination-gap">...</span><?php endif; ?>
+        <?php endif; ?>
+        <?php for ($i = $start; $i <= $end; $i++): ?>
+            <a class="button small <?= $i === $page ? 'primary' : '' ?>" href="<?= esc($pageUrl($i)) ?>"><?= $i ?></a>
+        <?php endfor; ?>
+        <?php if ($end < $totalPages): ?>
+            <?php if ($end < $totalPages - 1): ?><span class="pagination-gap">...</span><?php endif; ?>
+            <a class="button small" href="<?= esc($pageUrl($totalPages)) ?>"><?= $totalPages ?></a>
+        <?php endif; ?>
+        <a class="button small <?= $page >= $totalPages ? 'disabled' : '' ?>" href="<?= $page >= $totalPages ? '#' : esc($pageUrl($page + 1)) ?>">下一頁</a>
+    </nav>
+<?php endif; ?>
 <?= $this->endSection() ?>
