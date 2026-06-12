@@ -16,6 +16,7 @@ class BookModel extends Model
         'title',
         'circle_kana',
         'circle',
+        'circle_id',
         'author',
         'event',
         'cover_url',
