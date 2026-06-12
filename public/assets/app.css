@@ -409,6 +409,66 @@ label input, label select, label textarea { font-weight: 400; }
 }
 
 .source-list { display: grid; gap: 10px; }
+.circles-table {
+    min-width: 1280px;
+}
+.circles-table th:nth-child(1),
+.circles-table td:nth-child(1) {
+    width: 98px;
+}
+.circles-table th:nth-child(2),
+.circles-table td:nth-child(2) {
+    width: 120px;
+}
+.circles-table th:nth-child(3),
+.circles-table td:nth-child(3) {
+    min-width: 190px;
+}
+.circles-table th:nth-child(5),
+.circles-table td:nth-child(5) {
+    min-width: 240px;
+}
+.circle-name {
+    font-weight: 700;
+    line-height: 1.45;
+}
+.circle-kana-input {
+    margin-top: 6px;
+}
+.circle-social-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 180px;
+}
+.social-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 4px 8px;
+    border: 1px solid #b9d2cf;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #223236;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+}
+.circle-social-editor {
+    margin-top: 8px;
+}
+.circle-social-editor summary {
+    color: var(--accent-dark);
+    cursor: pointer;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+.circle-social-editor input {
+    margin-bottom: 6px;
+}
+.circle-track-toggle.ghost {
+    color: var(--muted);
+}
 .source-row {
     display: grid;
     grid-template-columns: 180px 110px minmax(220px, 1fr) minmax(160px, 1fr) auto;

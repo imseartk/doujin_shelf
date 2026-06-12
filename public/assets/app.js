@@ -43,6 +43,27 @@ $(function () {
         updateCartRow($row);
     });
 
+    $('.js-circle-track-toggle').on('click', function () {
+        var $button = $(this);
+        $button.prop('disabled', true);
+
+        $.ajax({
+            url: $button.data('url'),
+            method: 'POST',
+            data: withCsrf({}),
+            dataType: 'json'
+        }).done(function (response) {
+            refreshCsrf(response);
+            var tracked = !!(response && parseInt(response.is_tracked, 10));
+            $button
+                .toggleClass('primary', tracked)
+                .toggleClass('ghost', !tracked)
+                .text(response.label || (tracked ? '追蹤中' : '未追蹤'));
+        }).always(function () {
+            $button.prop('disabled', false);
+        });
+    });
+
     function updateCartRow($row) {
         var total = 0;
         var visibleItems = 0;
@@ -433,6 +454,11 @@ $(function () {
     }
 
     function refreshCsrf(response) {
-        if (response && response.csrf) csrfField().val(response.csrf);
+        if (!response || !response.csrf) return;
+
+        var $csrf = csrfField();
+        if (!$csrf.length) return;
+
+        $('input[type="hidden"][name="' + $csrf.attr('name') + '"]').val(response.csrf);
     }
 });

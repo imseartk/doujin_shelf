@@ -24,6 +24,10 @@ $routes->post('wishlist/sources/(:num)', 'Wishlist::updateSource/$1');
 $routes->post('wishlist/sources/(:num)/delete', 'Wishlist::deleteSource/$1');
 $routes->get('sources', 'Sources::index');
 
+$routes->get('circles', 'Circles::index');
+$routes->post('circles/(:num)', 'Circles::update/$1');
+$routes->post('circles/(:num)/track', 'Circles::toggleTrack/$1');
+
 $routes->get('orders', 'Orders::index');
 $routes->post('orders', 'Orders::create');
 $routes->get('orders/(:num)', 'Orders::show/$1');
