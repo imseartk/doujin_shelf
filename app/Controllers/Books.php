@@ -387,15 +387,6 @@ class Books extends BaseController
             return [null, $name];
         }
 
-        if ($kana !== null && empty($row['name_kana'])) {
-            $db->table('circles')
-                ->where('id', (int) $row['id'])
-                ->update([
-                    'name_kana' => $kana,
-                    'updated_at' => date('Y-m-d H:i:s'),
-                ]);
-        }
-
         return [(int) $row['id'], (string) $row['name']];
     }
 
