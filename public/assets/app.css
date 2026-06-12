@@ -391,6 +391,23 @@ label input, label select, label textarea { font-weight: 400; }
 }
 .taxonomy-suggestion:hover { background: #eef4f1; }
 
+.circle-picker {
+    position: relative;
+}
+.circle-picker .taxonomy-suggestions {
+    top: calc(100% + 4px);
+}
+.circle-suggestion-name {
+    display: block;
+    font-weight: 700;
+}
+.circle-suggestion-kana {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 2px;
+}
+
 .source-list { display: grid; gap: 10px; }
 .source-row {
     display: grid;

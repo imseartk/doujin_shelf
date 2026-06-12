@@ -87,6 +87,73 @@ $(function () {
         showCoverPreview(URL.createObjectURL(file));
     });
     updateCoverPreview();
+    initCirclePicker();
+
+    function initCirclePicker() {
+        var $picker = $('.js-circle-picker');
+        if (!$picker.length) return;
+
+        var $id = $picker.find('.js-circle-id');
+        var $input = $picker.find('.js-circle-input');
+        var $suggestions = $picker.find('.js-circle-suggestions');
+        var selectedName = normalizeTaxonomyName($input.val());
+        var searchTimer = null;
+
+        function search() {
+            var q = normalizeTaxonomyName($input.val());
+            if (!q) {
+                $id.val('');
+                selectedName = '';
+                $suggestions.prop('hidden', true).empty();
+                return;
+            }
+
+            $.getJSON('/books/circles/search', { q: q })
+                .done(function (response) {
+                    renderSuggestions(response.items || []);
+                });
+        }
+
+        function renderSuggestions(results) {
+            $suggestions.empty();
+            if (results.length === 0) {
+                $suggestions.prop('hidden', true);
+                return;
+            }
+
+            results.forEach(function (item) {
+                var $button = $('<button type="button" class="taxonomy-suggestion"></button>');
+                $('<span class="circle-suggestion-name"></span>').text(item.name).appendTo($button);
+                if (item.name_kana) {
+                    $('<span class="circle-suggestion-kana"></span>').text(item.name_kana).appendTo($button);
+                }
+                $button.on('click', function () {
+                    $id.val(item.id);
+                    $input.val(item.name);
+                    selectedName = normalizeTaxonomyName(item.name);
+                    $suggestions.prop('hidden', true).empty();
+                });
+                $button.appendTo($suggestions);
+            });
+            $suggestions.prop('hidden', false);
+        }
+
+        $input.on('input', function () {
+            if (normalizeTaxonomyName($input.val()) !== selectedName) {
+                $id.val('');
+            }
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(search, 180);
+        });
+        $input.on('keydown', function (event) {
+            if (event.key === 'Escape') {
+                $suggestions.prop('hidden', true).empty();
+            }
+        });
+        $input.on('blur', function () {
+            setTimeout(function () { $suggestions.prop('hidden', true); }, 160);
+        });
+    }
 
     function initBookListState() {
         var $table = $('.js-sortable-table');

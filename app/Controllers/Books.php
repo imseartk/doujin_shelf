@@ -159,6 +159,24 @@ class Books extends BaseController
         ]);
     }
 
+    public function circleSearch(): ResponseInterface
+    {
+        $q = trim((string) $this->request->getGet('q'));
+        $builder = db_connect()->table('circles')
+            ->select('id, name, name_kana');
+
+        if ($q !== '') {
+            $builder->groupStart()
+                ->like('name', $q)
+                ->orLike('name_kana', $q)
+                ->groupEnd();
+        }
+
+        return $this->response->setJSON([
+            'items' => $builder->orderBy('name', 'ASC')->limit(12)->get()->getResultArray(),
+        ]);
+    }
+
     public function taxonomyStore(string $group): ResponseInterface
     {
         $config = $this->taxonomyConfig($group);
@@ -212,11 +230,17 @@ class Books extends BaseController
         }
 
         $bookModel = new BookModel();
+        [$circleId, $circleName] = $this->resolveCircle(
+            $this->nullablePost('circle'),
+            $this->nullablePost('circle_kana')
+        );
+
         $data = [
             'type' => (string) $this->request->getPost('type'),
             'title' => trim((string) $this->request->getPost('title')),
             'circle_kana' => $this->nullablePost('circle_kana'),
-            'circle' => $this->nullablePost('circle'),
+            'circle' => $circleName,
+            'circle_id' => $circleId,
             'author' => $this->nullablePost('author'),
             'event' => $this->nullablePost('event'),
             'cover_url' => $this->nullablePost('cover_url'),
@@ -328,6 +352,51 @@ class Books extends BaseController
     {
         $value = (int) $this->request->getPost($key);
         return $value > 0 ? $value : null;
+    }
+
+    private function resolveCircle(?string $name, ?string $kana): array
+    {
+        if ($name === null) {
+            return [null, null];
+        }
+
+        $db = db_connect();
+        $row = $db->table('circles')
+            ->select('id, name, name_kana')
+            ->where('name', $name)
+            ->get(1)
+            ->getRowArray();
+
+        if (! $row) {
+            $now = date('Y-m-d H:i:s');
+            $db->table('circles')->ignore(true)->insert([
+                'name' => $name,
+                'name_kana' => $kana,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $row = $db->table('circles')
+                ->select('id, name, name_kana')
+                ->where('name', $name)
+                ->get(1)
+                ->getRowArray();
+        }
+
+        if (! $row) {
+            return [null, $name];
+        }
+
+        if ($kana !== null && empty($row['name_kana'])) {
+            $db->table('circles')
+                ->where('id', (int) $row['id'])
+                ->update([
+                    'name_kana' => $kana,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+        }
+
+        return [(int) $row['id'], (string) $row['name']];
     }
 
     private function parseNames(string $value): array

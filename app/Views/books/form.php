@@ -56,7 +56,11 @@
                 <input name="circle_kana" value="<?= esc($book['circle_kana'] ?? '') ?>" maxlength="20">
             </label>
             <label>社團
-                <input name="circle" value="<?= esc($book['circle'] ?? '') ?>" maxlength="255">
+                <div class="circle-picker js-circle-picker">
+                    <input type="hidden" class="js-circle-id" name="circle_id" value="<?= esc($book['circle_id'] ?? '') ?>">
+                    <input class="js-circle-input" name="circle" value="<?= esc($book['circle'] ?? '') ?>" maxlength="255" autocomplete="off">
+                    <div class="taxonomy-suggestions circle-suggestions js-circle-suggestions" hidden></div>
+                </div>
             </label>
             <label>作者
                 <input name="author" value="<?= esc($book['author'] ?? '') ?>" maxlength="255">
