@@ -13,7 +13,7 @@ class Session extends BaseConfig
 
     public string $cookieName = 'ci_session';
 
-    public int $expiration = 7200;
+    public int $expiration = 2_592_000;
 
     public string $savePath = WRITEPATH . 'session';
 
@@ -28,4 +28,11 @@ class Session extends BaseConfig
     public int $lockRetryInterval = 100_000;
 
     public int $lockMaxRetries = 300;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->expiration = (int) env('session.expiration', $this->expiration);
+    }
 }

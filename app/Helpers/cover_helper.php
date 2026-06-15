@@ -3,6 +3,12 @@
 if (! function_exists('covers_hidden')) {
     function covers_hidden(): bool
     {
+        $isAdminUnlocked = function_exists('admin_unlocked') && admin_unlocked();
+
+        if (! $isAdminUnlocked && session('hide_covers') === null) {
+            return true;
+        }
+
         return (bool) session('hide_covers');
     }
 }

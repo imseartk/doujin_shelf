@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Filters\AdminAuth;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
 use CodeIgniter\Filters\CSRF;
@@ -25,6 +26,7 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
+        'adminauth'     => AdminAuth::class,
     ];
 
     public array $required = [
@@ -40,7 +42,7 @@ class Filters extends BaseFilters
     ];
 
     public array $globals = [
-        'before' => [],
+        'before' => ['adminauth'],
         'after'  => [],
     ];
 

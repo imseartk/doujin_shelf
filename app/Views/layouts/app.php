@@ -19,12 +19,15 @@
         <a class="brand" href="/books">Doujin Shelf</a>
         <nav class="nav">
             <a href="/books">藏書清單</a>
-            <a href="/wishlist">願望清單</a>
-            <a href="/circles">社團清單</a>
-            <a href="/sources">購物車</a>
-            <a href="/orders">訂單</a>
-            <a href="/shops">店鋪</a>
-            <a href="/locations">位置</a>
+            <?php if (admin_unlocked()): ?>
+                <a href="/wishlist">願望清單</a>
+                <a href="/circles">社團清單</a>
+                <a href="/sources">購物車</a>
+                <a href="/orders">訂單</a>
+                <a href="/shops">店鋪</a>
+                <a href="/locations">位置</a>
+            <?php endif; ?>
+            <a href="/manage"><?= admin_unlocked() ? '管理中' : '管理' ?></a>
         </nav>
         <div class="topbar-tools">
             <form class="topbar-search" method="get" action="/books">

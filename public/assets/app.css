@@ -300,11 +300,13 @@ label input, label select, label textarea { font-weight: 400; }
     padding: 16px;
 }
 .panel.wide { grid-column: span 1; }
+.compact-panel { max-width: 460px; }
 .panel-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
 .fields { display: grid; gap: 12px; }
 .fields.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .span-2 { grid-column: span 2; }
 .form-actions { grid-column: 1 / -1; display: flex; gap: 10px; }
+.form-actions.standalone { margin-top: 14px; }
 .danger-form { margin-top: 20px; }
 
 .tag-field { display: grid; gap: 6px; margin-bottom: 14px; }

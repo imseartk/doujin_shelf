@@ -3,6 +3,7 @@
 <?= $this->section('content') ?>
 <?php
     $request = service('request');
+    $canManage = admin_unlocked();
     $uri = $request->getUri();
     $returnTo = '/' . ltrim($uri->getPath(), '/');
     $query = $uri->getQuery();
@@ -38,7 +39,9 @@
         <h1>藏書清單</h1>
         <p>用關鍵字快速查重，或依狀態整理目前的藏書紀錄。點欄位標題可以排序目前顯示的結果。</p>
     </div>
-    <a class="button primary" href="/books/new?return_to=<?= $encodedReturnTo ?>">新增書本</a>
+    <?php if ($canManage): ?>
+        <a class="button primary" href="/books/new?return_to=<?= $encodedReturnTo ?>">新增書本</a>
+    <?php endif; ?>
 </section>
 
 <form class="toolbar" method="get" action="/books">
@@ -53,7 +56,9 @@
     <a class="button ghost" href="/books">清除</a>
 </form>
 
-<div class="js-book-cover-upload-csrf" hidden><?= csrf_field() ?></div>
+<?php if ($canManage): ?>
+    <div class="js-book-cover-upload-csrf" hidden><?= csrf_field() ?></div>
+<?php endif; ?>
 
 <div class="table-wrap">
     <table class="data-table books-table js-sortable-table">
@@ -86,12 +91,14 @@
                         <button class="cover-action js-cover-lightbox-open" type="button" data-cover-url="<?= esc($displayCoverUrl) ?>" aria-label="檢視封面大圖">
                             <img class="cover-thumb" src="<?= esc($displayCoverUrl) ?>" alt="">
                         </button>
-                    <?php else: ?>
+                    <?php elseif ($canManage): ?>
                         <button class="cover-action js-cover-upload-trigger" type="button" data-book-id="<?= (int) $book['id'] ?>" aria-label="上傳封面">
                             <span class="cover-empty">no image</span>
                         </button>
                         <input class="js-cover-upload-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-book-id="<?= (int) $book['id'] ?>" hidden>
                         <span class="cover-upload-status js-cover-upload-status" data-book-id="<?= (int) $book['id'] ?>"></span>
+                    <?php else: ?>
+                        <span class="cover-empty">no image</span>
                     <?php endif; ?>
                 </td>
                 <td data-sort-value="<?= esc($book['title']) ?>">
@@ -112,7 +119,11 @@
                         <?php endif; ?>
                     <?php endif; ?>
                 </td>
-                <td class="actions"><a class="button small" href="/books/<?= (int) $book['id'] ?>/edit?return_to=<?= $encodedReturnTo ?>">編輯</a></td>
+                <td class="actions">
+                    <?php if ($canManage): ?>
+                    <a class="button small" href="/books/<?= (int) $book['id'] ?>/edit?return_to=<?= $encodedReturnTo ?>">編輯</a>
+                    <?php endif; ?>
+                </td>
             </tr>
         <?php endforeach; ?>
         <?php if ($books === []): ?>
