@@ -94,7 +94,7 @@ class Circlems extends BaseController
         try {
             $client = new CirclemsClient();
             $token = $this->refreshIfNeeded($token, $client);
-            $client->userInfo((string) $token['access_token']);
+            $client->eventList((string) $token['access_token']);
             (new CirclemsTokenModel())->update((int) $token['id'], [
                 'last_tested_at' => date('Y-m-d H:i:s'),
                 'last_error' => null,

@@ -14,6 +14,7 @@
         <p>目前可以使用完整管理功能。</p>
         <div class="form-actions standalone">
             <a class="button primary" href="/books">回藏書清單</a>
+            <a class="button" href="/circlems">Circle.ms 連線</a>
         </div>
     </section>
 <?php else: ?>

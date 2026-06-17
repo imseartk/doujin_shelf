@@ -6,7 +6,7 @@ use RuntimeException;
 
 class CirclemsClient
 {
-    private const DEFAULT_SCOPE = 'circle_read circle_write favorite_read favorite_write';
+    private const DEFAULT_SCOPE = 'user_info circle_read circle_write favorite_read favorite_write';
 
     public function isConfigured(): bool
     {
@@ -68,7 +68,7 @@ class CirclemsClient
 
     public function userInfo(string $accessToken): array
     {
-        return $this->apiGet('/User/Info/', $accessToken);
+        return $this->apiPost('/User/Info/', $accessToken);
     }
 
     public function eventList(string $accessToken): array
@@ -101,6 +101,19 @@ class CirclemsClient
         $url = $this->apiUrl($path) . '?' . http_build_query(['access_token' => $accessToken], '', '&', PHP_QUERY_RFC3986);
         [$statusCode, $body] = $this->request('GET', $url, [
             CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $accessToken],
+        ]);
+
+        return $this->decodeResponse($statusCode, $body, 'api');
+    }
+
+    private function apiPost(string $path, string $accessToken): array
+    {
+        [$statusCode, $body] = $this->request('POST', $this->apiUrl($path), [
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $accessToken,
+                'Content-Type: application/x-www-form-urlencoded',
+            ],
+            CURLOPT_POSTFIELDS => http_build_query(['access_token' => $accessToken], '', '&', PHP_QUERY_RFC3986),
         ]);
 
         return $this->decodeResponse($statusCode, $body, 'api');
@@ -145,7 +158,12 @@ class CirclemsClient
         $data = json_decode($body, true);
 
         if ($statusCode < 200 || $statusCode >= 300) {
-            throw new RuntimeException(sprintf('Circle.ms %s request failed with HTTP %d.', $context, $statusCode));
+            throw new RuntimeException(sprintf(
+                'Circle.ms %s request failed with HTTP %d. %s',
+                $context,
+                $statusCode,
+                $this->safeBodySummary($body)
+            ));
         }
 
         if (! is_array($data)) {
@@ -167,6 +185,16 @@ class CirclemsClient
     private function apiUrl(string $path): string
     {
         return rtrim($this->apiBaseUrl(), '/') . '/' . ltrim($path, '/');
+    }
+
+    private function safeBodySummary(string $body): string
+    {
+        $body = preg_replace('/\s+/u', ' ', trim(strip_tags($body))) ?? '';
+        if ($body === '') {
+            return '';
+        }
+
+        return mb_substr($body, 0, 180, 'UTF-8');
     }
 
     private function clientId(): string
