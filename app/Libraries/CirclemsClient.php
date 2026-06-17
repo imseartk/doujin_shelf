@@ -76,6 +76,15 @@ class CirclemsClient
         return $this->apiGet('/WebCatalog/GetEventList/', $accessToken);
     }
 
+    public function queryCircle(string $accessToken, int $eventId, string $circleName): array
+    {
+        return $this->apiGet('/WebCatalog/QueryCircle/', $accessToken, [
+            'event_id' => $eventId,
+            'circle_name' => $circleName,
+            'page' => 1,
+        ]);
+    }
+
     public function tokenExpiresAt(array $tokenResponse): ?string
     {
         $expiresIn = (int) ($tokenResponse['expires_in'] ?? 0);
@@ -96,9 +105,10 @@ class CirclemsClient
         return $this->decodeResponse($statusCode, $body, 'token');
     }
 
-    private function apiGet(string $path, string $accessToken): array
+    private function apiGet(string $path, string $accessToken, array $query = []): array
     {
-        $url = $this->apiUrl($path) . '?' . http_build_query(['access_token' => $accessToken], '', '&', PHP_QUERY_RFC3986);
+        $query = ['access_token' => $accessToken] + $query;
+        $url = $this->apiUrl($path) . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
         [$statusCode, $body] = $this->request('GET', $url, [
             CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $accessToken],
         ]);

@@ -51,4 +51,28 @@
         <?php endif; ?>
     </div>
 </section>
+
+<?php if ($token): ?>
+    <section class="panel circlems-search-panel">
+        <h2>社團搜尋測試</h2>
+        <p>使用目前 token 查詢最新活動中的社團資料。</p>
+        <form class="inline-form" method="post" action="/circlems/search-circle">
+            <?= csrf_field() ?>
+            <input type="text" name="circle_name" value="<?= esc($circleSearch['circleName'] ?? '08BASE') ?>" placeholder="社團名稱">
+            <button class="button" type="submit">搜尋社團</button>
+        </form>
+
+        <?php if (! empty($circleSearch)): ?>
+            <dl class="status-list">
+                <dt>搜尋社團</dt>
+                <dd><?= esc($circleSearch['circleName']) ?></dd>
+                <dt>活動 ID</dt>
+                <dd><?= esc((string) $circleSearch['eventId']) ?></dd>
+                <dt>命中筆數</dt>
+                <dd><?= esc((string) $circleSearch['count']) ?> / <?= esc((string) $circleSearch['maxCount']) ?></dd>
+            </dl>
+            <pre class="api-preview"><?= esc(json_encode($circleSearch['result'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)) ?></pre>
+        <?php endif; ?>
+    </section>
+<?php endif; ?>
 <?= $this->endSection() ?>

@@ -19,6 +19,7 @@ class Circlems extends BaseController
             'missingConfigKeys' => $client->missingConfigKeys(),
             'token' => $token,
             'isExpired' => $this->isTokenExpired($token),
+            'circleSearch' => session('circlems_circle_search'),
         ]);
     }
 
@@ -111,6 +112,53 @@ class Circlems extends BaseController
         return redirect()->to('/circlems')->with('message', 'Circle.ms API 測試成功。');
     }
 
+    public function searchCircle(): RedirectResponse
+    {
+        $circleName = trim((string) $this->request->getPost('circle_name'));
+        if ($circleName === '') {
+            return redirect()->to('/circlems')->with('error', '請輸入社團名稱。');
+        }
+
+        $token = $this->currentToken();
+        if (! $token) {
+            return redirect()->to('/circlems')->with('error', '尚未連線 Circle.ms。');
+        }
+
+        try {
+            $client = new CirclemsClient();
+            $token = $this->refreshIfNeeded($token, $client);
+            $eventList = $client->eventList((string) $token['access_token']);
+            $eventId = $this->latestEventId($eventList);
+
+            if ($eventId === null) {
+                throw new RuntimeException('Circle.ms event list did not include a latest event id.');
+            }
+
+            $result = $client->queryCircle((string) $token['access_token'], $eventId, $circleName);
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => null,
+            ]);
+        } catch (RuntimeException $exception) {
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => $exception->getMessage(),
+            ]);
+
+            return redirect()->to('/circlems')->with('error', $exception->getMessage());
+        }
+
+        return redirect()->to('/circlems')
+            ->with('message', 'Circle.ms 社團搜尋完成。')
+            ->with('circlems_circle_search', [
+                'circleName' => $circleName,
+                'eventId' => $eventId,
+                'count' => (int) ($result['response']['count'] ?? 0),
+                'maxCount' => (int) ($result['response']['maxcount'] ?? 0),
+                'result' => $this->summarizeCircleResult($result),
+            ]);
+    }
+
     private function currentToken(): ?array
     {
         return (new CirclemsTokenModel())
@@ -162,5 +210,36 @@ class Circlems extends BaseController
         }
 
         return strtotime((string) $token['expires_at']) <= time() + 300;
+    }
+
+    private function latestEventId(array $eventList): ?int
+    {
+        $candidates = [
+            $eventList['response']['LatestEventId'] ?? null,
+            $eventList['response']['latestEventId'] ?? null,
+            $eventList['response']['latest_event_id'] ?? null,
+            $eventList['LatestEventId'] ?? null,
+            $eventList['latestEventId'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_numeric($candidate) && (int) $candidate > 0) {
+                return (int) $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private function summarizeCircleResult(array $result): array
+    {
+        $list = $result['response']['list'] ?? [];
+        if (! is_array($list)) {
+            $list = [];
+        }
+
+        $result['response']['list'] = array_slice($list, 0, 10);
+
+        return $result;
     }
 }
