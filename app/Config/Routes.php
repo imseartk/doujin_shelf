@@ -37,6 +37,7 @@ $routes->get('oauth/circlems/callback', 'Circlems::callback');
 $routes->post('circlems/refresh', 'Circlems::refresh');
 $routes->post('circlems/test', 'Circlems::test');
 $routes->post('circlems/search-circle', 'Circlems::searchCircle');
+$routes->post('circlems/sample-circles', 'Circlems::sampleCircles');
 
 $routes->get('orders', 'Orders::index');
 $routes->post('orders', 'Orders::create');

@@ -58,8 +58,12 @@
         <p>使用目前 token 查詢最新活動中的社團資料。</p>
         <form class="inline-form" method="post" action="/circlems/search-circle">
             <?= csrf_field() ?>
-            <input type="text" name="circle_name" value="<?= esc($circleSearch['circleName'] ?? '08BASE') ?>" placeholder="社團名稱">
+            <input type="text" name="circle_name" value="<?= esc($circleSearch['query'] ?? '08BASE') ?>" placeholder="社團名稱">
             <button class="button" type="submit">搜尋社團</button>
+        </form>
+        <form class="inline-form" method="post" action="/circlems/sample-circles">
+            <?= csrf_field() ?>
+            <button class="button ghost" type="submit">抓樣本社團</button>
         </form>
 
         <?php if (! empty($circleSearch)): ?>
@@ -71,6 +75,16 @@
                 <dt>命中筆數</dt>
                 <dd><?= esc((string) $circleSearch['count']) ?> / <?= esc((string) $circleSearch['maxCount']) ?></dd>
             </dl>
+            <?php if (! empty($circleSearch['names'])): ?>
+                <div class="circlems-sample-names">
+                    <div class="field-label">可測試社團</div>
+                    <div class="tag-list">
+                        <?php foreach ($circleSearch['names'] as $name): ?>
+                            <span class="tag-chip"><?= esc($name) ?></span>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
             <pre class="api-preview"><?= esc(json_encode($circleSearch['result'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)) ?></pre>
         <?php endif; ?>
     </section>

@@ -335,6 +335,14 @@ label input, label select, label textarea { font-weight: 400; }
     line-height: 1.45;
     white-space: pre-wrap;
 }
+.circlems-sample-names {
+    margin-top: 14px;
+}
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
 .danger-form { margin-top: 20px; }
 
 .tag-field { display: grid; gap: 6px; margin-bottom: 14px; }

@@ -76,13 +76,18 @@ class CirclemsClient
         return $this->apiGet('/WebCatalog/GetEventList/', $accessToken);
     }
 
-    public function queryCircle(string $accessToken, int $eventId, string $circleName): array
+    public function queryCircle(string $accessToken, int $eventId, string $circleName = '', int $page = 1): array
     {
-        return $this->apiGet('/WebCatalog/QueryCircle/', $accessToken, [
+        $query = [
             'event_id' => $eventId,
-            'circle_name' => $circleName,
-            'page' => 1,
-        ]);
+            'page' => max(1, $page),
+        ];
+
+        if ($circleName !== '') {
+            $query['circle_name'] = $circleName;
+        }
+
+        return $this->apiGet('/WebCatalog/QueryCircle/', $accessToken, $query);
     }
 
     public function tokenExpiresAt(array $tokenResponse): ?string

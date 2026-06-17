@@ -152,10 +152,55 @@ class Circlems extends BaseController
             ->with('message', 'Circle.ms 社團搜尋完成。')
             ->with('circlems_circle_search', [
                 'circleName' => $circleName,
+                'query' => $circleName,
                 'eventId' => $eventId,
                 'count' => (int) ($result['response']['count'] ?? 0),
                 'maxCount' => (int) ($result['response']['maxcount'] ?? 0),
                 'result' => $this->summarizeCircleResult($result),
+            ]);
+    }
+
+    public function sampleCircles(): RedirectResponse
+    {
+        $token = $this->currentToken();
+        if (! $token) {
+            return redirect()->to('/circlems')->with('error', '尚未連線 Circle.ms。');
+        }
+
+        try {
+            $client = new CirclemsClient();
+            $token = $this->refreshIfNeeded($token, $client);
+            $eventList = $client->eventList((string) $token['access_token']);
+            $eventId = $this->latestEventId($eventList);
+
+            if ($eventId === null) {
+                throw new RuntimeException('Circle.ms event list did not include a latest event id.');
+            }
+
+            $result = $client->queryCircle((string) $token['access_token'], $eventId);
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => null,
+            ]);
+        } catch (RuntimeException $exception) {
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => $exception->getMessage(),
+            ]);
+
+            return redirect()->to('/circlems')->with('error', $exception->getMessage());
+        }
+
+        return redirect()->to('/circlems')
+            ->with('message', 'Circle.ms 樣本社團已取得。')
+            ->with('circlems_circle_search', [
+                'circleName' => '樣本社團',
+                'query' => '',
+                'eventId' => $eventId,
+                'count' => (int) ($result['response']['count'] ?? 0),
+                'maxCount' => (int) ($result['response']['maxcount'] ?? 0),
+                'names' => $this->circleNames($result),
+                'result' => $this->summarizeCircleResult($result, 20),
             ]);
     }
 
@@ -231,15 +276,41 @@ class Circlems extends BaseController
         return null;
     }
 
-    private function summarizeCircleResult(array $result): array
+    private function summarizeCircleResult(array $result, int $limit = 10): array
     {
         $list = $result['response']['list'] ?? [];
         if (! is_array($list)) {
             $list = [];
         }
 
-        $result['response']['list'] = array_slice($list, 0, 10);
+        $result['response']['list'] = array_slice($list, 0, $limit);
 
         return $result;
+    }
+
+    private function circleNames(array $result): array
+    {
+        $list = $result['response']['list'] ?? [];
+        if (! is_array($list)) {
+            return [];
+        }
+
+        $names = [];
+        foreach ($list as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $name = trim((string) ($row['circle_name'] ?? $row['circleName'] ?? $row['name'] ?? ''));
+            if ($name !== '') {
+                $names[] = $name;
+            }
+
+            if (count($names) >= 20) {
+                break;
+            }
+        }
+
+        return array_values(array_unique($names));
     }
 }
