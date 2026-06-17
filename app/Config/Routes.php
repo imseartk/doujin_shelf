@@ -31,6 +31,12 @@ $routes->get('circles', 'Circles::index');
 $routes->post('circles/(:num)', 'Circles::update/$1');
 $routes->post('circles/(:num)/track', 'Circles::toggleTrack/$1');
 
+$routes->get('circlems', 'Circlems::index');
+$routes->get('circlems/connect', 'Circlems::connect');
+$routes->get('oauth/circlems/callback', 'Circlems::callback');
+$routes->post('circlems/refresh', 'Circlems::refresh');
+$routes->post('circlems/test', 'Circlems::test');
+
 $routes->get('orders', 'Orders::index');
 $routes->post('orders', 'Orders::create');
 $routes->get('orders/(:num)', 'Orders::show/$1');

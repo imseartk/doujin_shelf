@@ -307,6 +307,19 @@ label input, label select, label textarea { font-weight: 400; }
 .span-2 { grid-column: span 2; }
 .form-actions { grid-column: 1 / -1; display: flex; gap: 10px; }
 .form-actions.standalone { margin-top: 14px; }
+.status-list {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 14px;
+    margin: 12px 0 0;
+}
+.status-list dt {
+    color: var(--muted);
+    font-weight: 700;
+}
+.status-list dd {
+    margin: 0;
+}
 .danger-form { margin-top: 20px; }
 
 .tag-field { display: grid; gap: 6px; margin-bottom: 14px; }

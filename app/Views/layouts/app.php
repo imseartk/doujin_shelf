@@ -24,6 +24,7 @@
                 <a href="/circles">社團清單</a>
                 <a href="/sources">購物車</a>
                 <a href="/orders">訂單</a>
+                <a href="/circlems">Circle.ms</a>
                 <a href="/shops">店鋪</a>
                 <a href="/locations">位置</a>
             <?php endif; ?>
