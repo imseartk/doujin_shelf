@@ -121,6 +121,23 @@
                                         <?php if ($row['circlemsId'] !== ''): ?><span>Circle.ms <?= esc($row['circlemsId']) ?></span><?php endif; ?>
                                     </div>
                                 </div>
+                                <?php if ($row['wcid'] !== ''): ?>
+                                    <div class="circlems-card-actions">
+                                        <form method="post" action="/circlems/circle-detail">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="event_id" value="<?= esc((string) $circleSearch['eventId']) ?>">
+                                            <input type="hidden" name="wcid" value="<?= esc($row['wcid']) ?>">
+                                            <button class="button ghost small" type="submit">詳細</button>
+                                        </form>
+                                        <form method="post" action="/circlems/circle-books">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="event_id" value="<?= esc((string) $circleSearch['eventId']) ?>">
+                                            <input type="hidden" name="wcid" value="<?= esc($row['wcid']) ?>">
+                                            <input type="hidden" name="page" value="1">
+                                            <button class="button ghost small" type="submit">頒布物</button>
+                                        </form>
+                                    </div>
+                                <?php endif; ?>
 
                                 <?php if ($row['description'] !== ''): ?>
                                     <p class="circlems-description"><?= esc(mb_strimwidth($row['description'], 0, 180, '...', 'UTF-8')) ?></p>
@@ -156,5 +173,82 @@
             <pre class="api-preview"><?= esc(json_encode($circleSearch['result'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)) ?></pre>
         <?php endif; ?>
     </section>
+
+    <?php if (! empty($circleProbe)): ?>
+        <section class="panel circlems-search-panel">
+            <h2><?= esc($circleProbe['title'] ?? 'API 測試結果') ?></h2>
+            <dl class="status-list">
+                <dt>活動 ID</dt>
+                <dd><?= esc((string) ($circleProbe['eventId'] ?? '')) ?></dd>
+                <dt>WCID</dt>
+                <dd><?= esc((string) ($circleProbe['wcid'] ?? '')) ?></dd>
+                <?php if (($circleProbe['type'] ?? '') === 'books'): ?>
+                    <dt>命中筆數</dt>
+                    <dd><?= esc((string) ($circleProbe['count'] ?? 0)) ?> / <?= esc((string) ($circleProbe['maxCount'] ?? 0)) ?></dd>
+                <?php endif; ?>
+            </dl>
+
+            <?php if (! empty($circleProbe['circle'])): ?>
+                <?php $row = $circleProbe['circle']; ?>
+                <article class="circlems-result-card">
+                    <?php if ($row['cutUrl'] !== ''): ?>
+                        <img class="circlems-cut" src="<?= esc($row['cutUrl']) ?>" alt="">
+                    <?php endif; ?>
+                    <div class="circlems-result-body">
+                        <div class="circlems-result-head">
+                            <div>
+                                <h3><?= esc($row['name'] !== '' ? $row['name'] : '(no name)') ?></h3>
+                                <?php if ($row['nameKana'] !== ''): ?>
+                                    <div class="muted"><?= esc($row['nameKana']) ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="circlems-meta">
+                                <?php if ($row['wcid'] !== ''): ?><span>WCID <?= esc($row['wcid']) ?></span><?php endif; ?>
+                                <?php if ($row['genre'] !== ''): ?><span>Genre <?= esc($row['genre']) ?></span><?php endif; ?>
+                                <?php if ($row['circlemsId'] !== ''): ?><span>Circle.ms <?= esc($row['circlemsId']) ?></span><?php endif; ?>
+                            </div>
+                        </div>
+                        <?php if ($row['description'] !== ''): ?>
+                            <p class="circlems-description"><?= esc(mb_strimwidth($row['description'], 0, 240, '...', 'UTF-8')) ?></p>
+                        <?php endif; ?>
+                    </div>
+                </article>
+            <?php endif; ?>
+
+            <?php if (! empty($circleProbe['books'])): ?>
+                <div class="circlems-book-list">
+                    <?php foreach ($circleProbe['books'] as $book): ?>
+                        <article class="circlems-book-card">
+                            <?php if ($book['imageUrl'] !== ''): ?>
+                                <img class="circlems-book-cover" src="<?= esc($book['imageUrl']) ?>" alt="">
+                            <?php endif; ?>
+                            <div class="circlems-result-body">
+                                <div class="circlems-result-head">
+                                    <div>
+                                        <h3><?= esc($book['name'] !== '' ? $book['name'] : '(no title)') ?></h3>
+                                        <div class="muted">
+                                            <?php if ($book['newBook'] === 1): ?>新刊<?php else: ?>既刊/其他<?php endif; ?>
+                                            <?php if ($book['price'] !== ''): ?> / <?= esc($book['price']) ?><?php endif; ?>
+                                            <?php if ($book['distDate'] !== ''): ?> / <?= esc($book['distDate']) ?><?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="circlems-meta">
+                                        <?php if ($book['workId'] !== ''): ?><span>Work <?= esc($book['workId']) ?></span><?php endif; ?>
+                                        <?php if ($book['genre'] !== ''): ?><span><?= esc($book['genre']) ?></span><?php endif; ?>
+                                        <?php if ($book['r18'] === 1): ?><span>R18</span><?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php if ($book['introduction'] !== ''): ?>
+                                    <p class="circlems-description"><?= esc(mb_strimwidth($book['introduction'], 0, 220, '...', 'UTF-8')) ?></p>
+                                <?php endif; ?>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <pre class="api-preview"><?= esc(json_encode($circleProbe['result'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)) ?></pre>
+        </section>
+    <?php endif; ?>
 <?php endif; ?>
 <?= $this->endSection() ?>

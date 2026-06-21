@@ -419,6 +419,36 @@ label input, label select, label textarea { font-weight: 400; }
     font-weight: 700;
     text-decoration: none;
 }
+.circlems-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.circlems-card-actions form {
+    margin: 0;
+}
+.circlems-book-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+}
+.circlems-book-card {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 14px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+}
+.circlems-book-cover {
+    width: 88px;
+    height: 124px;
+    object-fit: cover;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #f5f7f5;
+}
 .danger-form { margin-top: 20px; }
 
 .tag-field { display: grid; gap: 6px; margin-bottom: 14px; }
@@ -633,6 +663,7 @@ label input, label select, label textarea { font-weight: 400; }
     .span-2 { grid-column: auto; }
     .source-row { grid-template-columns: 1fr; }
     .circlems-result-card { grid-template-columns: 1fr; }
+    .circlems-book-card { grid-template-columns: 1fr; }
     .circlems-result-head { flex-direction: column; }
     .circlems-meta { justify-content: flex-start; }
 }

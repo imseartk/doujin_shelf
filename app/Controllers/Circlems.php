@@ -34,6 +34,7 @@ class Circlems extends BaseController
             'token' => $token,
             'isExpired' => $this->isTokenExpired($token),
             'circleSearch' => session('circlems_circle_search'),
+            'circleProbe' => session('circlems_probe_result'),
             'events' => $events,
             'latestEventId' => $latestEventId,
             'eventError' => $eventError,
@@ -226,6 +227,96 @@ class Circlems extends BaseController
             ]);
     }
 
+    public function circleDetail(): RedirectResponse
+    {
+        $wcid = (int) $this->request->getPost('wcid');
+        $eventId = (int) $this->request->getPost('event_id');
+        if ($wcid <= 0) {
+            return redirect()->to('/circlems')->with('error', '缺少 WCID，無法查詢社團詳細。');
+        }
+
+        $token = $this->currentToken();
+        if (! $token) {
+            return redirect()->to('/circlems')->with('error', '尚未連線 Circle.ms。');
+        }
+
+        try {
+            $client = new CirclemsClient();
+            $token = $this->refreshIfNeeded($token, $client);
+            $result = $client->circleDetail((string) $token['access_token'], $wcid, $eventId);
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => null,
+            ]);
+        } catch (RuntimeException $exception) {
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => $exception->getMessage(),
+            ]);
+
+            return redirect()->to('/circlems')->with('error', $exception->getMessage());
+        }
+
+        $circle = $result['response']['circle'] ?? [];
+
+        return redirect()->to('/circlems')
+            ->with('message', 'Circle.ms 社團詳細已取得。')
+            ->with('circlems_probe_result', [
+                'type' => 'detail',
+                'title' => '社團詳細',
+                'wcid' => $wcid,
+                'eventId' => $eventId,
+                'circle' => is_array($circle) ? ($this->circleRows(['response' => ['list' => [$circle]]])[0] ?? []) : [],
+                'result' => $result,
+            ]);
+    }
+
+    public function circleBooks(): RedirectResponse
+    {
+        $wcid = (int) $this->request->getPost('wcid');
+        $eventId = (int) $this->request->getPost('event_id');
+        $page = max(1, (int) $this->request->getPost('page'));
+        if ($wcid <= 0 || $eventId <= 0) {
+            return redirect()->to('/circlems')->with('error', '缺少活動 ID 或 WCID，無法查詢頒布物。');
+        }
+
+        $token = $this->currentToken();
+        if (! $token) {
+            return redirect()->to('/circlems')->with('error', '尚未連線 Circle.ms。');
+        }
+
+        try {
+            $client = new CirclemsClient();
+            $token = $this->refreshIfNeeded($token, $client);
+            $result = $client->queryBooks((string) $token['access_token'], $eventId, $wcid, $page);
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => null,
+            ]);
+        } catch (RuntimeException $exception) {
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => $exception->getMessage(),
+            ]);
+
+            return redirect()->to('/circlems')->with('error', $exception->getMessage());
+        }
+
+        return redirect()->to('/circlems')
+            ->with('message', 'Circle.ms 頒布物已取得。')
+            ->with('circlems_probe_result', [
+                'type' => 'books',
+                'title' => '頒布物',
+                'wcid' => $wcid,
+                'eventId' => $eventId,
+                'page' => $page,
+                'count' => (int) ($result['response']['count'] ?? 0),
+                'maxCount' => (int) ($result['response']['maxcount'] ?? 0),
+                'books' => $this->bookRows($result),
+                'result' => $this->summarizeCircleResult($result, 20),
+            ]);
+    }
+
     private function currentToken(): ?array
     {
         return (new CirclemsTokenModel())
@@ -391,6 +482,40 @@ class Circlems extends BaseController
         }
 
         return $normalized;
+    }
+
+    private function bookRows(array $result): array
+    {
+        $list = $result['response']['list'] ?? [];
+        if (! is_array($list)) {
+            return [];
+        }
+
+        $rows = [];
+        foreach (array_slice($list, 0, 20) as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $rows[] = [
+                'workId' => (string) ($row['work_id'] ?? ''),
+                'wcid' => (string) ($row['wcid'] ?? ''),
+                'num' => (string) ($row['num'] ?? ''),
+                'name' => (string) ($row['name'] ?? ''),
+                'size' => (string) ($row['size'] ?? ''),
+                'page' => (string) ($row['page'] ?? ''),
+                'genre' => (string) ($row['genre'] ?? ''),
+                'distDate' => (string) ($row['dist_date'] ?? ''),
+                'newBook' => (int) ($row['new_book'] ?? 0),
+                'imageUrl' => (string) ($row['image_url'] ?? ''),
+                'introduction' => (string) ($row['introduction'] ?? ''),
+                'r18' => (int) ($row['r18'] ?? 0),
+                'price' => isset($row['price']) ? (string) $row['price'] : '',
+                'updateDate' => (string) ($row['update_date'] ?? ''),
+            ];
+        }
+
+        return $rows;
     }
 
     private function summarizeCircleResult(array $result, int $limit = 10): array

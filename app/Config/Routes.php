@@ -38,6 +38,8 @@ $routes->post('circlems/refresh', 'Circlems::refresh');
 $routes->post('circlems/test', 'Circlems::test');
 $routes->post('circlems/search-circle', 'Circlems::searchCircle');
 $routes->post('circlems/sample-circles', 'Circlems::sampleCircles');
+$routes->post('circlems/circle-detail', 'Circlems::circleDetail');
+$routes->post('circlems/circle-books', 'Circlems::circleBooks');
 
 $routes->get('orders', 'Orders::index');
 $routes->post('orders', 'Orders::create');

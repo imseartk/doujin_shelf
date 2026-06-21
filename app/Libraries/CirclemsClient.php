@@ -90,6 +90,26 @@ class CirclemsClient
         return $this->apiGet('/WebCatalog/QueryCircle/', $accessToken, $query);
     }
 
+    public function circleDetail(string $accessToken, int $wcid, int $eventId = 0): array
+    {
+        $query = ['wcid' => $wcid];
+
+        if ($eventId > 0) {
+            $query['event_id'] = $eventId;
+        }
+
+        return $this->apiGet('/WebCatalog/GetCircle/', $accessToken, $query);
+    }
+
+    public function queryBooks(string $accessToken, int $eventId, int $wcid, int $page = 1): array
+    {
+        return $this->apiGet('/WebCatalog/QueryBook/', $accessToken, [
+            'event_id' => $eventId,
+            'wcid' => $wcid,
+            'page' => max(1, $page),
+        ]);
+    }
+
     public function tokenExpiresAt(array $tokenResponse): ?string
     {
         $expiresIn = (int) ($tokenResponse['expires_in'] ?? 0);
