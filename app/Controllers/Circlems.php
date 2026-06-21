@@ -13,6 +13,20 @@ class Circlems extends BaseController
     {
         $client = new CirclemsClient();
         $token = $this->currentToken();
+        $events = [];
+        $latestEventId = null;
+        $eventError = null;
+
+        if ($token) {
+            try {
+                $token = $this->refreshIfNeeded($token, $client);
+                $eventList = $client->eventList((string) $token['access_token']);
+                $events = $this->eventOptions($eventList);
+                $latestEventId = $this->latestEventId($eventList);
+            } catch (RuntimeException $exception) {
+                $eventError = $exception->getMessage();
+            }
+        }
 
         return view('circlems/index', [
             'configured' => $client->isConfigured(),
@@ -20,6 +34,9 @@ class Circlems extends BaseController
             'token' => $token,
             'isExpired' => $this->isTokenExpired($token),
             'circleSearch' => session('circlems_circle_search'),
+            'events' => $events,
+            'latestEventId' => $latestEventId,
+            'eventError' => $eventError,
         ]);
     }
 
@@ -115,9 +132,8 @@ class Circlems extends BaseController
     public function searchCircle(): RedirectResponse
     {
         $circleName = trim((string) $this->request->getPost('circle_name'));
-        if ($circleName === '') {
-            return redirect()->to('/circlems')->with('error', '請輸入社團名稱。');
-        }
+        $eventId = (int) $this->request->getPost('event_id');
+        $page = max(1, (int) $this->request->getPost('page'));
 
         $token = $this->currentToken();
         if (! $token) {
@@ -128,13 +144,15 @@ class Circlems extends BaseController
             $client = new CirclemsClient();
             $token = $this->refreshIfNeeded($token, $client);
             $eventList = $client->eventList((string) $token['access_token']);
-            $eventId = $this->latestEventId($eventList);
+            if ($eventId <= 0) {
+                $eventId = $this->latestEventId($eventList) ?? 0;
+            }
 
-            if ($eventId === null) {
+            if ($eventId <= 0) {
                 throw new RuntimeException('Circle.ms event list did not include a latest event id.');
             }
 
-            $result = $client->queryCircle((string) $token['access_token'], $eventId, $circleName);
+            $result = $client->queryCircle((string) $token['access_token'], $eventId, $circleName, $page);
             (new CirclemsTokenModel())->update((int) $token['id'], [
                 'last_tested_at' => date('Y-m-d H:i:s'),
                 'last_error' => null,
@@ -151,11 +169,13 @@ class Circlems extends BaseController
         return redirect()->to('/circlems')
             ->with('message', 'Circle.ms 社團搜尋完成。')
             ->with('circlems_circle_search', [
-                'circleName' => $circleName,
+                'circleName' => $circleName !== '' ? $circleName : '全部社團樣本',
                 'query' => $circleName,
                 'eventId' => $eventId,
+                'page' => $page,
                 'count' => (int) ($result['response']['count'] ?? 0),
                 'maxCount' => (int) ($result['response']['maxcount'] ?? 0),
+                'rows' => $this->circleRows($result),
                 'result' => $this->summarizeCircleResult($result),
             ]);
     }
@@ -197,9 +217,11 @@ class Circlems extends BaseController
                 'circleName' => '樣本社團',
                 'query' => '',
                 'eventId' => $eventId,
+                'page' => 1,
                 'count' => (int) ($result['response']['count'] ?? 0),
                 'maxCount' => (int) ($result['response']['maxcount'] ?? 0),
                 'names' => $this->circleNames($result),
+                'rows' => $this->circleRows($result),
                 'result' => $this->summarizeCircleResult($result, 20),
             ]);
     }
@@ -274,6 +296,101 @@ class Circlems extends BaseController
         }
 
         return null;
+    }
+
+    private function eventOptions(array $eventList): array
+    {
+        $list = $eventList['response']['list'] ?? [];
+        if (! is_array($list)) {
+            return [];
+        }
+
+        $latestEventId = $this->latestEventId($eventList);
+        $events = [];
+
+        foreach ($list as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $eventId = (int) ($row['EventId'] ?? $row['eventId'] ?? $row['event_id'] ?? 0);
+            if ($eventId <= 0 || ($latestEventId !== null && $eventId > $latestEventId)) {
+                continue;
+            }
+
+            $eventNo = (int) ($row['EventNo'] ?? $row['eventNo'] ?? $row['event_no'] ?? 0);
+            $events[] = [
+                'eventId' => $eventId,
+                'eventNo' => $eventNo,
+                'label' => $eventNo > 0 ? 'C' . $eventNo . ' / Event ' . $eventId : 'Event ' . $eventId,
+            ];
+        }
+
+        usort($events, static fn (array $a, array $b): int => $b['eventId'] <=> $a['eventId']);
+
+        return $events;
+    }
+
+    private function circleRows(array $result): array
+    {
+        $list = $result['response']['list'] ?? [];
+        if (! is_array($list)) {
+            return [];
+        }
+
+        $rows = [];
+        foreach (array_slice($list, 0, 20) as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $rows[] = [
+                'wcid' => (string) ($row['wcid'] ?? ''),
+                'name' => (string) ($row['name'] ?? $row['circle_name'] ?? ''),
+                'nameKana' => (string) ($row['name_kana'] ?? ''),
+                'circlemsId' => (string) ($row['circlemsId'] ?? ''),
+                'genre' => (string) ($row['genre'] ?? ''),
+                'cutUrl' => (string) ($row['cut_url'] ?? $row['cut_web_url'] ?? $row['cut_base_url'] ?? ''),
+                'url' => (string) ($row['url'] ?? ''),
+                'pixivUrl' => (string) ($row['pixiv_url'] ?? ''),
+                'twitterUrl' => (string) ($row['twitter_url'] ?? ''),
+                'clipstudioUrl' => (string) ($row['clipstudio_url'] ?? ''),
+                'niconicoUrl' => (string) ($row['niconico_url'] ?? ''),
+                'tag' => (string) ($row['tag'] ?? ''),
+                'description' => (string) ($row['description'] ?? ''),
+                'stores' => $this->onlineStores($row['onlinestore'] ?? []),
+                'updateDate' => (string) ($row['update_date'] ?? ''),
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function onlineStores(mixed $stores): array
+    {
+        if (! is_array($stores)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($stores as $store) {
+            if (! is_array($store)) {
+                continue;
+            }
+
+            $name = trim((string) ($store['name'] ?? ''));
+            $link = trim((string) ($store['link'] ?? ''));
+            if ($name === '' && $link === '') {
+                continue;
+            }
+
+            $normalized[] = [
+                'name' => $name !== '' ? $name : $link,
+                'link' => $link,
+            ];
+        }
+
+        return $normalized;
     }
 
     private function summarizeCircleResult(array $result, int $limit = 10): array
