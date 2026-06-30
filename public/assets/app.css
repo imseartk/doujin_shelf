@@ -449,6 +449,21 @@ label input, label select, label textarea { font-weight: 400; }
     border-radius: 6px;
     background: #f5f7f5;
 }
+.catalog-url-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 16px;
+}
+.catalog-url-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+}
 .danger-form { margin-top: 20px; }
 
 .tag-field { display: grid; gap: 6px; margin-bottom: 14px; }

@@ -110,6 +110,13 @@ class CirclemsClient
         ]);
     }
 
+    public function catalogBase(string $accessToken, int $eventId): array
+    {
+        return $this->apiGet('/CatalogBase/All/', $accessToken, [
+            'event_id' => $eventId,
+        ]);
+    }
+
     public function tokenExpiresAt(array $tokenResponse): ?string
     {
         $expiresIn = (int) ($tokenResponse['expires_in'] ?? 0);

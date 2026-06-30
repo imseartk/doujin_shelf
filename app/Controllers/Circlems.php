@@ -317,6 +317,46 @@ class Circlems extends BaseController
             ]);
     }
 
+    public function catalogBase(): RedirectResponse
+    {
+        $eventId = (int) $this->request->getPost('event_id');
+        if ($eventId <= 0) {
+            return redirect()->to('/circlems')->with('error', '缺少活動 ID，無法取得初期資料庫。');
+        }
+
+        $token = $this->currentToken();
+        if (! $token) {
+            return redirect()->to('/circlems')->with('error', '尚未連線 Circle.ms。');
+        }
+
+        try {
+            $client = new CirclemsClient();
+            $token = $this->refreshIfNeeded($token, $client);
+            $result = $client->catalogBase((string) $token['access_token'], $eventId);
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => null,
+            ]);
+        } catch (RuntimeException $exception) {
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => $exception->getMessage(),
+            ]);
+
+            return redirect()->to('/circlems')->with('error', $exception->getMessage());
+        }
+
+        return redirect()->to('/circlems')
+            ->with('message', 'Circle.ms 初期資料庫資訊已取得。')
+            ->with('circlems_probe_result', [
+                'type' => 'catalog',
+                'title' => '初期資料庫',
+                'eventId' => $eventId,
+                'catalogUrls' => $this->catalogUrls($result),
+                'result' => $result,
+            ]);
+    }
+
     private function currentToken(): ?array
     {
         return (new CirclemsTokenModel())
@@ -516,6 +556,63 @@ class Circlems extends BaseController
         }
 
         return $rows;
+    }
+
+    private function catalogUrls(array $result): array
+    {
+        $urls = $result['response']['url'] ?? $result['response']['urls'] ?? [];
+        if (! is_array($urls)) {
+            return [];
+        }
+
+        $rows = [];
+        foreach ($urls as $key => $url) {
+            $url = trim((string) $url);
+            if ($url === '') {
+                continue;
+            }
+
+            $rows[] = [
+                'key' => (string) $key,
+                'url' => $url,
+                'kind' => $this->catalogUrlKind((string) $key),
+            ];
+        }
+
+        usort($rows, static function (array $a, array $b): int {
+            $rank = [
+                'text-sqlite3-zip' => 1,
+                'text-sqlite3' => 2,
+                'image-zip' => 3,
+                'image' => 4,
+                'other' => 9,
+            ];
+
+            return ($rank[$a['kind']] ?? 9) <=> ($rank[$b['kind']] ?? 9)
+                ?: strcmp($a['key'], $b['key']);
+        });
+
+        return $rows;
+    }
+
+    private function catalogUrlKind(string $key): string
+    {
+        $key = strtolower($key);
+
+        if (str_contains($key, 'textdb_sqlite3') && str_contains($key, 'zip')) {
+            return 'text-sqlite3-zip';
+        }
+        if (str_contains($key, 'textdb_sqlite3')) {
+            return 'text-sqlite3';
+        }
+        if (str_contains($key, 'imagedb') && str_contains($key, 'zip')) {
+            return 'image-zip';
+        }
+        if (str_contains($key, 'imagedb')) {
+            return 'image';
+        }
+
+        return 'other';
     }
 
     private function summarizeCircleResult(array $result, int $limit = 10): array

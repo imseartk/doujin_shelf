@@ -77,6 +77,18 @@
             <?= csrf_field() ?>
             <button class="button ghost" type="submit">抓樣本社團</button>
         </form>
+        <form class="inline-form" method="post" action="/circlems/catalog-base">
+            <?= csrf_field() ?>
+            <select name="event_id">
+                <?php foreach ($events as $event): ?>
+                    <?php $selectedEventId = (int) ($circleSearch['eventId'] ?? $latestEventId ?? 0); ?>
+                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $selectedEventId ? 'selected' : '' ?>>
+                        <?= esc($event['label']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <button class="button ghost" type="submit">取得初期資料庫 URL</button>
+        </form>
 
         <?php if (! empty($circleSearch)): ?>
             <dl class="status-list">
@@ -187,6 +199,20 @@
                     <dd><?= esc((string) ($circleProbe['count'] ?? 0)) ?> / <?= esc((string) ($circleProbe['maxCount'] ?? 0)) ?></dd>
                 <?php endif; ?>
             </dl>
+
+            <?php if (($circleProbe['type'] ?? '') === 'catalog' && ! empty($circleProbe['catalogUrls'])): ?>
+                <div class="catalog-url-list">
+                    <?php foreach ($circleProbe['catalogUrls'] as $catalogUrl): ?>
+                        <div class="catalog-url-item">
+                            <div>
+                                <strong><?= esc($catalogUrl['key']) ?></strong>
+                                <div class="muted"><?= esc($catalogUrl['kind']) ?></div>
+                            </div>
+                            <a class="button small ghost" href="<?= esc($catalogUrl['url']) ?>" target="_blank" rel="noopener">開啟</a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
 
             <?php if (! empty($circleProbe['circle'])): ?>
                 <?php $row = $circleProbe['circle']; ?>
