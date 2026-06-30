@@ -44,6 +44,7 @@ $routes->post('circlems/circle-detail', 'Circlems::circleDetail');
 $routes->post('circlems/circle-books', 'Circlems::circleBooks');
 $routes->post('circlems/catalog-base', 'Circlems::catalogBase');
 $routes->post('circlems/catalog-download-text', 'Circlems::catalogDownloadText');
+$routes->post('circlems/catalog-lookup', 'Circlems::catalogLookup');
 
 $routes->get('orders', 'Orders::index');
 $routes->post('orders', 'Orders::create');

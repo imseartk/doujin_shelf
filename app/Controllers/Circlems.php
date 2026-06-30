@@ -404,6 +404,40 @@ class Circlems extends BaseController
             ]);
     }
 
+    public function catalogLookup(): RedirectResponse
+    {
+        $eventId = (int) $this->request->getPost('event_id');
+        $query = trim((string) $this->request->getPost('q'));
+
+        if ($eventId <= 0) {
+            return redirect()->to('/circlems')->with('error', '缺少活動 ID，無法查詢 text DB。');
+        }
+        if ($query === '') {
+            return redirect()->to('/circlems')->with('error', '請輸入社團名稱或 WCID。');
+        }
+
+        try {
+            $rows = $this->catalogLookupRows($eventId, $query);
+        } catch (RuntimeException $exception) {
+            return redirect()->to('/circlems')->with('error', $exception->getMessage());
+        }
+
+        return redirect()->to('/circlems')
+            ->with('message', 'Circle.ms text DB 位置查詢完成。')
+            ->with('circlems_probe_result', [
+                'type' => 'catalog_lookup',
+                'title' => 'text DB 位置查詢',
+                'eventId' => $eventId,
+                'query' => $query,
+                'catalogLookupRows' => $rows,
+                'result' => [
+                    'query' => $query,
+                    'count' => count($rows),
+                    'list' => $rows,
+                ],
+            ]);
+    }
+
     private function currentToken(): ?array
     {
         return (new CirclemsTokenModel())
@@ -753,6 +787,177 @@ class Circlems extends BaseController
 
         fclose($output);
         gzclose($input);
+    }
+
+    private function catalogLookupRows(int $eventId, string $query): array
+    {
+        if (! class_exists('SQLite3')) {
+            throw new RuntimeException('PHP SQLite3 extension is not installed.');
+        }
+
+        $dbPath = $this->catalogDbPath($eventId);
+        if (! is_file($dbPath)) {
+            throw new RuntimeException('尚未下載這個活動的 text DB，請先執行「下載並檢查 text DB」。');
+        }
+
+        $db = new \SQLite3($dbPath, SQLITE3_OPEN_READONLY);
+        $statement = $db->prepare(
+            <<<'SQL'
+SELECT
+    c.comiketNo,
+    c.id,
+    c.day,
+    c.blockId,
+    c.spaceNo,
+    c.spaceNoSub,
+    c.genreId,
+    c.circleName,
+    c.circleKana,
+    c.penName,
+    c.bookName,
+    c.url,
+    c.description,
+    c.updateId,
+    e.WCId AS wcId,
+    e.twitterURL,
+    e.pixivURL,
+    e.CirclemsPortalURL,
+    b.name AS blockName,
+    a.name AS areaName,
+    a.simpleName AS areaSimpleName,
+    m.id AS mapId,
+    m.name AS mapName,
+    m.filename AS mapFilename,
+    m.rotate AS mapRotate,
+    l.xpos,
+    l.ypos,
+    l.xpos2,
+    l.ypos2,
+    l.layout,
+    l.hallId
+FROM ComiketCircleWC c
+LEFT JOIN ComiketCircleExtend e
+    ON e.comiketNo = c.comiketNo AND e.id = c.id
+LEFT JOIN ComiketBlockWC b
+    ON b.comiketNo = c.comiketNo AND b.id = c.blockId
+LEFT JOIN ComiketAreaWC a
+    ON a.comiketNo = c.comiketNo AND a.id = b.areaId
+LEFT JOIN ComiketMapWC m
+    ON m.comiketNo = c.comiketNo AND m.id = a.mapId
+LEFT JOIN ComiketLayoutWC l
+    ON l.comiketNo = c.comiketNo AND l.blockId = c.blockId AND l.spaceNo = c.spaceNo
+WHERE
+    c.circleName LIKE :like
+    OR c.circleKana LIKE :like
+    OR c.penName LIKE :like
+    OR c.circlems LIKE :like
+    OR (:numeric > 0 AND (e.WCId = :numeric OR c.updateId = :numeric OR c.id = :numeric))
+ORDER BY c.day, m.id, b.id, c.spaceNo, c.spaceNoSub
+LIMIT 30
+SQL
+        );
+
+        if ($statement === false) {
+            $db->close();
+            throw new RuntimeException('Unable to prepare catalog lookup query.');
+        }
+
+        $numeric = ctype_digit($query) ? (int) $query : 0;
+        $statement->bindValue(':like', '%' . $query . '%', SQLITE3_TEXT);
+        $statement->bindValue(':numeric', $numeric, SQLITE3_INTEGER);
+
+        $result = $statement->execute();
+        if ($result === false) {
+            $db->close();
+            throw new RuntimeException('Unable to execute catalog lookup query.');
+        }
+
+        $rows = [];
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            $rows[] = $this->formatCatalogLookupRow($row);
+        }
+
+        $result->finalize();
+        $statement->close();
+        $db->close();
+
+        return $rows;
+    }
+
+    private function catalogDbPath(int $eventId): string
+    {
+        return WRITEPATH . 'circlems' . DIRECTORY_SEPARATOR . 'catalogs' . DIRECTORY_SEPARATOR . 'event_' . $eventId . DIRECTORY_SEPARATOR . 'webcatalog_text.db';
+    }
+
+    private function formatCatalogLookupRow(array $row): array
+    {
+        $spaceSub = $this->catalogSpaceSub((int) ($row['spaceNoSub'] ?? -1));
+        $spaceNo = (int) ($row['spaceNo'] ?? 0);
+        $spaceLabel = trim((string) ($row['blockName'] ?? '')) . sprintf('%02d', $spaceNo) . $spaceSub;
+        $areaLabel = trim((string) ($row['areaSimpleName'] ?? ''));
+        if ($areaLabel === '') {
+            $areaLabel = trim((string) ($row['areaName'] ?? ''));
+        }
+        if ($areaLabel === '') {
+            $areaLabel = trim((string) ($row['mapName'] ?? ''));
+        }
+
+        $positionParts = [];
+        if ((int) ($row['day'] ?? 0) > 0) {
+            $positionParts[] = (int) $row['day'] . '日目';
+        }
+        if ($areaLabel !== '') {
+            $positionParts[] = $areaLabel;
+        }
+        if ($spaceLabel !== '') {
+            $positionParts[] = $spaceLabel;
+        }
+
+        return [
+            'positionLabel' => implode(' ', $positionParts),
+            'wcid' => (string) ($row['wcId'] ?? ''),
+            'circleId' => (string) ($row['id'] ?? ''),
+            'updateId' => (string) ($row['updateId'] ?? ''),
+            'day' => (int) ($row['day'] ?? 0),
+            'circleName' => (string) ($row['circleName'] ?? ''),
+            'circleKana' => (string) ($row['circleKana'] ?? ''),
+            'penName' => (string) ($row['penName'] ?? ''),
+            'bookName' => (string) ($row['bookName'] ?? ''),
+            'genreId' => (string) ($row['genreId'] ?? ''),
+            'blockName' => (string) ($row['blockName'] ?? ''),
+            'areaName' => (string) ($row['areaName'] ?? ''),
+            'areaSimpleName' => (string) ($row['areaSimpleName'] ?? ''),
+            'mapName' => (string) ($row['mapName'] ?? ''),
+            'mapFilename' => (string) ($row['mapFilename'] ?? ''),
+            'spaceNo' => $spaceNo,
+            'spaceNoSub' => $spaceSub,
+            'xpos' => (int) ($row['xpos'] ?? 0),
+            'ypos' => (int) ($row['ypos'] ?? 0),
+            'xpos2' => (int) ($row['xpos2'] ?? 0),
+            'ypos2' => (int) ($row['ypos2'] ?? 0),
+            'layout' => (string) ($row['layout'] ?? ''),
+            'hallId' => (string) ($row['hallId'] ?? ''),
+            'url' => (string) ($row['url'] ?? ''),
+            'twitterUrl' => (string) ($row['twitterURL'] ?? ''),
+            'pixivUrl' => (string) ($row['pixivURL'] ?? ''),
+            'circlemsPortalUrl' => (string) ($row['CirclemsPortalURL'] ?? ''),
+            'description' => (string) ($row['description'] ?? ''),
+        ];
+    }
+
+    private function catalogSpaceSub(int $spaceNoSub): string
+    {
+        if ($spaceNoSub === 0) {
+            return 'a';
+        }
+        if ($spaceNoSub === 1) {
+            return 'b';
+        }
+        if ($spaceNoSub >= 0) {
+            return (string) $spaceNoSub;
+        }
+
+        return '';
     }
 
     private function inspectSqlite(string $dbPath): array

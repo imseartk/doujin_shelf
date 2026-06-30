@@ -1,6 +1,14 @@
 <?= $this->extend('layouts/app') ?>
 
 <?= $this->section('content') ?>
+<?php
+$probeEventId = is_array($circleProbe ?? null) ? (int) ($circleProbe['eventId'] ?? 0) : 0;
+$probeQuery = is_array($circleProbe ?? null) ? (string) ($circleProbe['query'] ?? '') : '';
+$defaultEventId = (int) ($circleSearch['eventId'] ?? 0);
+if ($defaultEventId <= 0) {
+    $defaultEventId = $probeEventId > 0 ? $probeEventId : (int) ($latestEventId ?? 0);
+}
+?>
 <section class="page-head">
     <div>
         <h1>Circle.ms 連線</h1>
@@ -63,8 +71,7 @@
             <?= csrf_field() ?>
             <select name="event_id">
                 <?php foreach ($events as $event): ?>
-                    <?php $selectedEventId = (int) ($circleSearch['eventId'] ?? $latestEventId ?? 0); ?>
-                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $selectedEventId ? 'selected' : '' ?>>
+                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $defaultEventId ? 'selected' : '' ?>>
                         <?= esc($event['label']) ?>
                     </option>
                 <?php endforeach; ?>
@@ -81,8 +88,7 @@
             <?= csrf_field() ?>
             <select name="event_id">
                 <?php foreach ($events as $event): ?>
-                    <?php $selectedEventId = (int) ($circleSearch['eventId'] ?? $latestEventId ?? 0); ?>
-                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $selectedEventId ? 'selected' : '' ?>>
+                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $defaultEventId ? 'selected' : '' ?>>
                         <?= esc($event['label']) ?>
                     </option>
                 <?php endforeach; ?>
@@ -100,6 +106,18 @@
                 <?php endforeach; ?>
             </select>
             <button class="button ghost" type="submit">下載並檢查 text DB</button>
+        </form>
+        <form class="inline-form" method="post" action="/circlems/catalog-lookup">
+            <?= csrf_field() ?>
+            <select name="event_id">
+                <?php foreach ($events as $event): ?>
+                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $defaultEventId ? 'selected' : '' ?>>
+                        <?= esc($event['label']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <input type="text" name="q" value="<?= esc($probeQuery !== '' ? $probeQuery : (string) ($circleSearch['query'] ?? '08BASE')) ?>" placeholder="社團名稱 / WCID">
+            <button class="button ghost" type="submit">查 text DB 位置</button>
         </form>
 
         <?php if (! empty($circleSearch)): ?>
@@ -261,6 +279,46 @@
                             <?php endforeach; ?>
                         </div>
                     </div>
+                <?php endif; ?>
+            <?php endif; ?>
+
+            <?php if (($circleProbe['type'] ?? '') === 'catalog_lookup'): ?>
+                <dl class="status-list catalog-download-status">
+                    <dt>查詢</dt>
+                    <dd><?= esc((string) ($circleProbe['query'] ?? '')) ?></dd>
+                    <dt>命中筆數</dt>
+                    <dd><?= number_format(count($circleProbe['catalogLookupRows'] ?? [])) ?></dd>
+                </dl>
+
+                <?php if (! empty($circleProbe['catalogLookupRows'])): ?>
+                    <div class="catalog-position-list">
+                        <?php foreach ($circleProbe['catalogLookupRows'] as $row): ?>
+                            <article class="catalog-position-card">
+                                <div>
+                                    <div class="catalog-position-label"><?= esc($row['positionLabel'] !== '' ? $row['positionLabel'] : '(no position)') ?></div>
+                                    <h3><?= esc($row['circleName'] !== '' ? $row['circleName'] : '(no name)') ?></h3>
+                                    <div class="muted">
+                                        <?php if ($row['circleKana'] !== ''): ?><?= esc($row['circleKana']) ?><?php endif; ?>
+                                        <?php if ($row['penName'] !== ''): ?> / <?= esc($row['penName']) ?><?php endif; ?>
+                                    </div>
+                                    <?php if ($row['description'] !== ''): ?>
+                                        <p class="circlems-description"><?= esc(mb_strimwidth($row['description'], 0, 180, '...', 'UTF-8')) ?></p>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="catalog-position-meta">
+                                    <?php if ($row['wcid'] !== ''): ?><span>WCID <?= esc($row['wcid']) ?></span><?php endif; ?>
+                                    <?php if ($row['genreId'] !== ''): ?><span>Genre <?= esc($row['genreId']) ?></span><?php endif; ?>
+                                    <?php if ($row['updateId'] !== ''): ?><span>Update <?= esc($row['updateId']) ?></span><?php endif; ?>
+                                    <?php if ($row['mapName'] !== ''): ?><span><?= esc($row['mapName']) ?></span><?php endif; ?>
+                                    <?php if ($row['areaName'] !== ''): ?><span><?= esc($row['areaName']) ?></span><?php endif; ?>
+                                    <span>x/y <?= esc((string) $row['xpos']) ?>, <?= esc((string) $row['ypos']) ?></span>
+                                    <span>x2/y2 <?= esc((string) $row['xpos2']) ?>, <?= esc((string) $row['ypos2']) ?></span>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <p class="muted">沒有在 text DB 找到符合的社團。</p>
                 <?php endif; ?>
             <?php endif; ?>
 
