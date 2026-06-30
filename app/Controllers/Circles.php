@@ -205,8 +205,13 @@ class Circles extends BaseController
         ];
 
         $cutUrl = trim((string) $this->request->getPost('webcatalog_cut_url'));
+        $cutWarning = null;
         if ($cutUrl !== '') {
-            $data['webcatalog_cut_url'] = $cutUrl;
+            try {
+                $data['webcatalog_cut_url'] = $this->storeCirclemsCutImage($cutUrl, $circlemsId);
+            } catch (RuntimeException $exception) {
+                $cutWarning = $exception->getMessage();
+            }
         }
 
         if ((string) $this->request->getPost('import_social') === '1') {
@@ -224,7 +229,12 @@ class Circles extends BaseController
 
         $circleModel->update($id, $data);
 
-        return redirect()->to('/circles/' . $id . '/circlems')->with('message', '已綁定 Circle.ms 社團。');
+        $message = '已綁定 Circle.ms 社團。';
+        if ($cutWarning !== null) {
+            $message .= ' 但圖片下載失敗：' . $cutWarning;
+        }
+
+        return redirect()->to('/circles/' . $id . '/circlems')->with('message', $message);
     }
 
     private function priorityPost(): string
@@ -237,6 +247,95 @@ class Circles extends BaseController
     {
         $value = trim((string) $this->request->getPost($key));
         return $value === '' ? null : $value;
+    }
+
+    private function storeCirclemsCutImage(string $url, string $circlemsId): string
+    {
+        if (! str_starts_with($url, 'https://') && ! str_starts_with($url, 'http://')) {
+            throw new RuntimeException('圖片網址格式不正確。');
+        }
+
+        $uploadPath = FCPATH . 'uploads/circles';
+        if (! is_dir($uploadPath) && ! mkdir($uploadPath, 0775, true) && ! is_dir($uploadPath)) {
+            throw new RuntimeException('無法建立社團圖片目錄。');
+        }
+
+        $tempPath = $uploadPath . DIRECTORY_SEPARATOR . 'tmp_' . bin2hex(random_bytes(8));
+        $handle = fopen($tempPath, 'wb');
+        if ($handle === false) {
+            throw new RuntimeException('無法寫入社團圖片。');
+        }
+
+        $curl = curl_init($url);
+        if ($curl === false) {
+            fclose($handle);
+            @unlink($tempPath);
+            throw new RuntimeException('無法初始化圖片下載。');
+        }
+
+        curl_setopt_array($curl, [
+            CURLOPT_FILE => $handle,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 3,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_USERAGENT => 'Personal Doujin Helper',
+        ]);
+
+        $ok = curl_exec($curl);
+        $statusCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $contentType = (string) curl_getinfo($curl, CURLINFO_CONTENT_TYPE);
+        $error = curl_error($curl);
+        curl_close($curl);
+        fclose($handle);
+
+        if ($ok === false || $statusCode < 200 || $statusCode >= 300) {
+            @unlink($tempPath);
+            throw new RuntimeException('HTTP ' . $statusCode . ($error !== '' ? ' / ' . $error : ''));
+        }
+
+        if ((filesize($tempPath) ?: 0) > 8 * 1024 * 1024) {
+            @unlink($tempPath);
+            throw new RuntimeException('圖片超過 8MB。');
+        }
+
+        $extension = $this->circleImageExtension($contentType, $tempPath);
+        if ($extension === null) {
+            @unlink($tempPath);
+            throw new RuntimeException('圖片格式不支援。');
+        }
+
+        $safeId = preg_replace('/[^A-Za-z0-9_-]/', '', $circlemsId) ?: 'circle';
+        $fileName = 'circlems_' . $safeId . '_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $targetPath = $uploadPath . DIRECTORY_SEPARATOR . $fileName;
+
+        if (! rename($tempPath, $targetPath)) {
+            @unlink($tempPath);
+            throw new RuntimeException('無法儲存社團圖片。');
+        }
+
+        return '/uploads/circles/' . $fileName;
+    }
+
+    private function circleImageExtension(string $contentType, string $path): ?string
+    {
+        $contentType = strtolower(trim(explode(';', $contentType)[0]));
+        $map = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'image/gif' => 'gif',
+        ];
+
+        if (isset($map[$contentType])) {
+            return $map[$contentType];
+        }
+
+        $info = @getimagesize($path);
+        if (! is_array($info)) {
+            return null;
+        }
+
+        return $map[strtolower((string) ($info['mime'] ?? ''))] ?? null;
     }
 
     private function safeReturnTo(): string
