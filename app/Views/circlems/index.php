@@ -119,6 +119,17 @@ if ($defaultEventId <= 0) {
             <input type="text" name="q" value="<?= esc($probeQuery !== '' ? $probeQuery : (string) ($circleSearch['query'] ?? '08BASE')) ?>" placeholder="社團名稱 / WCID">
             <button class="button ghost" type="submit">查 text DB 位置</button>
         </form>
+        <form class="inline-form" method="post" action="/circlems/import-c108" onsubmit="return confirm('要把已下載的 text DB 匯入 c108_circles 嗎？');">
+            <?= csrf_field() ?>
+            <select name="event_id">
+                <?php foreach ($events as $event): ?>
+                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $defaultEventId ? 'selected' : '' ?>>
+                        <?= esc($event['label']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <button class="button ghost" type="submit">匯入 C108 text DB</button>
+        </form>
 
         <?php if (! empty($circleSearch)): ?>
             <dl class="status-list">
@@ -320,6 +331,22 @@ if ($defaultEventId <= 0) {
                 <?php else: ?>
                     <p class="muted">沒有在 text DB 找到符合的社團。</p>
                 <?php endif; ?>
+            <?php endif; ?>
+
+            <?php if (($circleProbe['type'] ?? '') === 'catalog_import' && ! empty($circleProbe['catalogImport'])): ?>
+                <?php $import = $circleProbe['catalogImport']; ?>
+                <dl class="status-list catalog-download-status">
+                    <dt>資料表</dt>
+                    <dd><?= esc($import['table'] ?? '') ?></dd>
+                    <dt>匯入筆數</dt>
+                    <dd><?= number_format((int) ($import['imported'] ?? 0)) ?></dd>
+                    <dt>已連到本地社團</dt>
+                    <dd><?= number_format((int) ($import['matched_local_circles'] ?? 0)) ?></dd>
+                    <dt>略過</dt>
+                    <dd><?= number_format((int) ($import['skipped_without_wcid'] ?? 0)) ?> 筆沒有 WCID</dd>
+                    <dt>匯入時間</dt>
+                    <dd><?= esc($import['imported_at'] ?? '') ?></dd>
+                </dl>
             <?php endif; ?>
 
             <?php if (! empty($circleProbe['circle'])): ?>

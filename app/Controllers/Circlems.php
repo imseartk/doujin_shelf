@@ -438,6 +438,30 @@ class Circlems extends BaseController
             ]);
     }
 
+    public function importC108(): RedirectResponse
+    {
+        $eventId = (int) $this->request->getPost('event_id');
+        if ($eventId <= 0) {
+            return redirect()->to('/circlems')->with('error', '缺少活動 ID，無法匯入 C108。');
+        }
+
+        try {
+            $summary = $this->importC108Rows($eventId);
+        } catch (RuntimeException $exception) {
+            return redirect()->to('/circlems')->with('error', $exception->getMessage());
+        }
+
+        return redirect()->to('/circlems')
+            ->with('message', 'C108 社團攤位資料已匯入。')
+            ->with('circlems_probe_result', [
+                'type' => 'catalog_import',
+                'title' => 'C108 匯入結果',
+                'eventId' => $eventId,
+                'catalogImport' => $summary,
+                'result' => $summary,
+            ]);
+    }
+
     private function currentToken(): ?array
     {
         return (new CirclemsTokenModel())
@@ -818,6 +842,8 @@ SELECT
     c.url,
     c.description,
     c.updateId,
+    c.updateData,
+    c.circlems AS circlemsId,
     e.WCId AS wcId,
     e.twitterURL,
     e.pixivURL,
@@ -884,6 +910,219 @@ SQL
         return $rows;
     }
 
+    private function importC108Rows(int $eventId): array
+    {
+        if (! class_exists('SQLite3')) {
+            throw new RuntimeException('PHP SQLite3 extension is not installed.');
+        }
+        $mysql = db_connect();
+        if (! $mysql->tableExists('c108_circles')) {
+            throw new RuntimeException('找不到 c108_circles，請先執行 migration。');
+        }
+
+        $dbPath = $this->catalogDbPath($eventId);
+        if (! is_file($dbPath)) {
+            throw new RuntimeException('尚未下載這個活動的 text DB，請先執行「下載並檢查 text DB」。');
+        }
+
+        $localCircleIds = $this->localCircleIdsForCatalog($mysql);
+        $sqlite = new \SQLite3($dbPath, SQLITE3_OPEN_READONLY);
+        $result = $sqlite->query(
+            <<<'SQL'
+SELECT
+    c.comiketNo,
+    c.id,
+    c.day,
+    c.blockId,
+    c.spaceNo,
+    c.spaceNoSub,
+    c.genreId,
+    c.circleName,
+    c.circleKana,
+    c.penName,
+    c.bookName,
+    c.url,
+    c.description,
+    c.updateId,
+    c.updateData,
+    c.circlems AS circlemsId,
+    e.WCId AS wcId,
+    e.twitterURL,
+    e.pixivURL,
+    e.CirclemsPortalURL,
+    b.name AS blockName,
+    a.name AS areaName,
+    a.simpleName AS areaSimpleName,
+    m.id AS mapId,
+    m.name AS mapName,
+    m.filename AS mapFilename,
+    m.rotate AS mapRotate,
+    l.xpos,
+    l.ypos,
+    l.xpos2,
+    l.ypos2,
+    l.layout,
+    l.hallId
+FROM ComiketCircleWC c
+LEFT JOIN ComiketCircleExtend e
+    ON e.comiketNo = c.comiketNo AND e.id = c.id
+LEFT JOIN ComiketBlockWC b
+    ON b.comiketNo = c.comiketNo AND b.id = c.blockId
+LEFT JOIN ComiketAreaWC a
+    ON a.comiketNo = c.comiketNo AND a.id = b.areaId
+LEFT JOIN ComiketMapWC m
+    ON m.comiketNo = c.comiketNo AND m.id = a.mapId
+LEFT JOIN ComiketLayoutWC l
+    ON l.comiketNo = c.comiketNo AND l.blockId = c.blockId AND l.spaceNo = c.spaceNo
+ORDER BY c.day, m.id, b.id, c.spaceNo, c.spaceNoSub
+SQL
+        );
+
+        if ($result === false) {
+            $sqlite->close();
+            throw new RuntimeException('Unable to read C108 catalog rows.');
+        }
+
+        $table = $mysql->table('c108_circles');
+        $now = date('Y-m-d H:i:s');
+        $imported = 0;
+        $matched = 0;
+        $skipped = 0;
+
+        $mysql->transStart();
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            $formatted = $this->formatCatalogLookupRow($row);
+            $wcid = (int) $formatted['wcid'];
+            if ($wcid <= 0) {
+                $skipped++;
+                continue;
+            }
+
+            $circleId = $localCircleIds['wcid'][(string) $wcid]
+                ?? $localCircleIds['name'][$this->circleNameKey($formatted['circleName'])]
+                ?? null;
+
+            if ($circleId !== null) {
+                $matched++;
+            }
+
+            $table->replace([
+                'circle_id' => $circleId,
+                'event_id' => $eventId,
+                'comiket_no' => $formatted['comiketNo'] > 0 ? $formatted['comiketNo'] : null,
+                'catalog_circle_id' => (int) $formatted['circleId'] > 0 ? (int) $formatted['circleId'] : null,
+                'wcid' => $wcid,
+                'circlems_id' => $this->nullIfEmpty($formatted['circlemsId']),
+                'day' => $formatted['day'] > 0 ? $formatted['day'] : null,
+                'genre_id' => $this->nullIfEmpty($formatted['genreId']),
+                'circle_name' => $formatted['circleName'],
+                'circle_kana' => $this->nullIfEmpty($formatted['circleKana']),
+                'pen_name' => $this->nullIfEmpty($formatted['penName']),
+                'book_name' => $this->nullIfEmpty($formatted['bookName']),
+                'block_id' => (int) ($row['blockId'] ?? 0) > 0 ? (int) $row['blockId'] : null,
+                'block_name' => $this->nullIfEmpty($formatted['blockName']),
+                'area_name' => $this->nullIfEmpty($formatted['areaName']),
+                'area_simple_name' => $this->nullIfEmpty($formatted['areaSimpleName']),
+                'map_id' => (int) ($row['mapId'] ?? 0) > 0 ? (int) $row['mapId'] : null,
+                'map_name' => $this->nullIfEmpty($formatted['mapName']),
+                'map_filename' => $this->nullIfEmpty($formatted['mapFilename']),
+                'map_rotate' => (int) ($row['mapRotate'] ?? 0),
+                'space_no' => $formatted['spaceNo'] > 0 ? $formatted['spaceNo'] : null,
+                'space_no_sub' => $this->nullIfEmpty($formatted['spaceNoSub']),
+                'space_label' => $this->nullIfEmpty(trim($formatted['blockName'] . sprintf('%02d', $formatted['spaceNo']) . $formatted['spaceNoSub'])),
+                'position_label' => $this->nullIfEmpty($formatted['positionLabel']),
+                'xpos' => $formatted['xpos'],
+                'ypos' => $formatted['ypos'],
+                'xpos2' => $formatted['xpos2'],
+                'ypos2' => $formatted['ypos2'],
+                'layout' => $this->nullIfEmpty($formatted['layout']),
+                'hall_id' => $this->nullIfEmpty($formatted['hallId']),
+                'website_url' => $this->nullIfEmpty($formatted['url']),
+                'twitter_url' => $this->nullIfEmpty($formatted['twitterUrl']),
+                'pixiv_url' => $this->nullIfEmpty($formatted['pixivUrl']),
+                'circlems_portal_url' => $this->nullIfEmpty($formatted['circlemsPortalUrl']),
+                'description' => $this->nullIfEmpty($formatted['description']),
+                'source_update_id' => $this->nullIfEmpty($formatted['updateId']),
+                'source_updated_at' => $this->catalogDateOrNull($formatted['updateData']),
+                'imported_at' => $now,
+            ]);
+
+            $imported++;
+        }
+        $mysql->transComplete();
+
+        $result->finalize();
+        $sqlite->close();
+
+        if ($mysql->transStatus() === false) {
+            throw new RuntimeException('C108 import transaction failed.');
+        }
+
+        return [
+            'table' => 'c108_circles',
+            'event_id' => $eventId,
+            'imported' => $imported,
+            'matched_local_circles' => $matched,
+            'skipped_without_wcid' => $skipped,
+            'imported_at' => $now,
+        ];
+    }
+
+    private function localCircleIdsForCatalog($db): array
+    {
+        $rows = $db->table('circles')
+            ->select('id, name, webcatalog_circle_id')
+            ->get()
+            ->getResultArray();
+
+        $byWcid = [];
+        $byName = [];
+        foreach ($rows as $row) {
+            $id = (int) $row['id'];
+            $wcid = trim((string) ($row['webcatalog_circle_id'] ?? ''));
+            if ($wcid !== '') {
+                $byWcid[$wcid] = $id;
+            }
+
+            $nameKey = $this->circleNameKey((string) ($row['name'] ?? ''));
+            if ($nameKey !== '' && ! isset($byName[$nameKey])) {
+                $byName[$nameKey] = $id;
+            }
+        }
+
+        return [
+            'wcid' => $byWcid,
+            'name' => $byName,
+        ];
+    }
+
+    private function circleNameKey(string $name): string
+    {
+        return mb_strtolower(trim($name), 'UTF-8');
+    }
+
+    private function nullIfEmpty(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function catalogDateOrNull(string $value): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        $timestamp = strtotime($value);
+        if ($timestamp === false) {
+            return null;
+        }
+
+        return date('Y-m-d H:i:s', $timestamp);
+    }
+
     private function catalogDbPath(int $eventId): string
     {
         return WRITEPATH . 'circlems' . DIRECTORY_SEPARATOR . 'catalogs' . DIRECTORY_SEPARATOR . 'event_' . $eventId . DIRECTORY_SEPARATOR . 'webcatalog_text.db';
@@ -917,7 +1156,10 @@ SQL
             'positionLabel' => implode(' ', $positionParts),
             'wcid' => (string) ($row['wcId'] ?? ''),
             'circleId' => (string) ($row['id'] ?? ''),
+            'comiketNo' => (int) ($row['comiketNo'] ?? 0),
+            'circlemsId' => (string) ($row['circlemsId'] ?? ''),
             'updateId' => (string) ($row['updateId'] ?? ''),
+            'updateData' => (string) ($row['updateData'] ?? ''),
             'day' => (int) ($row['day'] ?? 0),
             'circleName' => (string) ($row['circleName'] ?? ''),
             'circleKana' => (string) ($row['circleKana'] ?? ''),
