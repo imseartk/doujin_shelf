@@ -28,8 +28,10 @@ $routes->post('wishlist/sources/(:num)/delete', 'Wishlist::deleteSource/$1');
 $routes->get('sources', 'Sources::index');
 
 $routes->get('circles', 'Circles::index');
+$routes->get('circles/(:num)/circlems', 'Circles::circlems/$1');
 $routes->post('circles/(:num)', 'Circles::update/$1');
 $routes->post('circles/(:num)/track', 'Circles::toggleTrack/$1');
+$routes->post('circles/(:num)/circlems/bind', 'Circles::bindCirclems/$1');
 
 $routes->get('circlems', 'Circlems::index');
 $routes->get('circlems/connect', 'Circlems::connect');

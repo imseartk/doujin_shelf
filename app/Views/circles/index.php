@@ -73,6 +73,7 @@
                 <th>是否追蹤</th>
                 <th>優先度</th>
                 <th>名稱</th>
+                <th>Circle.ms</th>
                 <th>社群資訊</th>
                 <th>備註</th>
                 <th>相關書籍</th>
@@ -105,6 +106,14 @@
                 <td>
                     <div class="circle-name"><?= esc($circle['name']) ?></div>
                     <input class="circle-kana-input" form="<?= esc($formId) ?>" name="name_kana" value="<?= esc($circle['name_kana'] ?? '') ?>" placeholder="首字 / 讀音">
+                </td>
+                <td>
+                    <?php if (! empty($circle['webcatalog_circle_id'])): ?>
+                        <div class="social-badge">ID <?= esc($circle['webcatalog_circle_id']) ?></div>
+                    <?php else: ?>
+                        <div class="muted">未綁定</div>
+                    <?php endif; ?>
+                    <a class="button small ghost circlems-bind-link" href="/circles/<?= $circleId ?>/circlems">候選</a>
                 </td>
                 <td>
                     <div class="circle-social-links">
@@ -146,7 +155,7 @@
             </tr>
         <?php endforeach; ?>
         <?php if ($circles === []): ?>
-            <tr><td colspan="7" class="empty">沒有符合條件的社團。</td></tr>
+            <tr><td colspan="8" class="empty">沒有符合條件的社團。</td></tr>
         <?php endif; ?>
         </tbody>
     </table>

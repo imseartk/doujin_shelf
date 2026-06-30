@@ -595,8 +595,12 @@ label input, label select, label textarea { font-weight: 400; }
 .circles-table td:nth-child(3) {
     min-width: 190px;
 }
-.circles-table th:nth-child(5),
-.circles-table td:nth-child(5) {
+.circles-table th:nth-child(4),
+.circles-table td:nth-child(4) {
+    min-width: 130px;
+}
+.circles-table th:nth-child(6),
+.circles-table td:nth-child(6) {
     min-width: 240px;
 }
 .circle-name {
@@ -639,6 +643,20 @@ label input, label select, label textarea { font-weight: 400; }
 }
 .circle-track-toggle.ghost {
     color: var(--muted);
+}
+.circlems-bind-link {
+    margin-top: 8px;
+}
+.circlems-binding-panel {
+    max-width: 760px;
+    margin-bottom: 16px;
+}
+.binding-current-links {
+    margin-top: 14px;
+}
+.circlems-candidate-list {
+    display: grid;
+    gap: 12px;
 }
 .source-row {
     display: grid;
