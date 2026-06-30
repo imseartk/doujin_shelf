@@ -121,6 +121,8 @@ if ($defaultEventId <= 0) {
         </form>
         <form class="inline-form" method="post" action="/circlems/import-c108" onsubmit="return confirm('要把已下載的 text DB 匯入 c108_circles 嗎？');">
             <?= csrf_field() ?>
+            <input type="hidden" name="offset" value="0">
+            <input type="hidden" name="limit" value="1000">
             <select name="event_id">
                 <?php foreach ($events as $event): ?>
                     <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $defaultEventId ? 'selected' : '' ?>>
@@ -338,15 +340,28 @@ if ($defaultEventId <= 0) {
                 <dl class="status-list catalog-download-status">
                     <dt>資料表</dt>
                     <dd><?= esc($import['table'] ?? '') ?></dd>
-                    <dt>匯入筆數</dt>
+                    <dt>進度</dt>
+                    <dd><?= number_format((int) ($import['next_offset'] ?? 0)) ?> / <?= number_format((int) ($import['total'] ?? 0)) ?></dd>
+                    <dt>本批匯入</dt>
                     <dd><?= number_format((int) ($import['imported'] ?? 0)) ?></dd>
-                    <dt>已連到本地社團</dt>
+                    <dt>本批連到本地社團</dt>
                     <dd><?= number_format((int) ($import['matched_local_circles'] ?? 0)) ?></dd>
-                    <dt>略過</dt>
+                    <dt>本批略過</dt>
                     <dd><?= number_format((int) ($import['skipped_without_wcid'] ?? 0)) ?> 筆沒有 WCID</dd>
                     <dt>匯入時間</dt>
                     <dd><?= esc($import['imported_at'] ?? '') ?></dd>
                 </dl>
+                <?php if (empty($import['done'])): ?>
+                    <form class="inline-form" method="post" action="/circlems/import-c108">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="event_id" value="<?= esc((string) ($import['event_id'] ?? $circleProbe['eventId'] ?? '')) ?>">
+                        <input type="hidden" name="offset" value="<?= esc((string) ($import['next_offset'] ?? 0)) ?>">
+                        <input type="hidden" name="limit" value="<?= esc((string) ($import['limit'] ?? 1000)) ?>">
+                        <button class="button primary" type="submit">繼續匯入下一批</button>
+                    </form>
+                <?php else: ?>
+                    <p class="muted">C108 匯入完成。</p>
+                <?php endif; ?>
             <?php endif; ?>
 
             <?php if (! empty($circleProbe['circle'])): ?>

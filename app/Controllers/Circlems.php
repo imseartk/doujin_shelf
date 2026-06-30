@@ -441,18 +441,24 @@ class Circlems extends BaseController
     public function importC108(): RedirectResponse
     {
         $eventId = (int) $this->request->getPost('event_id');
+        $offset = max(0, (int) $this->request->getPost('offset'));
+        $limit = (int) $this->request->getPost('limit');
+        if ($limit <= 0 || $limit > 1000) {
+            $limit = 1000;
+        }
+
         if ($eventId <= 0) {
             return redirect()->to('/circlems')->with('error', '缺少活動 ID，無法匯入 C108。');
         }
 
         try {
-            $summary = $this->importC108Rows($eventId);
+            $summary = $this->importC108Rows($eventId, $offset, $limit);
         } catch (RuntimeException $exception) {
             return redirect()->to('/circlems')->with('error', $exception->getMessage());
         }
 
         return redirect()->to('/circlems')
-            ->with('message', 'C108 社團攤位資料已匯入。')
+            ->with('message', $summary['done'] ? 'C108 社團攤位資料已匯入完成。' : 'C108 社團攤位資料已分批匯入。')
             ->with('circlems_probe_result', [
                 'type' => 'catalog_import',
                 'title' => 'C108 匯入結果',
@@ -910,7 +916,7 @@ SQL
         return $rows;
     }
 
-    private function importC108Rows(int $eventId): array
+    private function importC108Rows(int $eventId, int $offset, int $limit): array
     {
         if (! class_exists('SQLite3')) {
             throw new RuntimeException('PHP SQLite3 extension is not installed.');
@@ -925,9 +931,10 @@ SQL
             throw new RuntimeException('尚未下載這個活動的 text DB，請先執行「下載並檢查 text DB」。');
         }
 
-        $localCircleIds = $this->localCircleIdsForCatalog($mysql);
         $sqlite = new \SQLite3($dbPath, SQLITE3_OPEN_READONLY);
-        $result = $sqlite->query(
+        $total = (int) $sqlite->querySingle('SELECT COUNT(*) FROM ComiketCircleWC');
+        $localCircleIds = $this->localCircleIdsForCatalog($mysql);
+        $statement = $sqlite->prepare(
             <<<'SQL'
 SELECT
     c.comiketNo,
@@ -975,10 +982,21 @@ LEFT JOIN ComiketMapWC m
 LEFT JOIN ComiketLayoutWC l
     ON l.comiketNo = c.comiketNo AND l.blockId = c.blockId AND l.spaceNo = c.spaceNo
 ORDER BY c.day, m.id, b.id, c.spaceNo, c.spaceNoSub
+LIMIT :limit OFFSET :offset
 SQL
         );
 
+        if ($statement === false) {
+            $sqlite->close();
+            throw new RuntimeException('Unable to prepare C108 catalog import query.');
+        }
+
+        $statement->bindValue(':limit', $limit, SQLITE3_INTEGER);
+        $statement->bindValue(':offset', $offset, SQLITE3_INTEGER);
+        $result = $statement->execute();
+
         if ($result === false) {
+            $statement->close();
             $sqlite->close();
             throw new RuntimeException('Unable to read C108 catalog rows.');
         }
@@ -1052,15 +1070,24 @@ SQL
         $mysql->transComplete();
 
         $result->finalize();
+        $statement->close();
         $sqlite->close();
 
         if ($mysql->transStatus() === false) {
             throw new RuntimeException('C108 import transaction failed.');
         }
 
+        $nextOffset = $offset + $imported + $skipped;
+        $done = $nextOffset >= $total || ($imported + $skipped) === 0;
+
         return [
             'table' => 'c108_circles',
             'event_id' => $eventId,
+            'offset' => $offset,
+            'limit' => $limit,
+            'next_offset' => $nextOffset,
+            'total' => $total,
+            'done' => $done,
             'imported' => $imported,
             'matched_local_circles' => $matched,
             'skipped_without_wcid' => $skipped,
