@@ -642,23 +642,43 @@ label input, label select, label textarea { font-weight: 400; }
 }
 .circles-table th:nth-child(1),
 .circles-table td:nth-child(1) {
-    width: 98px;
+    width: 74px;
 }
 .circles-table th:nth-child(2),
 .circles-table td:nth-child(2) {
-    width: 120px;
+    width: 98px;
 }
 .circles-table th:nth-child(3),
 .circles-table td:nth-child(3) {
-    min-width: 190px;
+    width: 120px;
 }
 .circles-table th:nth-child(4),
 .circles-table td:nth-child(4) {
-    min-width: 130px;
+    min-width: 190px;
 }
 .circles-table th:nth-child(6),
 .circles-table td:nth-child(6) {
     min-width: 240px;
+}
+.circle-list-cut,
+.circle-list-cut-empty {
+    width: 54px;
+    height: 54px;
+    border-radius: 6px;
+}
+.circle-list-cut {
+    object-fit: cover;
+    border: 1px solid var(--line);
+    background: #f3f5f3;
+}
+.circle-list-cut-empty {
+    display: grid;
+    place-items: center;
+    border: 1px dashed #b8c2bd;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: center;
 }
 .circle-name {
     font-weight: 700;
@@ -701,8 +721,13 @@ label input, label select, label textarea { font-weight: 400; }
 .circle-track-toggle.ghost {
     color: var(--muted);
 }
-.circlems-bind-link {
-    margin-top: 8px;
+.circle-row-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+.circle-row-actions form {
+    margin: 0;
 }
 .circlems-binding-panel {
     max-width: 760px;

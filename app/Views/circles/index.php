@@ -70,10 +70,10 @@
     <table class="data-table circles-table">
         <thead>
             <tr>
+                <th>圖片</th>
                 <th>是否追蹤</th>
                 <th>優先度</th>
                 <th>名稱</th>
-                <th>Circle.ms</th>
                 <th>社群資訊</th>
                 <th>備註</th>
                 <th>相關書籍</th>
@@ -89,6 +89,13 @@
                 $links = $socialLinks($circle);
             ?>
             <tr data-circle-row="<?= $circleId ?>">
+                <td>
+                    <?php if (! empty($circle['webcatalog_cut_url'])): ?>
+                        <img class="circle-list-cut" src="<?= esc($circle['webcatalog_cut_url']) ?>" alt="">
+                    <?php else: ?>
+                        <div class="circle-list-cut-empty">no image</div>
+                    <?php endif; ?>
+                </td>
                 <td>
                     <button
                         class="button small circle-track-toggle js-circle-track-toggle <?= $isTracked ? 'primary' : 'ghost' ?>"
@@ -106,14 +113,6 @@
                 <td>
                     <div class="circle-name"><?= esc($circle['name']) ?></div>
                     <input class="circle-kana-input" form="<?= esc($formId) ?>" name="name_kana" value="<?= esc($circle['name_kana'] ?? '') ?>" placeholder="首字 / 讀音">
-                </td>
-                <td>
-                    <?php if (! empty($circle['webcatalog_circle_id'])): ?>
-                        <div class="social-badge">ID <?= esc($circle['webcatalog_circle_id']) ?></div>
-                    <?php else: ?>
-                        <div class="muted">未綁定</div>
-                    <?php endif; ?>
-                    <a class="button small ghost circlems-bind-link" href="/circles/<?= $circleId ?>/circlems">候選</a>
                 </td>
                 <td>
                     <div class="circle-social-links">
@@ -146,11 +145,14 @@
                     <?php endif; ?>
                 </td>
                 <td class="actions">
-                    <form id="<?= esc($formId) ?>" method="post" action="/circles/<?= $circleId ?>">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
-                        <button class="button small" type="submit">儲存</button>
-                    </form>
+                    <div class="circle-row-actions">
+                        <a class="button small ghost circlems-bind-link" href="/circles/<?= $circleId ?>/circlems">連動</a>
+                        <form id="<?= esc($formId) ?>" method="post" action="/circles/<?= $circleId ?>">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
+                            <button class="button small" type="submit">儲存</button>
+                        </form>
+                    </div>
                 </td>
             </tr>
         <?php endforeach; ?>
