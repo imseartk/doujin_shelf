@@ -121,6 +121,21 @@ if ($defaultEventId <= 0) {
             </select>
             <button class="button ghost" type="submit">下載並探測 image DB</button>
         </form>
+        <form class="inline-form" method="post" action="/circlems/catalog-export-common-images">
+            <?= csrf_field() ?>
+            <select name="event_id">
+                <?php foreach ($events as $event): ?>
+                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $defaultEventId ? 'selected' : '' ?>>
+                        <?= esc($event['label']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <select name="image_no">
+                <option value="1">Image DB 1</option>
+                <option value="2">Image DB 2</option>
+            </select>
+            <button class="button ghost" type="submit">匯出 common images</button>
+        </form>
         <form class="inline-form" method="post" action="/circlems/catalog-lookup">
             <?= csrf_field() ?>
             <select name="event_id">
@@ -370,6 +385,30 @@ if ($defaultEventId <= 0) {
                                     'samples' => $sqlite['samples'][$table] ?? [],
                                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)) ?></pre>
                             </details>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+
+            <?php if (($circleProbe['type'] ?? '') === 'catalog_common_export' && ! empty($circleProbe['catalogCommonExport'])): ?>
+                <?php $export = $circleProbe['catalogCommonExport']; ?>
+                <dl class="status-list catalog-download-status">
+                    <dt>Image DB</dt>
+                    <dd><?= esc((string) ($export['image_no'] ?? '')) ?></dd>
+                    <dt>匯出目錄</dt>
+                    <dd><?= esc($export['export_dir'] ?? '') ?></dd>
+                    <dt>匯出張數</dt>
+                    <dd><?= number_format((int) ($export['count'] ?? 0)) ?></dd>
+                </dl>
+
+                <?php if (! empty($export['files'])): ?>
+                    <div class="common-image-grid">
+                        <?php foreach ($export['files'] as $file): ?>
+                            <a class="common-image-card" href="<?= esc($file['url']) ?>" target="_blank" rel="noopener">
+                                <img src="<?= esc($file['url']) ?>" alt="">
+                                <strong><?= esc($file['name']) ?></strong>
+                                <span><?= number_format((int) $file['width']) ?> x <?= number_format((int) $file['height']) ?></span>
+                            </a>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>

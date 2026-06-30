@@ -522,6 +522,35 @@ label input, label select, label textarea { font-weight: 400; }
     color: var(--accent-dark);
     font-weight: 700;
 }
+.common-image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+}
+.common-image-card {
+    display: grid;
+    gap: 5px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: inherit;
+    text-decoration: none;
+}
+.common-image-card img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: contain;
+    background: #f4f6f4;
+}
+.common-image-card strong,
+.common-image-card span {
+    font-size: 12px;
+}
+.common-image-card span {
+    color: var(--muted);
+}
 .danger-form { margin-top: 20px; }
 
 .tag-field { display: grid; gap: 6px; margin-bottom: 14px; }

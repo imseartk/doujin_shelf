@@ -456,6 +456,35 @@ class Circlems extends BaseController
             ]);
     }
 
+    public function catalogExportCommonImages(): RedirectResponse
+    {
+        $eventId = (int) $this->request->getPost('event_id');
+        $imageNo = (int) $this->request->getPost('image_no');
+        if ($imageNo < 1 || $imageNo > 2) {
+            $imageNo = 1;
+        }
+
+        if ($eventId <= 0) {
+            return redirect()->to('/circlems')->with('error', '缺少活動 ID，無法匯出 common images。');
+        }
+
+        try {
+            $export = $this->exportCommonImages($eventId, $imageNo);
+        } catch (RuntimeException $exception) {
+            return redirect()->to('/circlems')->with('error', $exception->getMessage());
+        }
+
+        return redirect()->to('/circlems')
+            ->with('message', 'Circle.ms common images 已匯出。')
+            ->with('circlems_probe_result', [
+                'type' => 'catalog_common_export',
+                'title' => 'Common Images 匯出',
+                'eventId' => $eventId,
+                'catalogCommonExport' => $export,
+                'result' => $export,
+            ]);
+    }
+
     public function catalogLookup(): RedirectResponse
     {
         $eventId = (int) $this->request->getPost('event_id');
@@ -837,6 +866,71 @@ class Circlems extends BaseController
         ];
     }
 
+    private function exportCommonImages(int $eventId, int $imageNo): array
+    {
+        if (! class_exists('SQLite3')) {
+            throw new RuntimeException('PHP SQLite3 extension is not installed.');
+        }
+
+        $dbPath = $this->imageCatalogDbPath($eventId, $imageNo);
+        if (! is_file($dbPath)) {
+            throw new RuntimeException('尚未下載這個活動的 image DB，請先執行「下載並探測 image DB」。');
+        }
+
+        $dir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'circlems' . DIRECTORY_SEPARATOR . 'event_' . $eventId . DIRECTORY_SEPARATOR . 'image' . $imageNo . DIRECTORY_SEPARATOR . 'common';
+        if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
+            throw new RuntimeException('Unable to create common image export directory.');
+        }
+
+        $db = new \SQLite3($dbPath, SQLITE3_OPEN_READONLY);
+        $result = $db->query('SELECT name, width, height, type, size, image FROM ComiketCommonImage ORDER BY name');
+        if ($result === false) {
+            $db->close();
+            throw new RuntimeException('Unable to read ComiketCommonImage.');
+        }
+
+        $files = [];
+        while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+            $name = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($row['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+
+            $extension = strtolower((string) ($row['type'] ?? 'png'));
+            if (! in_array($extension, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+                $extension = 'png';
+            }
+
+            $fileName = $name . '.' . ($extension === 'jpeg' ? 'jpg' : $extension);
+            $path = $dir . DIRECTORY_SEPARATOR . $fileName;
+            $image = $row['image'] ?? null;
+            if (! is_string($image) || $image === '') {
+                continue;
+            }
+
+            file_put_contents($path, $image);
+            $files[] = [
+                'name' => $name,
+                'url' => '/uploads/circlems/event_' . $eventId . '/image' . $imageNo . '/common/' . $fileName,
+                'width' => (int) ($row['width'] ?? 0),
+                'height' => (int) ($row['height'] ?? 0),
+                'size' => (int) ($row['size'] ?? 0),
+                'type' => $extension,
+            ];
+        }
+
+        $result->finalize();
+        $db->close();
+
+        return [
+            'event_id' => $eventId,
+            'image_no' => $imageNo,
+            'export_dir' => $dir,
+            'count' => count($files),
+            'files' => $files,
+        ];
+    }
+
     private function textCatalogUrl(array $catalog): ?array
     {
         $urls = $catalog['response']['url'] ?? [];
@@ -879,6 +973,11 @@ class Circlems extends BaseController
         }
 
         return null;
+    }
+
+    private function imageCatalogDbPath(int $eventId, int $imageNo): string
+    {
+        return WRITEPATH . 'circlems' . DIRECTORY_SEPARATOR . 'catalogs' . DIRECTORY_SEPARATOR . 'event_' . $eventId . DIRECTORY_SEPARATOR . 'webcatalog_image' . $imageNo . '.db';
     }
 
     private function downloadFile(string $url, string $path): void
