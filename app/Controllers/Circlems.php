@@ -404,6 +404,58 @@ class Circlems extends BaseController
             ]);
     }
 
+    public function catalogDownloadImage(): RedirectResponse
+    {
+        $eventId = (int) $this->request->getPost('event_id');
+        $imageNo = (int) $this->request->getPost('image_no');
+        if ($imageNo < 1 || $imageNo > 2) {
+            $imageNo = 1;
+        }
+
+        if ($eventId <= 0) {
+            return redirect()->to('/circlems')->with('error', '缺少活動 ID，無法下載 image DB。');
+        }
+
+        $token = $this->currentToken();
+        if (! $token) {
+            return redirect()->to('/circlems')->with('error', '尚未連線 Circle.ms。');
+        }
+
+        try {
+            $client = new CirclemsClient();
+            $token = $this->refreshIfNeeded($token, $client);
+            $catalog = $client->catalogBase((string) $token['access_token'], $eventId);
+            $download = $this->downloadImageCatalog($eventId, $catalog, $imageNo);
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => null,
+            ]);
+        } catch (RuntimeException $exception) {
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => $exception->getMessage(),
+            ]);
+
+            return redirect()->to('/circlems')->with('error', $exception->getMessage());
+        }
+
+        return redirect()->to('/circlems')
+            ->with('message', 'Circle.ms image DB 已下載並檢查。')
+            ->with('circlems_probe_result', [
+                'type' => 'catalog_image_download',
+                'title' => 'Image DB 下載檢查',
+                'eventId' => $eventId,
+                'catalogImageDownload' => $download,
+                'result' => [
+                    'selected_url_key' => $download['urlKey'],
+                    'expected_md5' => $download['expectedMd5'],
+                    'actual_md5' => $download['actualMd5'],
+                    'md5_ok' => $download['md5Ok'],
+                    'sqlite' => $download['sqlite'],
+                ],
+            ]);
+    }
+
     public function catalogLookup(): RedirectResponse
     {
         $eventId = (int) $this->request->getPost('event_id');
@@ -745,6 +797,46 @@ class Circlems extends BaseController
         ];
     }
 
+    private function downloadImageCatalog(int $eventId, array $catalog, int $imageNo): array
+    {
+        $selected = $this->imageCatalogUrl($catalog, $imageNo);
+        if ($selected === null) {
+            throw new RuntimeException('Circle.ms catalog response did not include an image SQLite URL.');
+        }
+
+        $dir = WRITEPATH . 'circlems' . DIRECTORY_SEPARATOR . 'catalogs' . DIRECTORY_SEPARATOR . 'event_' . $eventId;
+        if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
+            throw new RuntimeException('Unable to create catalog directory: ' . $dir);
+        }
+
+        $archivePath = $dir . DIRECTORY_SEPARATOR . 'webcatalog_image' . $imageNo . '.db.gz';
+        $dbPath = $dir . DIRECTORY_SEPARATOR . 'webcatalog_image' . $imageNo . '.db';
+
+        $this->downloadFile($selected['url'], $archivePath);
+        $actualMd5 = strtoupper(md5_file($archivePath) ?: '');
+        $expectedMd5 = strtoupper((string) $selected['md5']);
+        $md5Ok = $expectedMd5 === '' || hash_equals($expectedMd5, $actualMd5);
+
+        if (! $md5Ok) {
+            throw new RuntimeException('Downloaded image catalog MD5 mismatch.');
+        }
+
+        $this->decompressGzip($archivePath, $dbPath);
+
+        return [
+            'imageNo' => $imageNo,
+            'urlKey' => $selected['key'],
+            'archivePath' => $archivePath,
+            'dbPath' => $dbPath,
+            'archiveSize' => filesize($archivePath) ?: 0,
+            'dbSize' => filesize($dbPath) ?: 0,
+            'expectedMd5' => $expectedMd5,
+            'actualMd5' => $actualMd5,
+            'md5Ok' => $md5Ok,
+            'sqlite' => $this->inspectImageSqlite($dbPath, $eventId),
+        ];
+    }
+
     private function textCatalogUrl(array $catalog): ?array
     {
         $urls = $catalog['response']['url'] ?? [];
@@ -754,6 +846,28 @@ class Circlems extends BaseController
         }
 
         foreach (['textdb_sqlite3_url_ssl', 'textdb_sqlite3_url'] as $key) {
+            $url = trim((string) ($urls[$key] ?? ''));
+            if ($url !== '') {
+                return [
+                    'key' => $key,
+                    'url' => $url,
+                    'md5' => is_array($md5s) ? (string) ($md5s[$key] ?? '') : '',
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    private function imageCatalogUrl(array $catalog, int $imageNo): ?array
+    {
+        $urls = $catalog['response']['url'] ?? [];
+        $md5s = $catalog['response']['md5'] ?? [];
+        if (! is_array($urls)) {
+            return null;
+        }
+
+        foreach (['imagedb' . $imageNo . '_url_ssl', 'imagedb' . $imageNo . '_url'] as $key) {
             $url = trim((string) ($urls[$key] ?? ''));
             if ($url !== '') {
                 return [
@@ -1265,6 +1379,169 @@ SQL
             'tables' => $tables,
             'counts' => $counts,
         ];
+    }
+
+    private function inspectImageSqlite(string $dbPath, int $eventId): array
+    {
+        if (! class_exists('SQLite3')) {
+            return [
+                'available' => false,
+                'message' => 'PHP SQLite3 extension is not installed.',
+                'tables' => [],
+                'counts' => [],
+                'columns' => [],
+                'samples' => [],
+                'map_filenames' => [],
+                'map_matches' => [],
+            ];
+        }
+
+        $db = new \SQLite3($dbPath, SQLITE3_OPEN_READONLY);
+        $tables = [];
+        $result = $db->query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name");
+        while ($result !== false && ($row = $result->fetchArray(SQLITE3_ASSOC))) {
+            $tables[] = (string) $row['name'];
+        }
+
+        $counts = [];
+        $columns = [];
+        $samples = [];
+        foreach ($tables as $table) {
+            $counts[$table] = (int) $db->querySingle('SELECT COUNT(*) FROM "' . $table . '"');
+            $columns[$table] = $this->sqliteColumns($db, $table);
+            $samples[$table] = $this->sqliteSampleRows($db, $table, $columns[$table]);
+        }
+
+        $mapFilenames = $this->catalogMapFilenames($eventId);
+        $mapMatches = $this->findImageDbMapMatches($db, $tables, $columns, $mapFilenames);
+
+        $db->close();
+
+        return [
+            'available' => true,
+            'message' => 'ok',
+            'tables' => $tables,
+            'counts' => $counts,
+            'columns' => $columns,
+            'samples' => $samples,
+            'map_filenames' => $mapFilenames,
+            'map_matches' => $mapMatches,
+        ];
+    }
+
+    private function sqliteColumns(\SQLite3 $db, string $table): array
+    {
+        $columns = [];
+        $result = $db->query('PRAGMA table_info("' . str_replace('"', '""', $table) . '")');
+        while ($result !== false && ($row = $result->fetchArray(SQLITE3_ASSOC))) {
+            $columns[] = [
+                'name' => (string) ($row['name'] ?? ''),
+                'type' => (string) ($row['type'] ?? ''),
+            ];
+        }
+
+        return $columns;
+    }
+
+    private function sqliteSampleRows(\SQLite3 $db, string $table, array $columns): array
+    {
+        $rows = [];
+        $result = $db->query('SELECT * FROM "' . str_replace('"', '""', $table) . '" LIMIT 3');
+        while ($result !== false && ($row = $result->fetchArray(SQLITE3_ASSOC))) {
+            $safeRow = [];
+            foreach ($columns as $column) {
+                $name = $column['name'];
+                $value = $row[$name] ?? null;
+                if ($value === null) {
+                    $safeRow[$name] = null;
+                    continue;
+                }
+
+                $text = (string) $value;
+                if (! mb_check_encoding($text, 'UTF-8')) {
+                    $safeRow[$name] = '[binary ' . strlen($text) . ' bytes]';
+                    continue;
+                }
+
+                $safeRow[$name] = mb_strimwidth($text, 0, 160, '...', 'UTF-8');
+            }
+            $rows[] = $safeRow;
+        }
+
+        return $rows;
+    }
+
+    private function catalogMapFilenames(int $eventId): array
+    {
+        $dbPath = $this->catalogDbPath($eventId);
+        if (! is_file($dbPath) || ! class_exists('SQLite3')) {
+            return [];
+        }
+
+        $db = new \SQLite3($dbPath, SQLITE3_OPEN_READONLY);
+        $filenames = [];
+        $result = $db->query('SELECT filename, allFilename FROM ComiketMapWC ORDER BY id');
+        while ($result !== false && ($row = $result->fetchArray(SQLITE3_ASSOC))) {
+            foreach (['filename', 'allFilename'] as $key) {
+                $filename = trim((string) ($row[$key] ?? ''));
+                if ($filename !== '') {
+                    $filenames[$filename] = true;
+                }
+            }
+        }
+        $db->close();
+
+        return array_keys($filenames);
+    }
+
+    private function findImageDbMapMatches(\SQLite3 $db, array $tables, array $columnsByTable, array $mapFilenames): array
+    {
+        if ($mapFilenames === []) {
+            return [];
+        }
+
+        $matches = [];
+        foreach ($tables as $table) {
+            $columns = array_column($columnsByTable[$table] ?? [], 'name');
+            $textColumns = array_values(array_filter($columns, static function (string $column): bool {
+                $name = strtolower($column);
+                return str_contains($name, 'file')
+                    || str_contains($name, 'name')
+                    || str_contains($name, 'path')
+                    || str_contains($name, 'url');
+            }));
+
+            foreach ($textColumns as $column) {
+                foreach (array_slice($mapFilenames, 0, 20) as $filename) {
+                    $statement = $db->prepare(
+                        'SELECT COUNT(*) FROM "' . str_replace('"', '""', $table) . '" WHERE "' . str_replace('"', '""', $column) . '" = :filename'
+                    );
+                    if ($statement === false) {
+                        continue;
+                    }
+                    $statement->bindValue(':filename', $filename, SQLITE3_TEXT);
+                    $result = $statement->execute();
+                    if ($result === false) {
+                        $statement->close();
+                        continue;
+                    }
+                    $countRow = $result->fetchArray(SQLITE3_NUM);
+                    $count = (int) ($countRow[0] ?? 0);
+                    $result->finalize();
+                    $statement->close();
+                    if ($count > 0) {
+                        $matches[] = [
+                            'table' => $table,
+                            'column' => $column,
+                            'filename' => $filename,
+                            'count' => $count,
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $matches;
     }
 
     private function catalogUrlKind(string $key): string

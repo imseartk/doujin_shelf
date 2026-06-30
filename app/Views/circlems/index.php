@@ -99,13 +99,27 @@ if ($defaultEventId <= 0) {
             <?= csrf_field() ?>
             <select name="event_id">
                 <?php foreach ($events as $event): ?>
-                    <?php $selectedEventId = (int) ($circleSearch['eventId'] ?? $latestEventId ?? 0); ?>
-                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $selectedEventId ? 'selected' : '' ?>>
+                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $defaultEventId ? 'selected' : '' ?>>
                         <?= esc($event['label']) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
             <button class="button ghost" type="submit">下載並檢查 text DB</button>
+        </form>
+        <form class="inline-form" method="post" action="/circlems/catalog-download-image">
+            <?= csrf_field() ?>
+            <select name="event_id">
+                <?php foreach ($events as $event): ?>
+                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $defaultEventId ? 'selected' : '' ?>>
+                        <?= esc($event['label']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <select name="image_no">
+                <option value="1">Image DB 1</option>
+                <option value="2">Image DB 2</option>
+            </select>
+            <button class="button ghost" type="submit">下載並探測 image DB</button>
         </form>
         <form class="inline-form" method="post" action="/circlems/catalog-lookup">
             <?= csrf_field() ?>
@@ -291,6 +305,72 @@ if ($defaultEventId <= 0) {
                                 <span class="tag-chip"><?= esc($table) ?></span>
                             <?php endforeach; ?>
                         </div>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+
+            <?php if (($circleProbe['type'] ?? '') === 'catalog_image_download' && ! empty($circleProbe['catalogImageDownload'])): ?>
+                <?php $download = $circleProbe['catalogImageDownload']; ?>
+                <?php $sqlite = $download['sqlite'] ?? []; ?>
+                <dl class="status-list catalog-download-status">
+                    <dt>Image DB</dt>
+                    <dd><?= esc((string) ($download['imageNo'] ?? '')) ?></dd>
+                    <dt>URL Key</dt>
+                    <dd><?= esc($download['urlKey']) ?></dd>
+                    <dt>壓縮檔</dt>
+                    <dd><?= esc($download['archivePath']) ?> / <?= number_format((int) $download['archiveSize']) ?> bytes</dd>
+                    <dt>SQLite DB</dt>
+                    <dd><?= esc($download['dbPath']) ?> / <?= number_format((int) $download['dbSize']) ?> bytes</dd>
+                    <dt>MD5</dt>
+                    <dd><?= $download['md5Ok'] ? 'OK' : 'NG' ?> / <?= esc($download['actualMd5']) ?></dd>
+                    <dt>SQLite3</dt>
+                    <dd><?= ! empty($sqlite['available']) ? '可用' : esc($sqlite['message'] ?? '不可用') ?></dd>
+                </dl>
+
+                <?php if (! empty($sqlite['counts'])): ?>
+                    <div class="catalog-url-list">
+                        <?php foreach ($sqlite['counts'] as $table => $count): ?>
+                            <div class="catalog-url-item">
+                                <strong><?= esc($table) ?></strong>
+                                <span><?= number_format((int) $count) ?> rows</span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (! empty($sqlite['map_filenames'])): ?>
+                    <div class="circlems-sample-names">
+                        <div class="field-label">Text DB map filenames</div>
+                        <div class="tag-list">
+                            <?php foreach (array_slice($sqlite['map_filenames'], 0, 20) as $filename): ?>
+                                <span class="tag-chip"><?= esc($filename) ?></span>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (! empty($sqlite['map_matches'])): ?>
+                    <div class="catalog-url-list">
+                        <?php foreach ($sqlite['map_matches'] as $match): ?>
+                            <div class="catalog-url-item">
+                                <strong><?= esc($match['filename']) ?></strong>
+                                <span><?= esc($match['table']) ?>.<?= esc($match['column']) ?> / <?= number_format((int) $match['count']) ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (! empty($sqlite['columns'])): ?>
+                    <div class="catalog-schema-list">
+                        <?php foreach ($sqlite['columns'] as $table => $columns): ?>
+                            <details>
+                                <summary><?= esc($table) ?> schema / sample</summary>
+                                <pre class="api-preview"><?= esc(json_encode([
+                                    'columns' => $columns,
+                                    'samples' => $sqlite['samples'][$table] ?? [],
+                                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)) ?></pre>
+                            </details>
+                        <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
             <?php endif; ?>

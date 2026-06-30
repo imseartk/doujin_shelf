@@ -46,6 +46,7 @@ $routes->post('circlems/circle-detail', 'Circlems::circleDetail');
 $routes->post('circlems/circle-books', 'Circlems::circleBooks');
 $routes->post('circlems/catalog-base', 'Circlems::catalogBase');
 $routes->post('circlems/catalog-download-text', 'Circlems::catalogDownloadText');
+$routes->post('circlems/catalog-download-image', 'Circlems::catalogDownloadImage');
 $routes->post('circlems/catalog-lookup', 'Circlems::catalogLookup');
 $routes->post('circlems/import-c108', 'Circlems::importC108');
 
