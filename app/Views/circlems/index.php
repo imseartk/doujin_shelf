@@ -89,6 +89,18 @@
             </select>
             <button class="button ghost" type="submit">取得初期資料庫 URL</button>
         </form>
+        <form class="inline-form" method="post" action="/circlems/catalog-download-text">
+            <?= csrf_field() ?>
+            <select name="event_id">
+                <?php foreach ($events as $event): ?>
+                    <?php $selectedEventId = (int) ($circleSearch['eventId'] ?? $latestEventId ?? 0); ?>
+                    <option value="<?= esc((string) $event['eventId']) ?>" <?= (int) $event['eventId'] === $selectedEventId ? 'selected' : '' ?>>
+                        <?= esc($event['label']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <button class="button ghost" type="submit">下載並檢查 text DB</button>
+        </form>
 
         <?php if (! empty($circleSearch)): ?>
             <dl class="status-list">
@@ -212,6 +224,44 @@
                         </div>
                     <?php endforeach; ?>
                 </div>
+            <?php endif; ?>
+
+            <?php if (($circleProbe['type'] ?? '') === 'catalog_download' && ! empty($circleProbe['catalogDownload'])): ?>
+                <?php $download = $circleProbe['catalogDownload']; ?>
+                <dl class="status-list catalog-download-status">
+                    <dt>URL Key</dt>
+                    <dd><?= esc($download['urlKey']) ?></dd>
+                    <dt>壓縮檔</dt>
+                    <dd><?= esc($download['archivePath']) ?> / <?= number_format((int) $download['archiveSize']) ?> bytes</dd>
+                    <dt>SQLite DB</dt>
+                    <dd><?= esc($download['dbPath']) ?> / <?= number_format((int) $download['dbSize']) ?> bytes</dd>
+                    <dt>MD5</dt>
+                    <dd><?= $download['md5Ok'] ? 'OK' : 'NG' ?> / <?= esc($download['actualMd5']) ?></dd>
+                    <dt>SQLite3</dt>
+                    <dd><?= ! empty($download['sqlite']['available']) ? '可用' : esc($download['sqlite']['message'] ?? '不可用') ?></dd>
+                </dl>
+
+                <?php if (! empty($download['sqlite']['counts'])): ?>
+                    <div class="catalog-url-list">
+                        <?php foreach ($download['sqlite']['counts'] as $table => $count): ?>
+                            <div class="catalog-url-item">
+                                <strong><?= esc($table) ?></strong>
+                                <span><?= number_format((int) $count) ?> rows</span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (! empty($download['sqlite']['tables'])): ?>
+                    <div class="circlems-sample-names">
+                        <div class="field-label">Tables</div>
+                        <div class="tag-list">
+                            <?php foreach ($download['sqlite']['tables'] as $table): ?>
+                                <span class="tag-chip"><?= esc($table) ?></span>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
 
             <?php if (! empty($circleProbe['circle'])): ?>

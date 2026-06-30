@@ -357,6 +357,53 @@ class Circlems extends BaseController
             ]);
     }
 
+    public function catalogDownloadText(): RedirectResponse
+    {
+        $eventId = (int) $this->request->getPost('event_id');
+        if ($eventId <= 0) {
+            return redirect()->to('/circlems')->with('error', '缺少活動 ID，無法下載初期資料庫。');
+        }
+
+        $token = $this->currentToken();
+        if (! $token) {
+            return redirect()->to('/circlems')->with('error', '尚未連線 Circle.ms。');
+        }
+
+        try {
+            $client = new CirclemsClient();
+            $token = $this->refreshIfNeeded($token, $client);
+            $catalog = $client->catalogBase((string) $token['access_token'], $eventId);
+            $download = $this->downloadTextCatalog($eventId, $catalog);
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => null,
+            ]);
+        } catch (RuntimeException $exception) {
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => $exception->getMessage(),
+            ]);
+
+            return redirect()->to('/circlems')->with('error', $exception->getMessage());
+        }
+
+        return redirect()->to('/circlems')
+            ->with('message', 'Circle.ms text DB 已下載並檢查。')
+            ->with('circlems_probe_result', [
+                'type' => 'catalog_download',
+                'title' => '初期資料庫下載檢查',
+                'eventId' => $eventId,
+                'catalogDownload' => $download,
+                'result' => [
+                    'selected_url_key' => $download['urlKey'],
+                    'expected_md5' => $download['expectedMd5'],
+                    'actual_md5' => $download['actualMd5'],
+                    'md5_ok' => $download['md5Ok'],
+                    'sqlite' => $download['sqlite'],
+                ],
+            ]);
+    }
+
     private function currentToken(): ?array
     {
         return (new CirclemsTokenModel())
@@ -593,6 +640,157 @@ class Circlems extends BaseController
         });
 
         return $rows;
+    }
+
+    private function downloadTextCatalog(int $eventId, array $catalog): array
+    {
+        $selected = $this->textCatalogUrl($catalog);
+        if ($selected === null) {
+            throw new RuntimeException('Circle.ms catalog response did not include a text SQLite URL.');
+        }
+
+        $dir = WRITEPATH . 'circlems' . DIRECTORY_SEPARATOR . 'catalogs' . DIRECTORY_SEPARATOR . 'event_' . $eventId;
+        if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
+            throw new RuntimeException('Unable to create catalog directory: ' . $dir);
+        }
+
+        $archivePath = $dir . DIRECTORY_SEPARATOR . 'webcatalog_text.db.gz';
+        $dbPath = $dir . DIRECTORY_SEPARATOR . 'webcatalog_text.db';
+
+        $this->downloadFile($selected['url'], $archivePath);
+        $actualMd5 = strtoupper(md5_file($archivePath) ?: '');
+        $expectedMd5 = strtoupper((string) $selected['md5']);
+        $md5Ok = $expectedMd5 === '' || hash_equals($expectedMd5, $actualMd5);
+
+        if (! $md5Ok) {
+            throw new RuntimeException('Downloaded catalog MD5 mismatch.');
+        }
+
+        $this->decompressGzip($archivePath, $dbPath);
+
+        return [
+            'urlKey' => $selected['key'],
+            'archivePath' => $archivePath,
+            'dbPath' => $dbPath,
+            'archiveSize' => filesize($archivePath) ?: 0,
+            'dbSize' => filesize($dbPath) ?: 0,
+            'expectedMd5' => $expectedMd5,
+            'actualMd5' => $actualMd5,
+            'md5Ok' => $md5Ok,
+            'sqlite' => $this->inspectSqlite($dbPath),
+        ];
+    }
+
+    private function textCatalogUrl(array $catalog): ?array
+    {
+        $urls = $catalog['response']['url'] ?? [];
+        $md5s = $catalog['response']['md5'] ?? [];
+        if (! is_array($urls)) {
+            return null;
+        }
+
+        foreach (['textdb_sqlite3_url_ssl', 'textdb_sqlite3_url'] as $key) {
+            $url = trim((string) ($urls[$key] ?? ''));
+            if ($url !== '') {
+                return [
+                    'key' => $key,
+                    'url' => $url,
+                    'md5' => is_array($md5s) ? (string) ($md5s[$key] ?? '') : '',
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    private function downloadFile(string $url, string $path): void
+    {
+        $handle = fopen($path, 'wb');
+        if ($handle === false) {
+            throw new RuntimeException('Unable to write catalog file: ' . $path);
+        }
+
+        $curl = curl_init($url);
+        if ($curl === false) {
+            fclose($handle);
+            throw new RuntimeException('Unable to initialize catalog download.');
+        }
+
+        curl_setopt_array($curl, [
+            CURLOPT_FILE => $handle,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_TIMEOUT => 240,
+        ]);
+
+        $ok = curl_exec($curl);
+        $statusCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $error = curl_error($curl);
+        curl_close($curl);
+        fclose($handle);
+
+        if ($ok === false || $statusCode < 200 || $statusCode >= 300) {
+            @unlink($path);
+            throw new RuntimeException('Catalog download failed with HTTP ' . $statusCode . '. ' . $error);
+        }
+    }
+
+    private function decompressGzip(string $source, string $target): void
+    {
+        $input = gzopen($source, 'rb');
+        if ($input === false) {
+            throw new RuntimeException('Unable to open gzip catalog file.');
+        }
+
+        $output = fopen($target, 'wb');
+        if ($output === false) {
+            gzclose($input);
+            throw new RuntimeException('Unable to write SQLite catalog file.');
+        }
+
+        while (! gzeof($input)) {
+            fwrite($output, gzread($input, 1024 * 1024));
+        }
+
+        fclose($output);
+        gzclose($input);
+    }
+
+    private function inspectSqlite(string $dbPath): array
+    {
+        if (! class_exists('SQLite3')) {
+            return [
+                'available' => false,
+                'message' => 'PHP SQLite3 extension is not installed.',
+                'tables' => [],
+                'counts' => [],
+            ];
+        }
+
+        $db = new \SQLite3($dbPath, SQLITE3_OPEN_READONLY);
+        $tables = [];
+        $result = $db->query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name");
+        while ($result !== false && ($row = $result->fetchArray(SQLITE3_ASSOC))) {
+            $tables[] = (string) $row['name'];
+        }
+
+        $counts = [];
+        foreach (['ComiketCircleWC', 'ComiketBlockWC', 'ComiketAreaWC', 'ComiketMapWC', 'ComiketLayoutWC', 'ComiketFloorWC', 'ComiketMappingWC'] as $table) {
+            if (! in_array($table, $tables, true)) {
+                continue;
+            }
+
+            $count = $db->querySingle('SELECT COUNT(*) FROM "' . $table . '"');
+            $counts[$table] = (int) $count;
+        }
+
+        $db->close();
+
+        return [
+            'available' => true,
+            'message' => 'ok',
+            'tables' => $tables,
+            'counts' => $counts,
+        ];
     }
 
     private function catalogUrlKind(string $key): string
