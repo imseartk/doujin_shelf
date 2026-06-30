@@ -25,6 +25,9 @@
 
 <section class="panel circlems-binding-panel">
     <h2>本地社團</h2>
+    <?php if (! empty($circle['webcatalog_cut_url'])): ?>
+        <img class="circlems-cut" src="<?= esc($circle['webcatalog_cut_url']) ?>" alt="">
+    <?php endif; ?>
     <dl class="status-list">
         <dt>名稱</dt>
         <dd><?= esc($circle['name']) ?></dd>
@@ -102,11 +105,13 @@
                     <form method="post" action="/circles/<?= (int) $circle['id'] ?>/circlems/bind">
                         <?= csrf_field() ?>
                         <input type="hidden" name="circlems_id" value="<?= esc($candidate['circlems_id']) ?>">
+                        <input type="hidden" name="webcatalog_cut_url" value="<?= esc($candidate['cut_url'] ?? '') ?>">
                         <button class="button small" type="submit">只綁定</button>
                     </form>
                     <form method="post" action="/circles/<?= (int) $circle['id'] ?>/circlems/bind">
                         <?= csrf_field() ?>
                         <input type="hidden" name="circlems_id" value="<?= esc($candidate['circlems_id']) ?>">
+                        <input type="hidden" name="webcatalog_cut_url" value="<?= esc($candidate['cut_url'] ?? '') ?>">
                         <input type="hidden" name="import_social" value="1">
                         <input type="hidden" name="name_kana" value="<?= esc($candidate['name_kana']) ?>">
                         <input type="hidden" name="website_url" value="<?= esc($candidate['website_url'] ?? '') ?>">

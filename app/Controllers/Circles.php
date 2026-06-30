@@ -204,6 +204,11 @@ class Circles extends BaseController
             'webcatalog_circle_id' => $circlemsId,
         ];
 
+        $cutUrl = trim((string) $this->request->getPost('webcatalog_cut_url'));
+        if ($cutUrl !== '') {
+            $data['webcatalog_cut_url'] = $cutUrl;
+        }
+
         if ((string) $this->request->getPost('import_social') === '1') {
             foreach ($this->circlemsSocialFieldsFromPost() as $field => $value) {
                 if ($value !== null && empty($circle[$field])) {

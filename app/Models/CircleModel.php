@@ -23,6 +23,7 @@ class CircleModel extends Model
         'melonbooks_url',
         'toranoana_url',
         'webcatalog_circle_id',
+        'webcatalog_cut_url',
         'note',
     ];
 }
