@@ -33,6 +33,8 @@ $routes->post('circles/(:num)', 'Circles::update/$1');
 $routes->post('circles/(:num)/track', 'Circles::toggleTrack/$1');
 $routes->post('circles/(:num)/circlems/bind', 'Circles::bindCirclems/$1');
 
+$routes->get('c108', 'C108::index');
+
 $routes->get('circlems', 'Circlems::index');
 $routes->get('circlems/connect', 'Circlems::connect');
 $routes->get('oauth/circlems/callback', 'Circlems::callback');
