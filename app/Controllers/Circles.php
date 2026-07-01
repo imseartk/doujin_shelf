@@ -195,20 +195,21 @@ class Circles extends BaseController
             return redirect()->to('/circles')->with('error', '找不到這個社團。');
         }
 
+        $wcid = trim((string) $this->request->getPost('wcid'));
         $circlemsId = trim((string) $this->request->getPost('circlems_id'));
-        if ($circlemsId === '') {
-            return redirect()->to('/circles/' . $id . '/circlems')->with('error', '缺少 Circle.ms 社團 ID。');
+        if ($wcid === '') {
+            return redirect()->to('/circles/' . $id . '/circlems')->with('error', '缺少 WCID，無法綁定 C108 資料。');
         }
 
         $data = [
-            'webcatalog_circle_id' => $circlemsId,
+            'webcatalog_circle_id' => $wcid,
         ];
 
         $cutUrl = trim((string) $this->request->getPost('webcatalog_cut_url'));
         $cutWarning = null;
         if ($cutUrl !== '') {
             try {
-                $data['webcatalog_cut_url'] = $this->storeCirclemsCutImage($cutUrl, $circlemsId);
+                $data['webcatalog_cut_url'] = $this->storeCirclemsCutImage($cutUrl, $wcid);
             } catch (RuntimeException $exception) {
                 $cutWarning = $exception->getMessage();
             }
@@ -228,6 +229,7 @@ class Circles extends BaseController
         }
 
         $circleModel->update($id, $data);
+        $this->syncC108CircleId($id, $wcid, $circlemsId);
 
         $message = '已綁定 Circle.ms 社團。';
         if ($cutWarning !== null) {
@@ -247,6 +249,20 @@ class Circles extends BaseController
     {
         $value = trim((string) $this->request->getPost($key));
         return $value === '' ? null : $value;
+    }
+
+    private function syncC108CircleId(int $circleId, string $wcid, string $circlemsId): void
+    {
+        $db = db_connect();
+        if (! $db->tableExists('c108_circles')) {
+            return;
+        }
+
+        $builder = $db->table('c108_circles')->where('wcid', $wcid);
+        if ($circlemsId !== '') {
+            $builder->orWhere('circlems_id', $circlemsId);
+        }
+        $builder->update(['circle_id' => $circleId]);
     }
 
     private function storeCirclemsCutImage(string $url, string $circlemsId): string

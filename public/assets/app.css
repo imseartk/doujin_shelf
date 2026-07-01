@@ -776,9 +776,6 @@ label input, label select, label textarea { font-weight: 400; }
 .c108-map-marker {
     position: absolute;
     z-index: 2;
-    width: 15px;
-    height: 15px;
-    border: 2px solid #233238;
     border-radius: 999px;
     transform: translate(-50%, -50%);
     box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
@@ -788,12 +785,22 @@ label input, label select, label textarea { font-weight: 400; }
     outline: 4px solid rgba(255, 0, 128, .25);
 }
 .c108-map-marker-unknown {
+    width: 5px;
+    height: 5px;
+    border: 1px solid rgba(35, 50, 56, .35);
     background: #fff;
+    opacity: .38;
 }
 .c108-map-marker-known {
+    width: 15px;
+    height: 15px;
+    border: 2px solid #233238;
     background: #72d184;
 }
 .c108-map-marker-tracked {
+    width: 15px;
+    height: 15px;
+    border: 2px solid #233238;
     background: #2c7be5;
 }
 .c108-map-list {

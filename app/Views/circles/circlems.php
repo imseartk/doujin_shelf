@@ -33,7 +33,7 @@
         <dd><?= esc($circle['name']) ?></dd>
         <dt>讀音</dt>
         <dd><?= esc($circle['name_kana'] ?? '未設定') ?></dd>
-        <dt>Circle.ms ID</dt>
+        <dt>WCID</dt>
         <dd><?= esc($circle['webcatalog_circle_id'] ?? '未綁定') ?></dd>
     </dl>
     <div class="circle-social-links binding-current-links">
@@ -104,12 +104,14 @@
                 <div class="circlems-card-actions">
                     <form method="post" action="/circles/<?= (int) $circle['id'] ?>/circlems/bind">
                         <?= csrf_field() ?>
+                        <input type="hidden" name="wcid" value="<?= esc($candidate['wcid']) ?>">
                         <input type="hidden" name="circlems_id" value="<?= esc($candidate['circlems_id']) ?>">
                         <input type="hidden" name="webcatalog_cut_url" value="<?= esc($candidate['cut_url'] ?? '') ?>">
                         <button class="button small" type="submit">只綁定</button>
                     </form>
                     <form method="post" action="/circles/<?= (int) $circle['id'] ?>/circlems/bind">
                         <?= csrf_field() ?>
+                        <input type="hidden" name="wcid" value="<?= esc($candidate['wcid']) ?>">
                         <input type="hidden" name="circlems_id" value="<?= esc($candidate['circlems_id']) ?>">
                         <input type="hidden" name="webcatalog_cut_url" value="<?= esc($candidate['cut_url'] ?? '') ?>">
                         <input type="hidden" name="import_social" value="1">

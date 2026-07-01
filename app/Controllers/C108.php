@@ -107,7 +107,7 @@ class C108 extends BaseController
     private function baseBuilder($db, bool $countOnly = false)
     {
         $builder = $db->table('c108_circles c108')
-            ->join('circles c', 'c.webcatalog_circle_id = c108.wcid', 'left');
+            ->join('circles c', $this->circleJoinCondition(), 'left');
 
         if ($countOnly) {
             return $builder->select('COUNT(*) AS total', false);
@@ -153,7 +153,7 @@ class C108 extends BaseController
             ->select('COUNT(*) AS total', false)
             ->select('SUM(CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END) AS known_count', false)
             ->select('SUM(CASE WHEN c.is_tracked = 1 THEN 1 ELSE 0 END) AS tracked_count', false)
-            ->join('circles c', 'c.webcatalog_circle_id = c108.wcid', 'left')
+            ->join('circles c', $this->circleJoinCondition(), 'left')
             ->get()
             ->getRowArray();
 
@@ -171,13 +171,18 @@ class C108 extends BaseController
             ->select('COUNT(*) AS total_count', false)
             ->select('SUM(CASE WHEN c.id IS NOT NULL THEN 1 ELSE 0 END) AS known_count', false)
             ->select('SUM(CASE WHEN c.is_tracked = 1 THEN 1 ELSE 0 END) AS tracked_count', false)
-            ->join('circles c', 'c.webcatalog_circle_id = c108.wcid', 'left')
+            ->join('circles c', $this->circleJoinCondition(), 'left')
             ->where('c108.map_filename IS NOT NULL', null, false)
             ->groupBy('c108.day, c108.map_filename, c108.map_name')
             ->orderBy('c108.day', 'ASC')
             ->orderBy('c108.map_filename', 'ASC')
             ->get()
             ->getResultArray();
+    }
+
+    private function circleJoinCondition(): string
+    {
+        return '(c.id = c108.circle_id OR c.webcatalog_circle_id = c108.wcid OR c.webcatalog_circle_id = c108.circlems_id)';
     }
 
     private function selectedMap(array $maps, string $day, string $map): array
