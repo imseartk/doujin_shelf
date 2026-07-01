@@ -758,6 +758,63 @@ label input, label select, label textarea { font-weight: 400; }
     line-height: 1.2;
     text-align: center;
 }
+.c108-map-scroll {
+    overflow: auto;
+    max-height: 76vh;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+}
+.c108-map-stage {
+    position: relative;
+}
+.c108-map-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.c108-map-marker {
+    position: absolute;
+    z-index: 2;
+    width: 15px;
+    height: 15px;
+    border: 2px solid #233238;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
+}
+.c108-map-marker:hover {
+    z-index: 3;
+    outline: 4px solid rgba(255, 0, 128, .25);
+}
+.c108-map-marker-unknown {
+    background: #fff;
+}
+.c108-map-marker-known {
+    background: #72d184;
+}
+.c108-map-marker-tracked {
+    background: #2c7be5;
+}
+.c108-map-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+.c108-map-list-item {
+    display: grid;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: inherit;
+    text-decoration: none;
+}
+.c108-map-list-item span {
+    color: var(--muted);
+    font-size: 13px;
+}
 .circles-table {
     min-width: 1280px;
 }

@@ -30,6 +30,7 @@
         <h1>C108</h1>
         <p>確認這次活動的社團、攤位與巡迴候選。</p>
     </div>
+    <a class="button ghost" href="/c108/map">地圖</a>
 </section>
 
 <section class="c108-summary">

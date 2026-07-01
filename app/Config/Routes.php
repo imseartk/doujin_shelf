@@ -34,6 +34,7 @@ $routes->post('circles/(:num)/track', 'Circles::toggleTrack/$1');
 $routes->post('circles/(:num)/circlems/bind', 'Circles::bindCirclems/$1');
 
 $routes->get('c108', 'C108::index');
+$routes->get('c108/map', 'C108::map');
 
 $routes->get('circlems', 'Circlems::index');
 $routes->get('circlems/connect', 'Circlems::connect');
