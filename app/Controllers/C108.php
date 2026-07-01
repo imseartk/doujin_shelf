@@ -228,6 +228,8 @@ class C108 extends BaseController
             'url' => '/' . $relativePath,
             'width' => (int) $size[0],
             'height' => (int) $size[1],
+            'marker_offset_x' => 20,
+            'marker_offset_y' => 20,
         ];
     }
 }

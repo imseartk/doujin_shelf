@@ -25,6 +25,8 @@
     };
 
     $mapSelectData = json_encode($mapsByDay, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $currentDay = (string) $day;
+    $currentMap = (string) $map;
 ?>
 <section class="page-head">
     <div>
@@ -36,18 +38,18 @@
 
 <form class="toolbar" method="get" action="/c108/map">
     <input type="search" name="q" value="<?= esc($q) ?>" placeholder="搜尋社團、作者、攤位、備註">
-    <select name="day" class="js-c108-map-day">
+    <select name="day" class="js-c108-map-day" data-current-day="<?= esc($currentDay) ?>">
         <?php foreach (array_keys($days) as $optionDay): ?>
-            <option value="<?= esc($optionDay) ?>" <?= $optionDay === $day ? 'selected' : '' ?>>
+            <option value="<?= esc($optionDay) ?>" <?= (string) $optionDay === $currentDay ? 'selected' : '' ?>>
                 <?= esc($optionDay) ?>日目
             </option>
         <?php endforeach; ?>
     </select>
-    <select name="map" class="js-c108-map-select" data-maps="<?= esc($mapSelectData) ?>">
+    <select name="map" class="js-c108-map-select" data-current-map="<?= esc($currentMap) ?>" data-maps="<?= esc($mapSelectData) ?>">
         <?php foreach ($maps as $option): ?>
-            <?php if ((string) $option['day'] !== $day) { continue; } ?>
+            <?php if ((string) $option['day'] !== $currentDay) { continue; } ?>
             <?php $optionMap = (string) $option['map_filename']; ?>
-            <option value="<?= esc($optionMap) ?>" <?= $optionMap === $map ? 'selected' : '' ?>>
+            <option value="<?= esc($optionMap) ?>" <?= $optionMap === $currentMap ? 'selected' : '' ?>>
                 <?= esc($optionMap) ?> / <?= esc($option['map_name'] ?? '') ?>
                 (追蹤 <?= number_format((int) ($option['tracked_count'] ?? 0)) ?>)
             </option>
@@ -87,8 +89,8 @@
             <img class="c108-map-image" src="<?= esc($image['url']) ?>" alt="">
             <?php foreach ($rows as $row): ?>
                 <?php
-                    $left = max(0, (int) ($row['xpos2'] ?? 0));
-                    $top = max(0, (int) ($row['ypos2'] ?? 0));
+                    $left = max(0, (int) ($row['xpos2'] ?? 0) + (int) ($image['marker_offset_x'] ?? 0));
+                    $top = max(0, (int) ($row['ypos2'] ?? 0) + (int) ($image['marker_offset_y'] ?? 0));
                     $label = trim((string) ($row['position_label'] ?? '') . ' ' . (string) ($row['circle_name'] ?? ''));
                 ?>
                 <a
@@ -115,13 +117,31 @@ $(function () {
     var $day = $('.js-c108-map-day');
     var $map = $('.js-c108-map-select');
     var mapsByDay = $map.data('maps') || {};
+    var currentDay = String($day.data('current-day') || '');
+    var currentMap = String($map.data('current-map') || '');
 
-    $day.on('change', function () {
-        var options = mapsByDay[String($day.val())] || [];
+    function rebuildMapOptions(selectedDay, selectedMap) {
+        var options = mapsByDay[String(selectedDay)] || [];
         $map.empty();
         options.forEach(function (item) {
-            $('<option></option>').val(item.map).text(item.label).appendTo($map);
+            $('<option></option>')
+                .val(item.map)
+                .text(item.label)
+                .prop('selected', String(item.map) === String(selectedMap))
+                .appendTo($map);
         });
+        if (!$map.val() && options.length) {
+            $map.val(options[0].map);
+        }
+    }
+
+    if (currentDay) {
+        $day.val(currentDay);
+        rebuildMapOptions(currentDay, currentMap);
+    }
+
+    $day.on('change', function () {
+        rebuildMapOptions($day.val(), '');
     });
 });
 </script>
