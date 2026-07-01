@@ -3,8 +3,14 @@
 <?= $this->section('content') ?>
 <?php
     $days = [];
+    $mapsByDay = [];
     foreach ($maps as $option) {
-        $days[(string) $option['day']] = true;
+        $optionDay = (string) $option['day'];
+        $days[$optionDay] = true;
+        $mapsByDay[$optionDay][] = [
+            'map' => (string) $option['map_filename'],
+            'label' => (string) $option['map_filename'] . ' / ' . (string) ($option['map_name'] ?? '') . ' (追蹤 ' . number_format((int) ($option['tracked_count'] ?? 0)) . ')',
+        ];
     }
 
     $markerClass = static function (array $row): string {
@@ -17,6 +23,8 @@
 
         return 'c108-map-marker-unknown';
     };
+
+    $mapSelectData = json_encode($mapsByDay, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 ?>
 <section class="page-head">
     <div>
@@ -28,14 +36,14 @@
 
 <form class="toolbar" method="get" action="/c108/map">
     <input type="search" name="q" value="<?= esc($q) ?>" placeholder="搜尋社團、作者、攤位、備註">
-    <select name="day">
+    <select name="day" class="js-c108-map-day">
         <?php foreach (array_keys($days) as $optionDay): ?>
             <option value="<?= esc($optionDay) ?>" <?= $optionDay === $day ? 'selected' : '' ?>>
                 <?= esc($optionDay) ?>日目
             </option>
         <?php endforeach; ?>
     </select>
-    <select name="map">
+    <select name="map" class="js-c108-map-select" data-maps="<?= esc($mapSelectData) ?>">
         <?php foreach ($maps as $option): ?>
             <?php if ((string) $option['day'] !== $day) { continue; } ?>
             <?php $optionMap = (string) $option['map_filename']; ?>
@@ -79,8 +87,8 @@
             <img class="c108-map-image" src="<?= esc($image['url']) ?>" alt="">
             <?php foreach ($rows as $row): ?>
                 <?php
-                    $left = max(0, (int) ($row['xpos'] ?? 0));
-                    $top = max(0, (int) ($row['ypos'] ?? 0));
+                    $left = max(0, (int) ($row['xpos2'] ?? 0));
+                    $top = max(0, (int) ($row['ypos2'] ?? 0));
                     $label = trim((string) ($row['position_label'] ?? '') . ' ' . (string) ($row['circle_name'] ?? ''));
                 ?>
                 <a
@@ -102,4 +110,19 @@
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
+<script>
+$(function () {
+    var $day = $('.js-c108-map-day');
+    var $map = $('.js-c108-map-select');
+    var mapsByDay = $map.data('maps') || {};
+
+    $day.on('change', function () {
+        var options = mapsByDay[String($day.val())] || [];
+        $map.empty();
+        options.forEach(function (item) {
+            $('<option></option>').val(item.map).text(item.label).appendTo($map);
+        });
+    });
+});
+</script>
 <?= $this->endSection() ?>

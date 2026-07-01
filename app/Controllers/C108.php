@@ -63,9 +63,10 @@ class C108 extends BaseController
             $relation = 'tracked';
         }
 
+        $requestedDay = $day;
         $maps = $this->mapOptions($db);
         if ($maps !== []) {
-            $selected = $this->selectedMap($maps, $day, $map);
+            $selected = $this->selectedMap($maps, $requestedDay, $map);
             $day = (string) $selected['day'];
             $map = (string) $selected['map_filename'];
         }
@@ -76,8 +77,8 @@ class C108 extends BaseController
             $builder = $this->baseBuilder($db)
                 ->where('c108.day', (int) $day)
                 ->where('c108.map_filename', $map)
-                ->where('c108.xpos IS NOT NULL', null, false)
-                ->where('c108.ypos IS NOT NULL', null, false);
+                ->where('c108.xpos2 IS NOT NULL', null, false)
+                ->where('c108.ypos2 IS NOT NULL', null, false);
             $this->applyFilters($builder, $q, '', $relation, $priority);
 
             $rows = $builder
@@ -190,6 +191,14 @@ class C108 extends BaseController
         foreach ($maps as $row) {
             if ((string) $row['day'] === $day && (string) $row['map_filename'] === $map) {
                 return $row;
+            }
+        }
+
+        if ($day === '1' || $day === '2') {
+            foreach ($maps as $row) {
+                if ((string) $row['day'] === $day) {
+                    return $row;
+                }
             }
         }
 
