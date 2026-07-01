@@ -785,11 +785,12 @@ label input, label select, label textarea { font-weight: 400; }
     outline: 4px solid rgba(255, 0, 128, .25);
 }
 .c108-map-marker-unknown {
-    width: 5px;
-    height: 5px;
-    border: 1px solid rgba(35, 50, 56, .35);
+    width: 3px;
+    height: 3px;
+    border: 0;
     background: #fff;
-    opacity: .38;
+    opacity: .28;
+    box-shadow: none;
 }
 .c108-map-marker-known {
     width: 15px;

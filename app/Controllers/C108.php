@@ -182,7 +182,7 @@ class C108 extends BaseController
 
     private function circleJoinCondition(): string
     {
-        return '(c.id = c108.circle_id OR c.webcatalog_circle_id = c108.wcid OR c.webcatalog_circle_id = c108.circlems_id)';
+        return 'c.id = c108.circle_id';
     }
 
     private function selectedMap(array $maps, string $day, string $map): array
