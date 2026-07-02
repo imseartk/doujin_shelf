@@ -130,6 +130,20 @@ class Circlems extends BaseController
         return redirect()->to('/circlems')->with('message', 'Circle.ms API 測試成功。');
     }
 
+    public function convertBindings(): RedirectResponse
+    {
+        try {
+            $summary = $this->convertCircleBindingsToCirclemsId();
+        } catch (RuntimeException $exception) {
+            return redirect()->to('/circlems')->with('error', $exception->getMessage());
+        }
+
+        return redirect()->to('/circlems')->with(
+            'message',
+            '已轉換既有社團綁定：更新 ' . number_format($summary['converted']) . ' 個社團，回填 ' . number_format($summary['linked']) . ' 筆 C108 攤位。'
+        );
+    }
+
     public function searchCircle(): RedirectResponse
     {
         $circleName = trim((string) $this->request->getPost('circle_name'));
@@ -1229,7 +1243,7 @@ SQL
                 continue;
             }
 
-            $circleId = $localCircleIds['wcid'][(string) $wcid]
+            $circleId = $localCircleIds['circlems'][$formatted['circlemsId']]
                 ?? $localCircleIds['name'][$this->circleNameKey($formatted['circleName'])]
                 ?? null;
 
@@ -1315,13 +1329,13 @@ SQL
             ->get()
             ->getResultArray();
 
-        $byWcid = [];
+        $byCirclems = [];
         $byName = [];
         foreach ($rows as $row) {
             $id = (int) $row['id'];
-            $wcid = trim((string) ($row['webcatalog_circle_id'] ?? ''));
-            if ($wcid !== '') {
-                $byWcid[$wcid] = $id;
+            $circlemsId = trim((string) ($row['webcatalog_circle_id'] ?? ''));
+            if ($circlemsId !== '') {
+                $byCirclems[$circlemsId] = $id;
             }
 
             $nameKey = $this->circleNameKey((string) ($row['name'] ?? ''));
@@ -1331,8 +1345,45 @@ SQL
         }
 
         return [
-            'wcid' => $byWcid,
+            'circlems' => $byCirclems,
             'name' => $byName,
+        ];
+    }
+
+    private function convertCircleBindingsToCirclemsId(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('circles') || ! $db->tableExists('c108_circles')) {
+            throw new RuntimeException('缺少 circles 或 c108_circles 資料表，無法轉換。');
+        }
+
+        $db->transStart();
+        $db->query(
+            'UPDATE `circles` c
+             JOIN `c108_circles` c108 ON c.`webcatalog_circle_id` = c108.`wcid`
+             SET c.`webcatalog_circle_id` = c108.`circlems_id`
+             WHERE c108.`circlems_id` IS NOT NULL
+               AND c108.`circlems_id` <> \'\''
+        );
+        $converted = $db->affectedRows();
+
+        $db->query(
+            'UPDATE `c108_circles` c108
+             JOIN `circles` c ON c.`webcatalog_circle_id` = c108.`circlems_id`
+             SET c108.`circle_id` = c.`id`
+             WHERE c108.`circlems_id` IS NOT NULL
+               AND c108.`circlems_id` <> \'\''
+        );
+        $linked = $db->affectedRows();
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            throw new RuntimeException('Circle.ms 綁定轉換失敗。');
+        }
+
+        return [
+            'converted' => max(0, $converted),
+            'linked' => max(0, $linked),
         ];
     }
 

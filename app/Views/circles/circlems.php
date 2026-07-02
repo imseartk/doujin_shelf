@@ -33,7 +33,7 @@
         <dd><?= esc($circle['name']) ?></dd>
         <dt>讀音</dt>
         <dd><?= esc($circle['name_kana'] ?? '未設定') ?></dd>
-        <dt>WCID</dt>
+        <dt>Circle.ms ID</dt>
         <dd><?= esc($circle['webcatalog_circle_id'] ?? '未綁定') ?></dd>
     </dl>
     <div class="circle-social-links binding-current-links">

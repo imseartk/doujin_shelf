@@ -197,19 +197,19 @@ class Circles extends BaseController
 
         $wcid = trim((string) $this->request->getPost('wcid'));
         $circlemsId = trim((string) $this->request->getPost('circlems_id'));
-        if ($wcid === '') {
-            return redirect()->to('/circles/' . $id . '/circlems')->with('error', '缺少 WCID，無法綁定 C108 資料。');
+        if ($circlemsId === '') {
+            return redirect()->to('/circles/' . $id . '/circlems')->with('error', '缺少 Circle.ms ID，無法綁定社團。');
         }
 
         $data = [
-            'webcatalog_circle_id' => $wcid,
+            'webcatalog_circle_id' => $circlemsId,
         ];
 
         $cutUrl = trim((string) $this->request->getPost('webcatalog_cut_url'));
         $cutWarning = null;
         if ($cutUrl !== '') {
             try {
-                $data['webcatalog_cut_url'] = $this->storeCirclemsCutImage($cutUrl, $wcid);
+                $data['webcatalog_cut_url'] = $this->storeCirclemsCutImage($cutUrl, $circlemsId);
             } catch (RuntimeException $exception) {
                 $cutWarning = $exception->getMessage();
             }
@@ -229,7 +229,7 @@ class Circles extends BaseController
         }
 
         $circleModel->update($id, $data);
-        $this->syncC108CircleId($id, $wcid, $circlemsId);
+        $this->syncC108CircleId($id, $circlemsId, $wcid);
 
         $message = '已綁定 Circle.ms 社團。';
         if ($cutWarning !== null) {
@@ -251,16 +251,16 @@ class Circles extends BaseController
         return $value === '' ? null : $value;
     }
 
-    private function syncC108CircleId(int $circleId, string $wcid, string $circlemsId): void
+    private function syncC108CircleId(int $circleId, string $circlemsId, string $wcid): void
     {
         $db = db_connect();
         if (! $db->tableExists('c108_circles')) {
             return;
         }
 
-        $builder = $db->table('c108_circles')->where('wcid', $wcid);
-        if ($circlemsId !== '') {
-            $builder->orWhere('circlems_id', $circlemsId);
+        $builder = $db->table('c108_circles')->where('circlems_id', $circlemsId);
+        if ($wcid !== '') {
+            $builder->orWhere('wcid', $wcid);
         }
         $builder->update(['circle_id' => $circleId]);
     }

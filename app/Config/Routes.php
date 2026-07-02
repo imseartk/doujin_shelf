@@ -41,6 +41,7 @@ $routes->get('circlems/connect', 'Circlems::connect');
 $routes->get('oauth/circlems/callback', 'Circlems::callback');
 $routes->post('circlems/refresh', 'Circlems::refresh');
 $routes->post('circlems/test', 'Circlems::test');
+$routes->post('circlems/convert-bindings', 'Circlems::convertBindings');
 $routes->post('circlems/search-circle', 'Circlems::searchCircle');
 $routes->post('circlems/sample-circles', 'Circlems::sampleCircles');
 $routes->post('circlems/circle-detail', 'Circlems::circleDetail');
