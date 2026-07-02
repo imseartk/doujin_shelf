@@ -144,6 +144,35 @@ class Circles extends BaseController
         ]);
     }
 
+    public function circlemsCandidatesJson(int $id): ResponseInterface
+    {
+        $circleModel = new CircleModel();
+        $circle = $circleModel->find($id);
+        if (! $circle) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '找不到這個社團。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $q = trim((string) ($this->request->getGet('q') ?: $circle['name']));
+        $eventId = (int) $this->request->getGet('event_id');
+        $page = max(1, (int) $this->request->getGet('page'));
+
+        try {
+            $data = $this->circlemsCandidateData($circle, $q, $eventId, $page);
+        } catch (RuntimeException $exception) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'message' => $exception->getMessage(),
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        return $this->response->setJSON($data + [
+            'csrf' => csrf_hash(),
+        ]);
+    }
+
     public function update(int $id): RedirectResponse
     {
         $circleModel = new CircleModel();
@@ -187,17 +216,31 @@ class Circles extends BaseController
         ]);
     }
 
-    public function bindCirclems(int $id): RedirectResponse
+    public function bindCirclems(int $id): RedirectResponse|ResponseInterface
     {
         $circleModel = new CircleModel();
         $circle = $circleModel->find($id);
         if (! $circle) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'message' => '找不到這個社團。',
+                    'csrf' => csrf_hash(),
+                ]);
+            }
+
             return redirect()->to('/circles')->with('error', '找不到這個社團。');
         }
 
         $wcid = trim((string) $this->request->getPost('wcid'));
         $circlemsId = trim((string) $this->request->getPost('circlems_id'));
         if ($circlemsId === '') {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(400)->setJSON([
+                    'message' => '缺少 Circle.ms ID，無法綁定社團。',
+                    'csrf' => csrf_hash(),
+                ]);
+            }
+
             return redirect()->to('/circles/' . $id . '/circlems')->with('error', '缺少 Circle.ms ID，無法綁定社團。');
         }
 
@@ -236,6 +279,14 @@ class Circles extends BaseController
             $message .= ' 但圖片下載失敗：' . $cutWarning;
         }
 
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'message' => $message,
+                'circle' => $this->circleRowForJson($circleModel->find($id) ?: []),
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
         return redirect()->to('/circles/' . $id . '/circlems')->with('message', $message);
     }
 
@@ -263,6 +314,62 @@ class Circles extends BaseController
             $builder->orWhere('wcid', $wcid);
         }
         $builder->update(['circle_id' => $circleId]);
+    }
+
+    private function circlemsCandidateData(array $circle, string $q, int $eventId, int $page): array
+    {
+        $client = new CirclemsClient();
+        $token = $this->currentCirclemsToken();
+        if (! $token) {
+            throw new RuntimeException('尚未連線 Circle.ms。');
+        }
+
+        $token = $this->refreshCirclemsTokenIfNeeded($token, $client);
+        $eventList = $client->eventList((string) $token['access_token']);
+        $events = $this->eventOptions($eventList);
+        $latestEventId = $this->latestEventId($eventList);
+        if ($eventId <= 0) {
+            $eventId = $latestEventId ?? 0;
+        }
+        if ($eventId <= 0) {
+            throw new RuntimeException('Circle.ms event list did not include a latest event id.');
+        }
+
+        $candidates = [];
+        if ($q !== '') {
+            $result = $client->queryCircle((string) $token['access_token'], $eventId, $q, $page);
+            $candidates = $this->circlemsCandidates($result);
+        }
+
+        return [
+            'circle' => [
+                'id' => (int) $circle['id'],
+                'name' => (string) $circle['name'],
+                'circlems_id' => (string) ($circle['webcatalog_circle_id'] ?? ''),
+            ],
+            'q' => $q,
+            'event_id' => $eventId,
+            'page' => $page,
+            'events' => $events,
+            'candidates' => $candidates,
+        ];
+    }
+
+    private function circleRowForJson(array $circle): array
+    {
+        return [
+            'id' => (int) ($circle['id'] ?? 0),
+            'name' => (string) ($circle['name'] ?? ''),
+            'name_kana' => (string) ($circle['name_kana'] ?? ''),
+            'webcatalog_circle_id' => (string) ($circle['webcatalog_circle_id'] ?? ''),
+            'webcatalog_cut_url' => (string) ($circle['webcatalog_cut_url'] ?? ''),
+            'twitter_url' => (string) ($circle['twitter_url'] ?? ''),
+            'pixiv_url' => (string) ($circle['pixiv_url'] ?? ''),
+            'website_url' => (string) ($circle['website_url'] ?? ''),
+            'booth_url' => (string) ($circle['booth_url'] ?? ''),
+            'melonbooks_url' => (string) ($circle['melonbooks_url'] ?? ''),
+            'toranoana_url' => (string) ($circle['toranoana_url'] ?? ''),
+        ];
     }
 
     private function storeCirclemsCutImage(string $url, string $circlemsId): string

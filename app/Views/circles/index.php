@@ -112,6 +112,9 @@
                 </td>
                 <td>
                     <div class="circle-name"><?= esc($circle['name']) ?></div>
+                    <div class="muted circlems-binding-state js-circlems-binding-state">
+                        <?= ! empty($circle['webcatalog_circle_id']) ? 'Circle.ms ' . esc($circle['webcatalog_circle_id']) : '未連動 Circle.ms' ?>
+                    </div>
                     <input class="circle-kana-input" form="<?= esc($formId) ?>" name="name_kana" value="<?= esc($circle['name_kana'] ?? '') ?>" placeholder="首字 / 讀音">
                 </td>
                 <td>
@@ -146,7 +149,14 @@
                 </td>
                 <td class="actions">
                     <div class="circle-row-actions">
-                        <a class="button small ghost circlems-bind-link" href="/circles/<?= $circleId ?>/circlems">連動</a>
+                        <button
+                            class="button small ghost js-circlems-bind-open"
+                            type="button"
+                            data-circle-id="<?= $circleId ?>"
+                            data-circle-name="<?= esc($circle['name']) ?>"
+                            data-url="/circles/<?= $circleId ?>/circlems/candidates"
+                            data-bind-url="/circles/<?= $circleId ?>/circlems/bind"
+                        >連動</button>
                         <form id="<?= esc($formId) ?>" method="post" action="/circles/<?= $circleId ?>">
                             <?= csrf_field() ?>
                             <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
@@ -184,4 +194,23 @@
         <a class="button small <?= $page >= $totalPages ? 'disabled' : '' ?>" href="<?= $page >= $totalPages ? '#' : esc($pageUrl($page + 1)) ?>">下一頁</a>
     </nav>
 <?php endif; ?>
+
+<div class="circlems-bind-modal js-circlems-bind-modal" hidden>
+    <div class="circlems-bind-backdrop js-circlems-bind-close"></div>
+    <section class="circlems-bind-card" role="dialog" aria-modal="true" aria-labelledby="circlems-bind-title">
+        <button class="circlems-bind-close js-circlems-bind-close" type="button" aria-label="關閉">×</button>
+        <div class="circlems-bind-head">
+            <h2 id="circlems-bind-title">Circle.ms 連動</h2>
+            <div class="muted js-circlems-bind-current"></div>
+        </div>
+        <form class="circlems-bind-search js-circlems-bind-search">
+            <select name="event_id" class="js-circlems-bind-event"></select>
+            <input type="search" name="q" class="js-circlems-bind-q" placeholder="社團名稱">
+            <input class="short-input js-circlems-bind-page" type="number" name="page" value="1" min="1" placeholder="頁">
+            <button class="button" type="submit">搜尋</button>
+        </form>
+        <div class="notice error js-circlems-bind-error" hidden></div>
+        <div class="circlems-bind-results js-circlems-bind-results"></div>
+    </section>
+</div>
 <?= $this->endSection() ?>

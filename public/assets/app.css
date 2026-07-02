@@ -1003,6 +1003,64 @@ label input, label select, label textarea { font-weight: 400; }
     display: grid;
     gap: 12px;
 }
+.circlems-bind-modal[hidden] {
+    display: none;
+}
+.circlems-bind-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+}
+.circlems-bind-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 31, 36, .42);
+}
+.circlems-bind-card {
+    position: relative;
+    z-index: 1;
+    width: min(920px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow: auto;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .22);
+}
+.circlems-bind-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+}
+.circlems-bind-head {
+    padding-right: 42px;
+    margin-bottom: 12px;
+}
+.circlems-bind-search {
+    display: grid;
+    grid-template-columns: minmax(150px, 200px) minmax(220px, 1fr) 78px auto;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.circlems-bind-results {
+    display: grid;
+    gap: 12px;
+}
+.circlems-bind-result-card {
+    background: #fff;
+}
 .source-row {
     display: grid;
     grid-template-columns: 180px 110px minmax(220px, 1fr) minmax(160px, 1fr) auto;
@@ -1025,6 +1083,7 @@ label input, label select, label textarea { font-weight: 400; }
     .fields.two { grid-template-columns: 1fr; }
     .span-2 { grid-column: auto; }
     .source-row { grid-template-columns: 1fr; }
+    .circlems-bind-search { grid-template-columns: 1fr; }
     .circlems-result-card { grid-template-columns: 1fr; }
     .circlems-book-card { grid-template-columns: 1fr; }
     .circlems-result-head { flex-direction: column; }

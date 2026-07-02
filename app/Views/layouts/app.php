@@ -22,7 +22,7 @@
             <?php if (admin_unlocked()): ?>
                 <a href="/wishlist">願望清單</a>
                 <a href="/circles">社團清單</a>
-                <a href="/c108">C108</a>
+                <a href="/c108/map">C108</a>
                 <a href="/sources">購物車</a>
                 <a href="/orders">訂單</a>
                 <a href="/shops">店鋪</a>

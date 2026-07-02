@@ -29,6 +29,7 @@ $routes->get('sources', 'Sources::index');
 
 $routes->get('circles', 'Circles::index');
 $routes->get('circles/(:num)/circlems', 'Circles::circlems/$1');
+$routes->get('circles/(:num)/circlems/candidates', 'Circles::circlemsCandidatesJson/$1');
 $routes->post('circles/(:num)', 'Circles::update/$1');
 $routes->post('circles/(:num)/track', 'Circles::toggleTrack/$1');
 $routes->post('circles/(:num)/circlems/bind', 'Circles::bindCirclems/$1');

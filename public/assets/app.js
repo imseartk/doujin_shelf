@@ -64,6 +64,220 @@ $(function () {
         });
     });
 
+    var circlemsModalState = {
+        circleId: null,
+        circleName: '',
+        url: '',
+        bindUrl: '',
+        $row: null
+    };
+    var $circlemsModal = $('.js-circlems-bind-modal');
+
+    $('.js-circlems-bind-open').on('click', function () {
+        var $button = $(this);
+        circlemsModalState = {
+            circleId: $button.data('circle-id'),
+            circleName: String($button.data('circle-name') || ''),
+            url: String($button.data('url') || ''),
+            bindUrl: String($button.data('bind-url') || ''),
+            $row: $button.closest('tr')
+        };
+
+        $('.js-circlems-bind-current').text(circlemsModalState.circleName);
+        $('.js-circlems-bind-q').val(circlemsModalState.circleName);
+        $('.js-circlems-bind-page').val('1');
+        $('.js-circlems-bind-error').prop('hidden', true).text('');
+        $('.js-circlems-bind-results').html('<div class="empty">搜尋中...</div>');
+        $circlemsModal.prop('hidden', false);
+        loadCirclemsCandidates();
+    });
+
+    $('.js-circlems-bind-close').on('click', function () {
+        $circlemsModal.prop('hidden', true);
+    });
+
+    $('.js-circlems-bind-search').on('submit', function (event) {
+        event.preventDefault();
+        loadCirclemsCandidates();
+    });
+
+    $('.js-circlems-bind-results').on('click', '.js-circlems-bind-candidate', function () {
+        var candidate = $(this).data('candidate') || {};
+        bindCirclemsCandidate(candidate, $(this).data('import-social') === 1);
+    });
+
+    function loadCirclemsCandidates() {
+        if (!circlemsModalState.url) return;
+
+        $.ajax({
+            url: circlemsModalState.url,
+            method: 'GET',
+            dataType: 'json',
+            data: {
+                event_id: $('.js-circlems-bind-event').val() || '',
+                q: $('.js-circlems-bind-q').val() || circlemsModalState.circleName,
+                page: $('.js-circlems-bind-page').val() || 1
+            }
+        }).done(function (response) {
+            refreshCsrf(response);
+            renderCirclemsEvents(response.events || [], response.event_id);
+            renderCirclemsCandidates(response.candidates || []);
+            $('.js-circlems-bind-error').prop('hidden', true).text('');
+        }).fail(function (xhr) {
+            var response = xhr.responseJSON || {};
+            refreshCsrf(response);
+            $('.js-circlems-bind-results').empty();
+            $('.js-circlems-bind-error').prop('hidden', false).text(response.message || 'Circle.ms 搜尋失敗。');
+        });
+    }
+
+    function renderCirclemsEvents(events, selectedEventId) {
+        var $event = $('.js-circlems-bind-event');
+        var previousValue = $event.val();
+        $event.empty();
+        events.forEach(function (event) {
+            $('<option></option>')
+                .val(event.eventId)
+                .text(event.label)
+                .prop('selected', String(event.eventId) === String(selectedEventId || previousValue))
+                .appendTo($event);
+        });
+    }
+
+    function renderCirclemsCandidates(candidates) {
+        var $results = $('.js-circlems-bind-results').empty();
+        if (!candidates.length) {
+            $results.html('<div class="empty">沒有 Circle.ms 候選結果。</div>');
+            return;
+        }
+
+        candidates.forEach(function (candidate) {
+            var $card = $('<article class="circlems-result-card circlems-bind-result-card"></article>');
+            if (candidate.cut_url) {
+                $('<img class="circlems-cut" alt="">').attr('src', candidate.cut_url).appendTo($card);
+            }
+
+            var $body = $('<div class="circlems-result-body"></div>').appendTo($card);
+            var $head = $('<div class="circlems-result-head"></div>').appendTo($body);
+            var $title = $('<div></div>').appendTo($head);
+            $('<h3></h3>').text(candidate.name || '(no name)').appendTo($title);
+            if (candidate.name_kana) $('<div class="muted"></div>').text(candidate.name_kana).appendTo($title);
+
+            var $meta = $('<div class="circlems-meta"></div>').appendTo($head);
+            if (candidate.wcid) $('<span></span>').text('WCID ' + candidate.wcid).appendTo($meta);
+            if (candidate.genre) $('<span></span>').text('Genre ' + candidate.genre).appendTo($meta);
+            if (candidate.circlems_id) $('<span></span>').text('Circle.ms ' + candidate.circlems_id).appendTo($meta);
+
+            if (candidate.description) {
+                $('<p class="circlems-description"></p>').text(truncateText(candidate.description, 180)).appendTo($body);
+            }
+
+            var tags = String(candidate.tag || '').split(',').map(function (tag) { return tag.trim(); }).filter(Boolean);
+            if (tags.length) {
+                var $tags = $('<div class="tag-list"></div>').appendTo($body);
+                tags.forEach(function (tag) { $('<span class="tag-chip"></span>').text(tag).appendTo($tags); });
+            }
+
+            var $links = $('<div class="circlems-links"></div>').appendTo($body);
+            addCirclemsLink($links, 'Web', candidate.website_url);
+            addCirclemsLink($links, 'Pixiv', candidate.pixiv_url);
+            addCirclemsLink($links, 'X', candidate.twitter_url);
+            (candidate.stores || []).forEach(function (store) {
+                addCirclemsLink($links, store.name, store.link);
+            });
+
+            var $actions = $('<div class="circlems-card-actions"></div>').appendTo($body);
+            $('<button class="button small ghost js-circlems-bind-candidate" type="button">只綁定</button>')
+                .data('candidate', candidate)
+                .data('import-social', 0)
+                .appendTo($actions);
+            $('<button class="button small primary js-circlems-bind-candidate" type="button">綁定並匯入社群</button>')
+                .data('candidate', candidate)
+                .data('import-social', 1)
+                .appendTo($actions);
+
+            $results.append($card);
+        });
+    }
+
+    function bindCirclemsCandidate(candidate, importSocial) {
+        if (!circlemsModalState.bindUrl || !candidate.circlems_id) return;
+
+        $.ajax({
+            url: circlemsModalState.bindUrl,
+            method: 'POST',
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            data: withCsrf({
+                wcid: candidate.wcid || '',
+                circlems_id: candidate.circlems_id || '',
+                webcatalog_cut_url: candidate.cut_url || '',
+                import_social: importSocial ? '1' : '0',
+                name_kana: candidate.name_kana || '',
+                website_url: candidate.website_url || '',
+                pixiv_url: candidate.pixiv_url || '',
+                twitter_url: candidate.twitter_url || '',
+                booth_url: candidate.booth_url || '',
+                melonbooks_url: candidate.melonbooks_url || '',
+                toranoana_url: candidate.toranoana_url || ''
+            })
+        }).done(function (response) {
+            refreshCsrf(response);
+            updateCircleRowAfterBind(response.circle || {});
+            $circlemsModal.prop('hidden', true);
+        }).fail(function (xhr) {
+            var response = xhr.responseJSON || {};
+            refreshCsrf(response);
+            $('.js-circlems-bind-error').prop('hidden', false).text(response.message || 'Circle.ms 綁定失敗。');
+        });
+    }
+
+    function updateCircleRowAfterBind(circle) {
+        var $row = circlemsModalState.$row;
+        if (!$row || !$row.length) return;
+
+        if (circle.webcatalog_cut_url) {
+            $row.find('td:first').html($('<img class="circle-list-cut" alt="">').attr('src', circle.webcatalog_cut_url));
+        }
+        $row.find('.js-circlems-binding-state').text(circle.webcatalog_circle_id ? 'Circle.ms ' + circle.webcatalog_circle_id : '未連動 Circle.ms');
+        $row.find('input[name="name_kana"]').val(circle.name_kana || '');
+
+        var links = {
+            'X': circle.twitter_url,
+            'pixiv': circle.pixiv_url,
+            'Web': circle.website_url,
+            'BOOTH': circle.booth_url,
+            'Melon': circle.melonbooks_url,
+            'Tora': circle.toranoana_url
+        };
+        var $links = $row.find('.circle-social-links').first().empty();
+        var hasLink = false;
+        Object.keys(links).forEach(function (label) {
+            if (!links[label]) return;
+            hasLink = true;
+            $('<a class="social-badge" target="_blank" rel="noopener noreferrer"></a>')
+                .attr('href', links[label])
+                .text(label)
+                .appendTo($links);
+        });
+        if (!hasLink) $('<span class="muted">未設定</span>').appendTo($links);
+
+        var fieldMap = { 'X': 'twitter_url', 'pixiv': 'pixiv_url', 'Web': 'website_url', 'BOOTH': 'booth_url', 'Melon': 'melonbooks_url', 'Tora': 'toranoana_url' };
+        Object.keys(fieldMap).forEach(function (label) {
+            $row.find('input[name="' + fieldMap[label] + '"]').val(links[label] || '');
+        });
+    }
+
+    function addCirclemsLink($container, label, url) {
+        if (!url) return;
+        $('<a target="_blank" rel="noopener"></a>').attr('href', url).text(label).appendTo($container);
+    }
+
+    function truncateText(value, width) {
+        value = String(value || '');
+        return value.length > width ? value.slice(0, width) + '...' : value;
+    }
+
     function updateCartRow($row) {
         var total = 0;
         var visibleItems = 0;
