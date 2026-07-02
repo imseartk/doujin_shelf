@@ -58,9 +58,15 @@ class C108 extends BaseController
         $map = trim((string) $this->request->getGet('map'));
         $relation = trim((string) $this->request->getGet('relation'));
         $priority = trim((string) $this->request->getGet('priority'));
+        $hasFilters = $q !== '' || $day !== '' || $map !== '' || $relation !== '' || $priority !== '';
 
         if ($relation === '') {
-            $relation = 'tracked';
+            $relation = 'all';
+        }
+        if (! $hasFilters) {
+            $day = '1';
+            $map = 'E123';
+            $relation = 'all';
         }
 
         $requestedDay = $day;
@@ -203,7 +209,7 @@ class C108 extends BaseController
         }
 
         foreach ($maps as $row) {
-            if ((int) ($row['tracked_count'] ?? 0) > 0) {
+            if ((string) $row['day'] === '1' && (string) $row['map_filename'] === 'E123') {
                 return $row;
             }
         }

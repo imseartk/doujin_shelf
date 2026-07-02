@@ -38,6 +38,7 @@ class Circlems extends BaseController
             'events' => $events,
             'latestEventId' => $latestEventId,
             'eventError' => $eventError,
+            'bindingStats' => $this->circleBindingStats(),
         ]);
     }
 
@@ -1384,6 +1385,33 @@ SQL
         return [
             'converted' => max(0, $converted),
             'linked' => max(0, $linked),
+        ];
+    }
+
+    private function circleBindingStats(): array
+    {
+        $db = db_connect();
+        if (! $db->tableExists('circles')) {
+            return ['bound_circles' => 0, 'linked_c108' => 0];
+        }
+
+        $bound = $db->table('circles')
+            ->where('webcatalog_circle_id IS NOT NULL', null, false)
+            ->where('webcatalog_circle_id <>', '')
+            ->countAllResults();
+
+        $linked = 0;
+        if ($db->tableExists('c108_circles')) {
+            $linked = $db->table('c108_circles c108')
+                ->join('circles c', 'c.webcatalog_circle_id = c108.circlems_id', 'inner')
+                ->where('c.webcatalog_circle_id IS NOT NULL', null, false)
+                ->where('c.webcatalog_circle_id <>', '')
+                ->countAllResults();
+        }
+
+        return [
+            'bound_circles' => $bound,
+            'linked_c108' => $linked,
         ];
     }
 

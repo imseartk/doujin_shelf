@@ -61,6 +61,12 @@ if ($defaultEventId <= 0) {
 <section class="panel compact-panel">
     <h2>既有綁定轉換</h2>
     <p class="muted">把目前以 WCID 儲存的本地社團綁定改成穩定的 Circle.ms ID，並重新連結 C108 攤位。</p>
+    <dl class="status-list">
+        <dt>已綁定社團</dt>
+        <dd><?= number_format((int) ($bindingStats['bound_circles'] ?? 0)) ?></dd>
+        <dt>C108 連結攤位</dt>
+        <dd><?= number_format((int) ($bindingStats['linked_c108'] ?? 0)) ?></dd>
+    </dl>
     <form method="post" action="/circlems/convert-bindings" onsubmit="return confirm('要將既有社團綁定轉換成 Circle.ms ID 嗎？');">
         <?= csrf_field() ?>
         <button class="button ghost" type="submit">轉換既有綁定</button>

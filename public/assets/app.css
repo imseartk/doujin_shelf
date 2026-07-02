@@ -825,7 +825,7 @@ label input, label select, label textarea { font-weight: 400; }
 .c108-map-modal-card {
     position: relative;
     z-index: 1;
-    width: min(620px, 100%);
+    width: min(720px, 100%);
     max-height: calc(100vh - 40px);
     overflow: auto;
     padding: 18px;
@@ -848,9 +848,12 @@ label input, label select, label textarea { font-weight: 400; }
 }
 .c108-map-modal-body {
     display: grid;
-    grid-template-columns: 96px 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
     gap: 16px;
     align-items: start;
+    min-width: 0;
+}
+.c108-map-modal-body > div {
     min-width: 0;
 }
 .c108-map-modal-image {
@@ -864,30 +867,33 @@ label input, label select, label textarea { font-weight: 400; }
 .c108-map-modal-card h2 {
     margin: 0 38px 4px 0;
     font-size: 22px;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
 .c108-map-modal-details {
     display: grid;
     gap: 6px;
     margin: 14px 0;
+    width: 100%;
 }
 .c108-map-modal-details div {
-    display: grid;
-    grid-template-columns: 64px minmax(0, 1fr);
+    display: flex;
     gap: 10px;
     align-items: start;
 }
 .c108-map-modal-details dt {
+    flex: 0 0 64px;
     color: var(--muted);
 }
 .c108-map-modal-details dd {
+    flex: 1 1 auto;
+    min-width: 0;
     margin: 0;
-    overflow-wrap: anywhere;
-    word-break: normal;
+    overflow-wrap: break-word;
+    word-break: keep-all;
 }
 .c108-map-modal-note {
     white-space: pre-wrap;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
 @media (max-width: 560px) {
     .c108-map-modal-body {
