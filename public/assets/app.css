@@ -776,6 +776,7 @@ label input, label select, label textarea { font-weight: 400; }
 .c108-map-marker {
     position: absolute;
     z-index: 2;
+    appearance: none;
     width: 34px;
     height: 26px;
     padding: 0;
@@ -784,6 +785,7 @@ label input, label select, label textarea { font-weight: 400; }
     transform: translate(-50%, -50%);
     cursor: pointer;
     box-shadow: 0 1px 3px rgba(0, 0, 0, .28);
+    line-height: 0;
 }
 .c108-map-marker:hover {
     z-index: 3;
@@ -797,9 +799,11 @@ label input, label select, label textarea { font-weight: 400; }
     box-shadow: none;
 }
 .c108-map-marker-known {
+    border-color: rgba(31, 111, 58, .88);
     background: rgba(114, 209, 132, .62);
 }
 .c108-map-marker-tracked {
+    border-color: rgba(22, 78, 148, .88);
     background: rgba(44, 123, 229, .66);
 }
 .c108-map-modal[hidden] {
@@ -822,6 +826,8 @@ label input, label select, label textarea { font-weight: 400; }
     position: relative;
     z-index: 1;
     width: min(620px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow: auto;
     padding: 18px;
     border-radius: 8px;
     border: 1px solid var(--line);
@@ -845,6 +851,7 @@ label input, label select, label textarea { font-weight: 400; }
     grid-template-columns: 96px 1fr;
     gap: 16px;
     align-items: start;
+    min-width: 0;
 }
 .c108-map-modal-image {
     width: 96px;
@@ -857,6 +864,7 @@ label input, label select, label textarea { font-weight: 400; }
 .c108-map-modal-card h2 {
     margin: 0 38px 4px 0;
     font-size: 22px;
+    overflow-wrap: anywhere;
 }
 .c108-map-modal-details {
     display: grid;
@@ -865,17 +873,21 @@ label input, label select, label textarea { font-weight: 400; }
 }
 .c108-map-modal-details div {
     display: grid;
-    grid-template-columns: 72px 1fr;
+    grid-template-columns: 64px minmax(0, 1fr);
     gap: 10px;
+    align-items: start;
 }
 .c108-map-modal-details dt {
     color: var(--muted);
 }
 .c108-map-modal-details dd {
     margin: 0;
+    overflow-wrap: anywhere;
+    word-break: normal;
 }
 .c108-map-modal-note {
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 @media (max-width: 560px) {
     .c108-map-modal-body {

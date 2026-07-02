@@ -37,10 +37,36 @@
         $labels = ['must' => '必看', 'high' => '優先', 'normal' => '普通'];
         return $labels[$priority ?? ''] ?? '未設定';
     };
+    $markerRank = static function (array $row): int {
+        if (! empty($row['is_tracked'])) {
+            return 3;
+        }
+        if (! empty($row['local_circle_id'])) {
+            return 2;
+        }
+
+        return 1;
+    };
 
     $mapSelectData = json_encode($mapsByDay, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $currentDay = (string) $day;
     $currentMap = (string) $map;
+    $markerRows = [];
+    if ($image !== null) {
+        foreach ($rows as $row) {
+            $left = max(0, (int) ($row['xpos2'] ?? 0) + (int) ($image['marker_offset_x'] ?? 0));
+            $top = max(0, (int) ($row['ypos2'] ?? 0) + (int) ($image['marker_offset_y'] ?? 0));
+            $markerKey = $left . ':' . $top;
+            $markerRow = $row;
+            $markerRow['_marker_left'] = $left;
+            $markerRow['_marker_top'] = $top;
+            $markerRow['_marker_rank'] = $markerRank($row);
+
+            if (! isset($markerRows[$markerKey]) || $markerRow['_marker_rank'] > $markerRows[$markerKey]['_marker_rank']) {
+                $markerRows[$markerKey] = $markerRow;
+            }
+        }
+    }
 ?>
 <section class="page-head">
     <div>
@@ -86,7 +112,7 @@
 
 <div class="list-summary">
     <span><?= esc($day) ?>日目 / <?= esc($map) ?></span>
-    <span><?= number_format(count($rows)) ?> 個點</span>
+    <span><?= number_format(count($markerRows)) ?> 個點</span>
 </div>
 
 <?php if ($image === null): ?>
@@ -95,11 +121,15 @@
     <section class="c108-map-scroll">
         <div class="c108-map-stage" style="width: <?= (int) $image['width'] ?>px; height: <?= (int) $image['height'] ?>px;">
             <img class="c108-map-image" src="<?= esc($image['url']) ?>" alt="">
-            <?php foreach ($rows as $row): ?>
+            <?php foreach ($markerRows as $row): ?>
                 <?php
-                    $left = max(0, (int) ($row['xpos2'] ?? 0) + (int) ($image['marker_offset_x'] ?? 0));
-                    $top = max(0, (int) ($row['ypos2'] ?? 0) + (int) ($image['marker_offset_y'] ?? 0));
+                    $left = (int) $row['_marker_left'];
+                    $top = (int) $row['_marker_top'];
                     $label = trim((string) ($row['position_label'] ?? '') . ' ' . (string) ($row['circle_name'] ?? ''));
+                    $imageUrl = (string) ($row['webcatalog_cut_url'] ?? '');
+                    if ($imageUrl === '') {
+                        $imageUrl = (string) ($row['cut_url'] ?? ($row['cut_web_url'] ?? ''));
+                    }
                 ?>
                 <button
                     type="button"
@@ -114,7 +144,7 @@
                     data-position="<?= esc($row['position_label'] ?? '') ?>"
                     data-map="<?= esc(trim((string) ($row['map_name'] ?? '') . ' ' . (string) ($row['area_name'] ?? '') . ' ' . (string) ($row['space_label'] ?? ''))) ?>"
                     data-note="<?= esc($row['note'] ?? '') ?>"
-                    data-image="<?= esc($row['webcatalog_cut_url'] ?? '') ?>"
+                    data-image="<?= esc($imageUrl) ?>"
                 ></button>
             <?php endforeach; ?>
         </div>
@@ -133,6 +163,10 @@
                         <div>
                             <dt>C108</dt>
                             <dd class="js-c108-map-modal-position"></dd>
+                        </div>
+                        <div>
+                            <dt>館區</dt>
+                            <dd class="js-c108-map-modal-map"></dd>
                         </div>
                         <div>
                             <dt>分類</dt>
@@ -192,13 +226,13 @@ $(function () {
     $('.js-c108-map-marker').on('click', function () {
         var $marker = $(this);
         var subtitle = [$marker.data('kana'), $marker.data('pen-name')].filter(Boolean).join(' / ');
-        var position = [$marker.data('position'), $marker.data('map')].filter(Boolean).join(' ');
         var note = $marker.data('note') || '未設定';
         var image = $marker.data('image') || '';
 
         $('.js-c108-map-modal-title').text($marker.data('name') || '');
         $('.js-c108-map-modal-subtitle').text(subtitle);
-        $('.js-c108-map-modal-position').text(position || '未設定');
+        $('.js-c108-map-modal-position').text($marker.data('position') || '未設定');
+        $('.js-c108-map-modal-map').text($marker.data('map') || '未設定');
         $('.js-c108-map-modal-status').text($marker.data('status') || '一般社團');
         $('.js-c108-map-modal-priority').text($marker.data('priority') || '未設定');
         $('.js-c108-map-modal-note').text(note);
