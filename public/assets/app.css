@@ -776,52 +776,111 @@ label input, label select, label textarea { font-weight: 400; }
 .c108-map-marker {
     position: absolute;
     z-index: 2;
-    border-radius: 999px;
+    width: 34px;
+    height: 26px;
+    padding: 0;
+    border-radius: 3px;
+    border: 2px solid rgba(35, 50, 56, .82);
     transform: translate(-50%, -50%);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .28);
 }
 .c108-map-marker:hover {
     z-index: 3;
     outline: 4px solid rgba(255, 0, 128, .25);
 }
 .c108-map-marker-unknown {
-    width: 3px;
-    height: 3px;
-    border: 0;
-    background: #fff;
-    opacity: .28;
+    width: 24px;
+    height: 18px;
+    border-color: rgba(35, 50, 56, .32);
+    background: rgba(255, 255, 255, .48);
     box-shadow: none;
 }
 .c108-map-marker-known {
-    width: 15px;
-    height: 15px;
-    border: 2px solid #233238;
-    background: #72d184;
+    background: rgba(114, 209, 132, .62);
 }
 .c108-map-marker-tracked {
-    width: 15px;
-    height: 15px;
-    border: 2px solid #233238;
-    background: #2c7be5;
+    background: rgba(44, 123, 229, .66);
 }
-.c108-map-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 8px;
-    margin-top: 12px;
+.c108-map-modal[hidden] {
+    display: none;
 }
-.c108-map-list-item {
+.c108-map-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
     display: grid;
-    gap: 3px;
-    padding: 8px;
-    border: 1px solid var(--line);
+    place-items: center;
+    padding: 20px;
+}
+.c108-map-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 31, 36, .42);
+}
+.c108-map-modal-card {
+    position: relative;
+    z-index: 1;
+    width: min(620px, 100%);
+    padding: 18px;
     border-radius: 8px;
-    color: inherit;
-    text-decoration: none;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .22);
 }
-.c108-map-list-item span {
+.c108-map-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+}
+.c108-map-modal-body {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 16px;
+    align-items: start;
+}
+.c108-map-modal-image {
+    width: 96px;
+    height: 96px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    object-fit: cover;
+    background: #f3f5f3;
+}
+.c108-map-modal-card h2 {
+    margin: 0 38px 4px 0;
+    font-size: 22px;
+}
+.c108-map-modal-details {
+    display: grid;
+    gap: 6px;
+    margin: 14px 0;
+}
+.c108-map-modal-details div {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 10px;
+}
+.c108-map-modal-details dt {
     color: var(--muted);
-    font-size: 13px;
+}
+.c108-map-modal-details dd {
+    margin: 0;
+}
+.c108-map-modal-note {
+    white-space: pre-wrap;
+}
+@media (max-width: 560px) {
+    .c108-map-modal-body {
+        grid-template-columns: 1fr;
+    }
 }
 .circles-table {
     min-width: 1280px;

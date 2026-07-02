@@ -23,6 +23,20 @@
 
         return 'c108-map-marker-unknown';
     };
+    $statusLabel = static function (array $row): string {
+        if (! empty($row['is_tracked'])) {
+            return '追蹤中';
+        }
+        if (! empty($row['local_circle_id'])) {
+            return '買過的社團';
+        }
+
+        return '一般社團';
+    };
+    $priorityLabel = static function (?string $priority): string {
+        $labels = ['must' => '必看', 'high' => '優先', 'normal' => '普通'];
+        return $labels[$priority ?? ''] ?? '未設定';
+    };
 
     $mapSelectData = json_encode($mapsByDay, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $currentDay = (string) $day;
@@ -70,12 +84,6 @@
     <a class="button ghost" href="/c108/map">重置</a>
 </form>
 
-<div class="c108-legend">
-    <span class="c108-legend-item c108-row-unknown">一般社團</span>
-    <span class="c108-legend-item c108-row-known">買過的社團</span>
-    <span class="c108-legend-item c108-row-tracked">追蹤中</span>
-</div>
-
 <div class="list-summary">
     <span><?= esc($day) ?>日目 / <?= esc($map) ?></span>
     <span><?= number_format(count($rows)) ?> 個點</span>
@@ -93,23 +101,52 @@
                     $top = max(0, (int) ($row['ypos2'] ?? 0) + (int) ($image['marker_offset_y'] ?? 0));
                     $label = trim((string) ($row['position_label'] ?? '') . ' ' . (string) ($row['circle_name'] ?? ''));
                 ?>
-                <a
-                    class="c108-map-marker <?= esc($markerClass($row)) ?>"
-                    href="/c108?q=<?= rawurlencode((string) ($row['circle_name'] ?? '')) ?>"
+                <button
+                    type="button"
+                    class="c108-map-marker <?= esc($markerClass($row)) ?> js-c108-map-marker"
                     style="left: <?= $left ?>px; top: <?= $top ?>px;"
                     title="<?= esc($label) ?>"
-                ></a>
+                    data-name="<?= esc($row['circle_name'] ?? '') ?>"
+                    data-kana="<?= esc($row['circle_kana'] ?? '') ?>"
+                    data-pen-name="<?= esc($row['pen_name'] ?? '') ?>"
+                    data-status="<?= esc($statusLabel($row)) ?>"
+                    data-priority="<?= esc($priorityLabel($row['priority'] ?? null)) ?>"
+                    data-position="<?= esc($row['position_label'] ?? '') ?>"
+                    data-map="<?= esc(trim((string) ($row['map_name'] ?? '') . ' ' . (string) ($row['area_name'] ?? '') . ' ' . (string) ($row['space_label'] ?? ''))) ?>"
+                    data-note="<?= esc($row['note'] ?? '') ?>"
+                    data-image="<?= esc($row['webcatalog_cut_url'] ?? '') ?>"
+                ></button>
             <?php endforeach; ?>
         </div>
     </section>
 
-    <div class="c108-map-list">
-        <?php foreach ($rows as $row): ?>
-            <a class="c108-map-list-item <?= esc(! empty($row['is_tracked']) ? 'c108-row-tracked' : (! empty($row['local_circle_id']) ? 'c108-row-known' : 'c108-row-unknown')) ?>" href="/c108?q=<?= rawurlencode((string) ($row['circle_name'] ?? '')) ?>">
-                <strong><?= esc($row['circle_name'] ?? '') ?></strong>
-                <span><?= esc($row['position_label'] ?? '') ?></span>
-            </a>
-        <?php endforeach; ?>
+    <div class="c108-map-modal js-c108-map-modal" hidden>
+        <div class="c108-map-modal-backdrop js-c108-map-modal-close"></div>
+        <section class="c108-map-modal-card" role="dialog" aria-modal="true" aria-labelledby="c108-map-modal-title">
+            <button class="c108-map-modal-close js-c108-map-modal-close" type="button" aria-label="關閉">×</button>
+            <div class="c108-map-modal-body">
+                <img class="c108-map-modal-image js-c108-map-modal-image" src="" alt="" hidden>
+                <div>
+                    <h2 id="c108-map-modal-title" class="js-c108-map-modal-title"></h2>
+                    <div class="muted js-c108-map-modal-subtitle"></div>
+                    <dl class="c108-map-modal-details">
+                        <div>
+                            <dt>C108</dt>
+                            <dd class="js-c108-map-modal-position"></dd>
+                        </div>
+                        <div>
+                            <dt>分類</dt>
+                            <dd class="js-c108-map-modal-status"></dd>
+                        </div>
+                        <div>
+                            <dt>優先度</dt>
+                            <dd class="js-c108-map-modal-priority"></dd>
+                        </div>
+                    </dl>
+                    <div class="c108-map-modal-note js-c108-map-modal-note"></div>
+                </div>
+            </div>
+        </section>
     </div>
 <?php endif; ?>
 <script>
@@ -142,6 +179,44 @@ $(function () {
 
     $day.on('change', function () {
         rebuildMapOptions($day.val(), '');
+    });
+
+    var $modal = $('.js-c108-map-modal');
+    var $modalImage = $('.js-c108-map-modal-image');
+
+    function closeCircleModal() {
+        $modal.prop('hidden', true);
+        $modalImage.attr('src', '').prop('hidden', true);
+    }
+
+    $('.js-c108-map-marker').on('click', function () {
+        var $marker = $(this);
+        var subtitle = [$marker.data('kana'), $marker.data('pen-name')].filter(Boolean).join(' / ');
+        var position = [$marker.data('position'), $marker.data('map')].filter(Boolean).join(' ');
+        var note = $marker.data('note') || '未設定';
+        var image = $marker.data('image') || '';
+
+        $('.js-c108-map-modal-title').text($marker.data('name') || '');
+        $('.js-c108-map-modal-subtitle').text(subtitle);
+        $('.js-c108-map-modal-position').text(position || '未設定');
+        $('.js-c108-map-modal-status').text($marker.data('status') || '一般社團');
+        $('.js-c108-map-modal-priority').text($marker.data('priority') || '未設定');
+        $('.js-c108-map-modal-note').text(note);
+
+        if (image) {
+            $modalImage.attr('src', image).prop('hidden', false);
+        } else {
+            $modalImage.attr('src', '').prop('hidden', true);
+        }
+
+        $modal.prop('hidden', false);
+    });
+
+    $('.js-c108-map-modal-close').on('click', closeCircleModal);
+    $(document).on('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeCircleModal();
+        }
     });
 });
 </script>
