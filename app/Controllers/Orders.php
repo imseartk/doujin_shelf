@@ -8,6 +8,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 class Orders extends BaseController
 {
     private const ACTIVE_STATUS = 'active';
+    private const COMPLETED_STATUS = 'completed';
 
     public function index(): string
     {
@@ -103,9 +104,56 @@ class Orders extends BaseController
             ->get()
             ->getResultArray();
 
+        $orderedCount = 0;
+        foreach ($books as $book) {
+            if (($book['status'] ?? '') === 'ordered') {
+                $orderedCount++;
+            }
+        }
+
         return view('orders/show', [
             'order' => $order,
             'books' => $books,
+            'orderedCount' => $orderedCount,
         ]);
+    }
+
+    public function complete(int $id): RedirectResponse
+    {
+        $db = db_connect();
+        $order = $db->table('orders')
+            ->where('id', $id)
+            ->get()
+            ->getRowArray();
+
+        if (! $order) {
+            return redirect()->to('/orders')->with('error', '找不到這張訂單。');
+        }
+
+        $orderedCount = $db->table('books')
+            ->where('order_id', $id)
+            ->where('status', 'ordered')
+            ->countAllResults();
+
+        if ($orderedCount <= 0) {
+            return redirect()->to('/orders/' . $id)->with('error', '這張訂單沒有可轉為已擁有的已訂購書籍。');
+        }
+
+        $db->transStart();
+        $db->table('books')
+            ->where('order_id', $id)
+            ->where('status', 'ordered')
+            ->update(['status' => 'owned']);
+
+        $db->table('orders')
+            ->where('id', $id)
+            ->update(['status' => self::COMPLETED_STATUS]);
+        $db->transComplete();
+
+        if (! $db->transStatus()) {
+            return redirect()->to('/orders/' . $id)->with('error', '訂單批次更新失敗，請再試一次。');
+        }
+
+        return redirect()->to('/orders')->with('message', '已將 ' . number_format($orderedCount) . ' 本書轉為已擁有，訂單已完成。');
     }
 }

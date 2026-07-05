@@ -57,6 +57,7 @@ $routes->post('circlems/import-c108', 'Circlems::importC108');
 $routes->get('orders', 'Orders::index');
 $routes->post('orders', 'Orders::create');
 $routes->get('orders/(:num)', 'Orders::show/$1');
+$routes->post('orders/(:num)/complete', 'Orders::complete/$1');
 
 $routes->get('shops', 'Shops::index');
 $routes->post('shops', 'Shops::create');
