@@ -140,7 +140,7 @@
                     <textarea form="<?= esc($formId) ?>" name="note" rows="3" placeholder="備註"><?= esc($circle['note'] ?? '') ?></textarea>
                 </td>
                 <td>
-                    <a href="/books?q=<?= rawurlencode($circle['name']) ?>">
+                    <a href="/books?q=<?= rawurlencode($circle['name']) ?>" target="_blank" rel="noopener noreferrer">
                         <?= number_format((int) $circle['book_count']) ?> 本
                     </a>
                     <?php if ((int) $circle['wishlist_count'] > 0): ?>
