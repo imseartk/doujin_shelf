@@ -564,6 +564,76 @@ class Circlems extends BaseController
             ]);
     }
 
+    public function updateC108OfflineCatalog(int $eventId = 230, int $limit = 1000, bool $reset = false, bool $download = true): array
+    {
+        if ($eventId <= 0) {
+            throw new RuntimeException('缺少活動 ID，無法更新 C108 離線清單。');
+        }
+
+        if ($limit <= 0 || $limit > 1000) {
+            $limit = 1000;
+        }
+
+        $downloadSummary = null;
+
+        if ($download) {
+            $token = $this->currentToken();
+            if (! $token) {
+                throw new RuntimeException('尚未連線 Circle.ms。');
+            }
+
+            $client = new CirclemsClient();
+            $token = $this->refreshIfNeeded($token, $client);
+            $catalog = $client->catalogBase((string) $token['access_token'], $eventId);
+            $downloadSummary = $this->downloadTextCatalog($eventId, $catalog);
+
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => null,
+            ]);
+        }
+
+        if (! class_exists('SQLite3')) {
+            throw new RuntimeException('PHP SQLite3 extension is not installed.');
+        }
+
+        if (! is_file($this->catalogDbPath($eventId))) {
+            throw new RuntimeException('尚未下載這個活動的 text DB，請先下載後再匯入。');
+        }
+
+        if ($reset) {
+            $this->resetC108Rows($eventId);
+        }
+
+        $offset = 0;
+        $totalImported = 0;
+        $totalMatched = 0;
+        $totalSkipped = 0;
+        $lastSummary = null;
+
+        do {
+            $lastSummary = $this->importC108Rows($eventId, $offset, $limit);
+            $totalImported += (int) $lastSummary['imported'];
+            $totalMatched += (int) $lastSummary['matched_local_circles'];
+            $totalSkipped += (int) $lastSummary['skipped_without_wcid'];
+            $offset = (int) $lastSummary['next_offset'];
+        } while (! $lastSummary['done']);
+
+        return [
+            'event_id' => $eventId,
+            'limit' => $limit,
+            'reset' => $reset,
+            'downloaded' => $download,
+            'download' => $downloadSummary,
+            'total' => (int) ($lastSummary['total'] ?? 0),
+            'imported' => $totalImported,
+            'matched_local_circles' => $totalMatched,
+            'skipped_without_wcid' => $totalSkipped,
+            'final_offset' => $offset,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+    }
+
     private function currentToken(): ?array
     {
         return (new CirclemsTokenModel())
@@ -1321,6 +1391,16 @@ SQL
             'skipped_without_wcid' => $skipped,
             'imported_at' => $now,
         ];
+    }
+
+    private function resetC108Rows(int $eventId): void
+    {
+        $db = db_connect();
+        if (! $db->tableExists('c108_circles')) {
+            throw new RuntimeException('找不到 c108_circles，請先執行 migration。');
+        }
+
+        $db->table('c108_circles')->where('event_id', $eventId)->delete();
     }
 
     private function localCircleIdsForCatalog($db): array
