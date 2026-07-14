@@ -39,6 +39,8 @@ class Books extends BaseController
         'characters' => ['table' => 'characters', 'label' => '角色', 'where' => ['work_id' => null], 'insert' => ['work_id' => null]],
     ];
 
+    private const QUICK_TAG_IDS = [8, 9, 11, 14];
+
     public function index(): string
     {
         $db = db_connect();
@@ -309,6 +311,7 @@ class Books extends BaseController
             'tagsText' => $id > 0 ? $this->relationText($id, 'book_tags', 'tags', 'tag_id') : (string) ($book['tags_text'] ?? ''),
             'worksText' => $id > 0 ? $this->relationText($id, 'book_works', 'works', 'work_id') : (string) ($book['works_text'] ?? ''),
             'charactersText' => $id > 0 ? $this->relationText($id, 'book_characters', 'characters', 'character_id') : (string) ($book['characters_text'] ?? ''),
+            'quickTags' => $this->quickTagOptions(),
         ]);
     }
 
@@ -556,6 +559,29 @@ class Books extends BaseController
 
             foreach ($children[$id] as $child) {
                 $options[] = ['id' => (int) $child['id'], 'label' => $parent['name'] . ' / ' . $child['name']];
+            }
+        }
+
+        return $options;
+    }
+
+    private function quickTagOptions(): array
+    {
+        $rows = db_connect()->table('tags')
+            ->select('id, name')
+            ->whereIn('id', self::QUICK_TAG_IDS)
+            ->get()
+            ->getResultArray();
+
+        $indexed = [];
+        foreach ($rows as $row) {
+            $indexed[(int) $row['id']] = $row;
+        }
+
+        $options = [];
+        foreach (self::QUICK_TAG_IDS as $id) {
+            if (isset($indexed[$id])) {
+                $options[] = $indexed[$id];
             }
         }
 

@@ -624,6 +624,9 @@ $(function () {
         }
 
         $add.on('click', createAndAdd);
+        $editor.find('.js-taxonomy-quick-add').on('click', function () {
+            addExisting($(this).data('name'));
+        });
         $input.on('keydown', function (event) {
             if (event.key === 'Enter') {
                 event.preventDefault();

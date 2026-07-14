@@ -96,7 +96,16 @@
     <section class="panel">
         <h2>分類</h2>
         <div class="taxonomy-field js-taxonomy-editor" data-taxonomy="tags">
-            <div class="field-label">一般 tag</div>
+            <div class="taxonomy-label-row">
+                <div class="field-label">一般 tag</div>
+                <?php if (! empty($quickTags)): ?>
+                    <div class="taxonomy-quick-tags" aria-label="常用 tag">
+                        <?php foreach ($quickTags as $quickTag): ?>
+                            <button class="button small ghost js-taxonomy-quick-add" type="button" data-name="<?= esc($quickTag['name']) ?>"><?= esc($quickTag['name']) ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
             <div class="taxonomy-add-row">
                 <input class="js-taxonomy-input" type="text" placeholder="輸入分類名稱">
                 <button class="button small js-taxonomy-add" type="button">加入</button>

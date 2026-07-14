@@ -596,6 +596,20 @@ label input, label select, label textarea { font-weight: 400; }
     margin-bottom: 18px;
     position: relative;
 }
+.taxonomy-label-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+}
+.taxonomy-label-row .field-label {
+    margin-bottom: 0;
+}
+.taxonomy-quick-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
 .taxonomy-add-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
