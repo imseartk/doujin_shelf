@@ -103,7 +103,7 @@
                 </td>
                 <td data-sort-value="<?= esc($book['title']) ?>">
                     <div class="title-main"><?= esc($book['title']) ?></div>
-                    <div class="muted"><?= esc($book['type']) ?><?= $book['circle_kana'] ? ' / ' . esc($book['circle_kana']) : '' ?></div>
+                    <div class="muted"><?= esc($typeOptions[$book['type']] ?? $book['type']) ?><?= $book['circle_kana'] ? ' / ' . esc($book['circle_kana']) : '' ?></div>
                 </td>
                 <td data-sort-value="<?= esc($book['circle'] ?? '') ?>"><?= esc($book['circle'] ?? '') ?></td>
                 <td data-sort-value="<?= esc($book['author'] ?? '') ?>"><?= esc($book['author'] ?? '') ?></td>

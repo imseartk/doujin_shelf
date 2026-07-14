@@ -30,7 +30,7 @@ class Circles extends BaseController
             ->select('c.*')
             ->select('COUNT(b.id) AS book_count', false)
             ->select("SUM(CASE WHEN b.status = 'wishlist' THEN 1 ELSE 0 END) AS wishlist_count", false)
-            ->join('books b', 'b.circle_id = c.id', 'left');
+            ->join('books b', "b.circle_id = c.id AND b.type <> 'comic'", 'left');
 
         if ($q !== '') {
             $builder->groupStart()

@@ -22,7 +22,7 @@ class Books extends BaseController
 
     private const TYPE_OPTIONS = [
         'doujin' => '同人誌',
-        'comic' => '漫畫/單行本',
+        'comic' => '単行本',
         'other' => '其他',
     ];
 
@@ -93,6 +93,7 @@ class Books extends BaseController
             'shopId' => $shopId,
             'shops' => (new ShopModel())->orderBy('sort_order', 'ASC')->orderBy('name', 'ASC')->findAll(),
             'statusOptions' => self::STATUS_OPTIONS,
+            'typeOptions' => self::TYPE_OPTIONS,
         ]);
     }
 
@@ -230,15 +231,15 @@ class Books extends BaseController
         }
 
         $bookModel = new BookModel();
-        [$circleId, $circleName] = $this->resolveCircle(
-            $this->nullablePost('circle'),
-            $this->nullablePost('circle_kana')
-        );
+        $type = (string) $this->request->getPost('type');
+        [$circleId, $circleName] = $type === 'comic'
+            ? [null, null]
+            : $this->resolveCircle($this->nullablePost('circle'), $this->nullablePost('circle_kana'));
 
         $data = [
-            'type' => (string) $this->request->getPost('type'),
+            'type' => $type,
             'title' => trim((string) $this->request->getPost('title')),
-            'circle_kana' => $this->nullablePost('circle_kana'),
+            'circle_kana' => $type === 'comic' ? null : $this->nullablePost('circle_kana'),
             'circle' => $circleName,
             'circle_id' => $circleId,
             'author' => $this->nullablePost('author'),
