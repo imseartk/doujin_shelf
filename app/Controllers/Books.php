@@ -166,7 +166,8 @@ class Books extends BaseController
     {
         $q = trim((string) $this->request->getGet('q'));
         $builder = db_connect()->table('circles')
-            ->select('id, name, name_kana');
+            ->select('id, name, name_kana')
+            ->select("(SELECT b.author FROM books b WHERE b.circle_id = circles.id AND b.author IS NOT NULL AND b.author <> '' ORDER BY b.updated_at DESC, b.id DESC LIMIT 1) AS author", false);
 
         if ($q !== '') {
             $builder->groupStart()

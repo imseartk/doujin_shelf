@@ -330,6 +330,7 @@ $(function () {
 
         var $id = $picker.find('.js-circle-id');
         var $input = $picker.find('.js-circle-input');
+        var $author = $('input[name="author"]').first();
         var $suggestions = $picker.find('.js-circle-suggestions');
         var selectedName = normalizeTaxonomyName($input.val());
         var searchTimer = null;
@@ -362,9 +363,13 @@ $(function () {
                 if (item.name_kana) {
                     $('<span class="circle-suggestion-kana"></span>').text(item.name_kana).appendTo($button);
                 }
+                if (item.author) {
+                    $('<span class="circle-suggestion-kana"></span>').text('作者: ' + item.author).appendTo($button);
+                }
                 $button.on('click', function () {
                     $id.val(item.id);
                     $input.val(item.name);
+                    if (item.author) $author.val(item.author);
                     selectedName = normalizeTaxonomyName(item.name);
                     $suggestions.prop('hidden', true).empty();
                 });
