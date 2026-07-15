@@ -152,16 +152,33 @@ class C108 extends BaseController
         try {
             $client = new CirclemsClient();
             $token = $this->refreshCirclemsTokenIfNeeded($token, $client);
-            $result = $client->favoriteWorks((string) $token['access_token'], (int) $row['event_id'], 1, $wcid);
+            $items = [];
+            $seenCount = 0;
+            $maxCount = null;
+
+            for ($page = 1; $page <= 20; $page++) {
+                $result = $client->favoriteWorks((string) $token['access_token'], (int) $row['event_id'], $page, $wcid);
+                $response = $result['response'] ?? [];
+                $pageItems = is_array($response['list'] ?? null) ? $response['list'] : [];
+                $seenCount += count($pageItems);
+
+                if (isset($response['maxcount'])) {
+                    $maxCount = (int) $response['maxcount'];
+                }
+
+                foreach ($pageItems as $item) {
+                    if (is_array($item) && (int) ($item['wcid'] ?? 0) === $wcid) {
+                        $items[] = $item;
+                    }
+                }
+
+                if ($pageItems === [] || ($maxCount !== null && $seenCount >= $maxCount)) {
+                    break;
+                }
+            }
         } catch (RuntimeException $exception) {
             return $this->response->setStatusCode(502)->setJSON(['message' => $exception->getMessage()]);
         }
-
-        $response = $result['response'] ?? [];
-        $items = is_array($response['list'] ?? null) ? $response['list'] : [];
-        $items = array_values(array_filter($items, static function ($item) use ($wcid): bool {
-            return is_array($item) && (int) ($item['wcid'] ?? 0) === $wcid;
-        }));
 
         return $this->response->setJSON([
             'items' => array_map([$this, 'formatWorkItem'], $items),
