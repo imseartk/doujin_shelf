@@ -634,6 +634,124 @@ class Circlems extends BaseController
         ];
     }
 
+    public function checkC108FavoriteUpdates(int $eventId = 230): array
+    {
+        if ($eventId <= 0) {
+            throw new RuntimeException('缺少活動 ID，無法檢查 C108 更新。');
+        }
+
+        $token = $this->currentToken();
+        if (! $token) {
+            throw new RuntimeException('尚未連線 Circle.ms。');
+        }
+
+        $client = new CirclemsClient();
+        $token = $this->refreshIfNeeded($token, $client);
+        $db = db_connect();
+
+        if (! $db->tableExists('c108_circles')) {
+            throw new RuntimeException('找不到 c108_circles，請先執行 migration。');
+        }
+
+        foreach (['update_notice_text', 'update_detected_at', 'update_read'] as $field) {
+            if (! $db->fieldExists($field, 'c108_circles')) {
+                throw new RuntimeException('c108_circles 缺少更新通知欄位，請先執行 migration。');
+            }
+        }
+
+        $page = 1;
+        $maxCount = 0;
+        $checked = 0;
+        $matched = 0;
+        $updated = 0;
+        $skippedUntracked = 0;
+        $now = date('Y-m-d H:i:s');
+
+        do {
+            $result = $client->favoriteCircles((string) $token['access_token'], $eventId, $page, 0);
+            $response = $result['response'] ?? [];
+            $items = is_array($response['list'] ?? null) ? $response['list'] : [];
+            $count = (int) ($response['count'] ?? count($items));
+            $maxCount = (int) ($response['maxcount'] ?? $maxCount);
+
+            foreach ($items as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+
+                $circle = is_array($item['circle'] ?? null) ? $item['circle'] : [];
+                $wcid = (int) ($circle['wcid'] ?? 0);
+                if ($wcid <= 0) {
+                    continue;
+                }
+
+                $checked++;
+                $row = $db->table('c108_circles c108')
+                    ->select('c108.id, c108.description, c108.source_updated_at, c108.update_read, c.id AS local_circle_id, c.is_tracked')
+                    ->join('circles c', 'c.id = c108.circle_id', 'left')
+                    ->where('c108.event_id', $eventId)
+                    ->where('c108.wcid', $wcid)
+                    ->get()
+                    ->getRowArray();
+
+                if (! $row) {
+                    continue;
+                }
+
+                $matched++;
+                if ((int) ($row['is_tracked'] ?? 0) !== 1) {
+                    $skippedUntracked++;
+                    continue;
+                }
+
+                $apiUpdatedAt = $this->catalogDateOrNull((string) ($circle['update_date'] ?? ''));
+                $localUpdatedAt = $this->catalogDateOrNull((string) ($row['source_updated_at'] ?? ''));
+                if ($apiUpdatedAt === null || ($localUpdatedAt !== null && $apiUpdatedAt <= $localUpdatedAt)) {
+                    continue;
+                }
+
+                $apiDescription = trim((string) ($circle['description'] ?? ''));
+                $localDescription = trim((string) ($row['description'] ?? ''));
+                $notice = $apiDescription !== $localDescription
+                    ? '社團描述更新'
+                    : '社團資訊更新';
+
+                $db->table('c108_circles')->where('id', (int) $row['id'])->update([
+                    'circlems_id' => $this->nullIfEmpty((string) ($circle['circlemsId'] ?? '')),
+                    'genre_id' => $this->nullIfEmpty((string) ($circle['genre'] ?? '')),
+                    'circle_name' => (string) ($circle['name'] ?? ''),
+                    'circle_kana' => $this->nullIfEmpty((string) ($circle['name_kana'] ?? '')),
+                    'website_url' => $this->nullIfEmpty((string) ($circle['url'] ?? '')),
+                    'twitter_url' => $this->nullIfEmpty((string) ($circle['twitter_url'] ?? '')),
+                    'pixiv_url' => $this->nullIfEmpty((string) ($circle['pixiv_url'] ?? '')),
+                    'description' => $this->nullIfEmpty($apiDescription),
+                    'source_update_id' => $this->nullIfEmpty((string) ($circle['updateId'] ?? '')),
+                    'source_updated_at' => $apiUpdatedAt,
+                    'update_notice_text' => $notice,
+                    'update_detected_at' => $now,
+                    'update_read' => 0,
+                ]);
+                $updated++;
+            }
+
+            $page++;
+        } while ($count > 0 && $checked < $maxCount && $page <= 100);
+
+        (new CirclemsTokenModel())->update((int) $token['id'], [
+            'last_tested_at' => $now,
+            'last_error' => null,
+        ]);
+
+        return [
+            'event_id' => $eventId,
+            'favorite_count' => $checked,
+            'matched_c108_rows' => $matched,
+            'skipped_untracked' => $skippedUntracked,
+            'updated_rows' => $updated,
+            'checked_at' => $now,
+        ];
+    }
+
     private function currentToken(): ?array
     {
         return (new CirclemsTokenModel())

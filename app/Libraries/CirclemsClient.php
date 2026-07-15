@@ -117,6 +117,15 @@ class CirclemsClient
         ]);
     }
 
+    public function favoriteCircles(string $accessToken, int $eventId, int $page = 1, int $sort = 0): array
+    {
+        return $this->apiGet('/Readers/FavoriteCircles/', $accessToken, [
+            'event_id' => $eventId,
+            'page' => max(1, $page),
+            'sort' => $sort,
+        ]);
+    }
+
     public function tokenExpiresAt(array $tokenResponse): ?string
     {
         $expiresIn = (int) ($tokenResponse['expires_in'] ?? 0);
