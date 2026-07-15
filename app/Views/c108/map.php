@@ -147,6 +147,7 @@
                     data-status="<?= esc($statusLabel($row)) ?>"
                     data-position="<?= esc($row['position_label'] ?? '') ?>"
                     data-book-name="<?= esc($row['book_name'] ?? '') ?>"
+                    data-description="<?= esc($row['description'] ?? '') ?>"
                     data-webcatalog-url="<?= esc($row['circlems_portal_url'] ?? '') ?>"
                     data-wcid="<?= esc((string) ($row['wcid'] ?? '')) ?>"
                     data-note="<?= esc($row['note'] ?? '') ?>"
@@ -178,6 +179,10 @@
                         <div>
                             <dt>頒布</dt>
                             <dd class="js-c108-map-modal-book-name"></dd>
+                        </div>
+                        <div>
+                            <dt>簡介</dt>
+                            <dd class="js-c108-map-modal-description"></dd>
                         </div>
                     </dl>
                     <div class="c108-map-owned js-c108-map-owned" hidden></div>
@@ -257,6 +262,7 @@ $(function () {
         var note = $marker.data('note') || '未設定';
         var image = $marker.data('image') || '';
         var bookName = $marker.data('book-name') || '未設定';
+        var description = $marker.data('description') || '未設定';
         var webcatalogUrl = $marker.data('webcatalog-url') || '';
         var ownedBooks = $marker.data('owned-books') || [];
         currentWcid = String($marker.data('wcid') || '');
@@ -266,6 +272,7 @@ $(function () {
         $('.js-c108-map-modal-position').text($marker.data('position') || '未設定');
         $('.js-c108-map-modal-status').text($marker.data('status') || '一般社團');
         $('.js-c108-map-modal-book-name').text(bookName);
+        $('.js-c108-map-modal-description').text(description);
         $('.js-c108-map-modal-note').text(note);
         $works.prop('hidden', true).empty();
 
@@ -336,6 +343,8 @@ $(function () {
             var $card = $('<article class="c108-work-card"></article>');
             if (item.image_url) {
                 $('<img alt="">').attr('src', item.image_url).appendTo($card);
+            } else {
+                $card.addClass('c108-work-card-no-image');
             }
             var $body = $('<div></div>').appendTo($card);
             $('<h3></h3>').text(item.name || '(no title)').appendTo($body);

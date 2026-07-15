@@ -978,6 +978,9 @@ label input, label select, label textarea { font-weight: 400; }
     border-radius: 8px;
     background: #fff;
 }
+.c108-work-card-no-image {
+    grid-template-columns: minmax(0, 1fr);
+}
 .c108-work-card img {
     width: 70px;
     height: 96px;
