@@ -40,6 +40,7 @@ class Books extends BaseController
     ];
 
     private const QUICK_TAG_IDS = [8, 9, 11, 14];
+    private const QUICK_WORK_IDS = [1];
 
     public function index(): string
     {
@@ -313,6 +314,7 @@ class Books extends BaseController
             'worksText' => $id > 0 ? $this->relationText($id, 'book_works', 'works', 'work_id') : (string) ($book['works_text'] ?? ''),
             'charactersText' => $id > 0 ? $this->relationText($id, 'book_characters', 'characters', 'character_id') : (string) ($book['characters_text'] ?? ''),
             'quickTags' => $this->quickTagOptions(),
+            'quickWorks' => $this->quickWorkOptions(),
         ]);
     }
 
@@ -568,9 +570,19 @@ class Books extends BaseController
 
     private function quickTagOptions(): array
     {
-        $rows = db_connect()->table('tags')
+        return $this->quickTaxonomyOptions('tags', self::QUICK_TAG_IDS);
+    }
+
+    private function quickWorkOptions(): array
+    {
+        return $this->quickTaxonomyOptions('works', self::QUICK_WORK_IDS);
+    }
+
+    private function quickTaxonomyOptions(string $table, array $ids): array
+    {
+        $rows = db_connect()->table($table)
             ->select('id, name')
-            ->whereIn('id', self::QUICK_TAG_IDS)
+            ->whereIn('id', $ids)
             ->get()
             ->getResultArray();
 
@@ -580,7 +592,7 @@ class Books extends BaseController
         }
 
         $options = [];
-        foreach (self::QUICK_TAG_IDS as $id) {
+        foreach ($ids as $id) {
             if (isset($indexed[$id])) {
                 $options[] = $indexed[$id];
             }

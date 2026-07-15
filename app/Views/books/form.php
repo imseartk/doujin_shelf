@@ -116,7 +116,16 @@
             <div class="field-hint js-taxonomy-status"></div>
         </div>
         <div class="taxonomy-field js-taxonomy-editor" data-taxonomy="works">
-            <div class="field-label">原作</div>
+            <div class="taxonomy-label-row">
+                <div class="field-label">原作</div>
+                <?php if (! empty($quickWorks)): ?>
+                    <div class="taxonomy-quick-tags" aria-label="常用原作">
+                        <?php foreach ($quickWorks as $quickWork): ?>
+                            <button class="button small ghost js-taxonomy-quick-add" type="button" data-name="<?= esc($quickWork['name']) ?>"><?= esc($quickWork['name']) ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
             <div class="taxonomy-add-row">
                 <input class="js-taxonomy-input" type="text" placeholder="例如 ブルーアーカイブ">
                 <button class="button small js-taxonomy-add" type="button">加入</button>
