@@ -177,7 +177,7 @@
                             <dd class="js-c108-map-modal-status"></dd>
                         </div>
                         <div>
-                            <dt>頒布</dt>
+                            <dt>預定發布物</dt>
                             <dd class="js-c108-map-modal-book-name"></dd>
                         </div>
                         <div>
