@@ -126,6 +126,20 @@ class CirclemsClient
         ]);
     }
 
+    public function favoriteWorks(string $accessToken, int $eventId, int $page = 1, int $wcid = 0): array
+    {
+        $query = [
+            'event_id' => $eventId,
+            'page' => max(1, $page),
+        ];
+
+        if ($wcid > 0) {
+            $query['wcid'] = $wcid;
+        }
+
+        return $this->apiGet('/Readers/FavoriteWorks/', $accessToken, $query);
+    }
+
     public function tokenExpiresAt(array $tokenResponse): ?string
     {
         $expiresIn = (int) ($tokenResponse['expires_in'] ?? 0);

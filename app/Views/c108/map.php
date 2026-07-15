@@ -33,10 +33,6 @@
 
         return '一般社團';
     };
-    $priorityLabel = static function (?string $priority): string {
-        $labels = ['must' => '必看', 'high' => '優先', 'normal' => '普通'];
-        return $labels[$priority ?? ''] ?? '未設定';
-    };
     $markerRank = static function (array $row): int {
         if (! empty($row['is_tracked'])) {
             return 3;
@@ -132,6 +128,13 @@
                     if ($imageUrl === '') {
                         $imageUrl = (string) ($row['cut_url'] ?? ($row['cut_web_url'] ?? ''));
                     }
+                    $ownedBooks = [];
+                    if (! empty($row['owned_book_1_title'])) {
+                        $ownedBooks[] = ['title' => (string) $row['owned_book_1_title'], 'cover' => (string) ($row['owned_book_1_cover'] ?? '')];
+                    }
+                    if (! empty($row['owned_book_2_title'])) {
+                        $ownedBooks[] = ['title' => (string) $row['owned_book_2_title'], 'cover' => (string) ($row['owned_book_2_cover'] ?? '')];
+                    }
                 ?>
                 <button
                     type="button"
@@ -142,11 +145,13 @@
                     data-kana="<?= esc($row['circle_kana'] ?? '') ?>"
                     data-pen-name="<?= esc($row['pen_name'] ?? '') ?>"
                     data-status="<?= esc($statusLabel($row)) ?>"
-                    data-priority="<?= esc($priorityLabel($row['priority'] ?? null)) ?>"
                     data-position="<?= esc($row['position_label'] ?? '') ?>"
-                    data-map="<?= esc(trim((string) ($row['map_name'] ?? '') . ' ' . (string) ($row['area_name'] ?? '') . ' ' . (string) ($row['space_label'] ?? ''))) ?>"
+                    data-book-name="<?= esc($row['book_name'] ?? '') ?>"
+                    data-webcatalog-url="<?= esc($row['circlems_portal_url'] ?? '') ?>"
+                    data-wcid="<?= esc((string) ($row['wcid'] ?? '')) ?>"
                     data-note="<?= esc($row['note'] ?? '') ?>"
                     data-image="<?= esc($imageUrl) ?>"
+                    data-owned-books="<?= esc(json_encode($ownedBooks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"
                 ></button>
             <?php endforeach; ?>
         </div>
@@ -163,23 +168,25 @@
                     <div class="muted js-c108-map-modal-subtitle"></div>
                     <dl class="c108-map-modal-details">
                         <div>
-                            <dt>C108</dt>
+                            <dt>攤位</dt>
                             <dd class="js-c108-map-modal-position"></dd>
-                        </div>
-                        <div>
-                            <dt>館區</dt>
-                            <dd class="js-c108-map-modal-map"></dd>
                         </div>
                         <div>
                             <dt>分類</dt>
                             <dd class="js-c108-map-modal-status"></dd>
                         </div>
                         <div>
-                            <dt>優先度</dt>
-                            <dd class="js-c108-map-modal-priority"></dd>
+                            <dt>頒布</dt>
+                            <dd class="js-c108-map-modal-book-name"></dd>
                         </div>
                     </dl>
+                    <div class="c108-map-owned js-c108-map-owned" hidden></div>
                     <div class="c108-map-modal-note js-c108-map-modal-note"></div>
+                    <div class="c108-map-modal-actions">
+                        <a class="button small ghost js-c108-map-webcatalog" href="#" target="_blank" rel="noopener" hidden>Web Catalog</a>
+                        <button class="button small js-c108-map-load-works" type="button">顯示頒布物</button>
+                    </div>
+                    <div class="c108-map-works js-c108-map-works" hidden></div>
                 </div>
             </div>
         </section>
@@ -234,10 +241,14 @@ $(function () {
 
     var $modal = $('.js-c108-map-modal');
     var $modalImage = $('.js-c108-map-modal-image');
+    var $works = $('.js-c108-map-works');
+    var currentWcid = '';
 
     function closeCircleModal() {
         $modal.prop('hidden', true);
         $modalImage.attr('src', '').prop('hidden', true);
+        $works.prop('hidden', true).empty();
+        currentWcid = '';
     }
 
     $('.js-c108-map-marker').on('click', function () {
@@ -245,14 +256,23 @@ $(function () {
         var subtitle = [$marker.data('kana'), $marker.data('pen-name')].filter(Boolean).join(' / ');
         var note = $marker.data('note') || '未設定';
         var image = $marker.data('image') || '';
+        var bookName = $marker.data('book-name') || '未設定';
+        var webcatalogUrl = $marker.data('webcatalog-url') || '';
+        var ownedBooks = $marker.data('owned-books') || [];
+        currentWcid = String($marker.data('wcid') || '');
 
         $('.js-c108-map-modal-title').text($marker.data('name') || '');
         $('.js-c108-map-modal-subtitle').text(subtitle);
         $('.js-c108-map-modal-position').text($marker.data('position') || '未設定');
-        $('.js-c108-map-modal-map').text($marker.data('map') || '未設定');
         $('.js-c108-map-modal-status').text($marker.data('status') || '一般社團');
-        $('.js-c108-map-modal-priority').text($marker.data('priority') || '未設定');
+        $('.js-c108-map-modal-book-name').text(bookName);
         $('.js-c108-map-modal-note').text(note);
+        $works.prop('hidden', true).empty();
+
+        var $webcatalog = $('.js-c108-map-webcatalog');
+        $webcatalog.prop('hidden', !webcatalogUrl).attr('href', webcatalogUrl || '#');
+        $('.js-c108-map-load-works').prop('disabled', !currentWcid).text('顯示頒布物');
+        renderOwnedBooks(Array.isArray(ownedBooks) ? ownedBooks : []);
 
         if (image) {
             $modalImage.attr('src', image).prop('hidden', false);
@@ -262,6 +282,75 @@ $(function () {
 
         $modal.prop('hidden', false);
     });
+
+    function renderOwnedBooks(books) {
+        var $owned = $('.js-c108-map-owned').empty();
+        if (!books.length) {
+            $owned.prop('hidden', true);
+            return;
+        }
+
+        $('<div class="muted"></div>').text('已擁有').appendTo($owned);
+        var $list = $('<div class="c108-map-owned-list"></div>').appendTo($owned);
+        books.forEach(function (book) {
+            var $item = $('<div class="c108-map-owned-item"></div>');
+            if (book.cover) {
+                $('<img alt="">').attr('src', book.cover).appendTo($item);
+            } else {
+                $('<div class="c108-map-owned-empty">no image</div>').appendTo($item);
+            }
+            $('<span></span>').text(book.title || '').appendTo($item);
+            $item.appendTo($list);
+        });
+        $owned.prop('hidden', false);
+    }
+
+    $('.js-c108-map-load-works').on('click', function () {
+        if (!currentWcid) return;
+
+        var $button = $(this);
+        $button.prop('disabled', true).text('讀取中...');
+        $works.prop('hidden', false).html('<div class="muted">讀取頒布物中...</div>');
+
+        $.getJSON('/c108/works/' + encodeURIComponent(currentWcid))
+            .done(function (response) {
+                renderWorks(response.items || []);
+            })
+            .fail(function (xhr) {
+                var response = xhr.responseJSON || {};
+                $works.html($('<div class="notice error"></div>').text(response.message || '讀取頒布物失敗。'));
+            })
+            .always(function () {
+                $button.prop('disabled', false).text('重新讀取頒布物');
+            });
+    });
+
+    function renderWorks(items) {
+        $works.empty();
+        if (!items.length) {
+            $works.html('<div class="muted">沒有頒布物資料。</div>');
+            return;
+        }
+
+        items.forEach(function (item) {
+            var $card = $('<article class="c108-work-card"></article>');
+            if (item.image_url) {
+                $('<img alt="">').attr('src', item.image_url).appendTo($card);
+            }
+            var $body = $('<div></div>').appendTo($card);
+            $('<h3></h3>').text(item.name || '(no title)').appendTo($body);
+            var meta = [];
+            if (item.new_book) meta.push('新刊');
+            if (item.price !== null && item.price !== undefined) meta.push('¥' + item.price);
+            if (item.page) meta.push(item.page + 'p');
+            if (item.size) meta.push(item.size);
+            if (item.r18) meta.push('R18');
+            if (item.update_date) meta.push(item.update_date);
+            if (meta.length) $('<div class="muted"></div>').text(meta.join(' / ')).appendTo($body);
+            if (item.introduction) $('<p></p>').text(item.introduction).appendTo($body);
+            $card.appendTo($works);
+        });
+    }
 
     $('.js-c108-map-modal-close').on('click', closeCircleModal);
     $(document).on('keydown', function (event) {

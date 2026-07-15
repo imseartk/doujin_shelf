@@ -2,6 +2,11 @@
 
 namespace App\Controllers;
 
+use App\Libraries\CirclemsClient;
+use App\Models\CirclemsTokenModel;
+use CodeIgniter\HTTP\ResponseInterface;
+use RuntimeException;
+
 class C108 extends BaseController
 {
     private const PER_PAGE = 100;
@@ -123,6 +128,46 @@ class C108 extends BaseController
         ]);
     }
 
+    public function works(int $wcid): ResponseInterface
+    {
+        if ($wcid <= 0) {
+            return $this->response->setStatusCode(404)->setJSON(['message' => '找不到攤位。']);
+        }
+
+        $row = db_connect()->table('c108_circles')
+            ->select('event_id, wcid')
+            ->where('wcid', $wcid)
+            ->get()
+            ->getRowArray();
+
+        if (! $row) {
+            return $this->response->setStatusCode(404)->setJSON(['message' => '找不到攤位。']);
+        }
+
+        $token = $this->currentCirclemsToken();
+        if (! $token) {
+            return $this->response->setStatusCode(422)->setJSON(['message' => '尚未連線 Circle.ms。']);
+        }
+
+        try {
+            $client = new CirclemsClient();
+            $token = $this->refreshCirclemsTokenIfNeeded($token, $client);
+            $result = $client->favoriteWorks((string) $token['access_token'], (int) $row['event_id'], 1, $wcid);
+        } catch (RuntimeException $exception) {
+            return $this->response->setStatusCode(502)->setJSON(['message' => $exception->getMessage()]);
+        }
+
+        $response = $result['response'] ?? [];
+        $items = is_array($response['list'] ?? null) ? $response['list'] : [];
+        $items = array_values(array_filter($items, static function ($item) use ($wcid): bool {
+            return is_array($item) && (int) ($item['wcid'] ?? 0) === $wcid;
+        }));
+
+        return $this->response->setJSON([
+            'items' => array_map([$this, 'formatWorkItem'], $items),
+        ]);
+    }
+
     private function baseBuilder($db, bool $countOnly = false)
     {
         $builder = $db->table('c108_circles c108')
@@ -134,7 +179,18 @@ class C108 extends BaseController
 
         return $builder
             ->select('c108.*')
-            ->select('c.id AS local_circle_id, c.name AS local_circle_name, c.is_tracked, c.priority, c.note, c.webcatalog_cut_url');
+            ->select('c.id AS local_circle_id, c.name AS local_circle_name, c.is_tracked, c.priority, c.note, c.webcatalog_cut_url')
+            ->select($this->ownedBookSelect(0) . ' AS owned_book_1_title', false)
+            ->select($this->ownedBookSelect(0, 'cover_url') . ' AS owned_book_1_cover', false)
+            ->select($this->ownedBookSelect(1) . ' AS owned_book_2_title', false)
+            ->select($this->ownedBookSelect(1, 'cover_url') . ' AS owned_book_2_cover', false);
+    }
+
+    private function ownedBookSelect(int $offset, string $column = 'title'): string
+    {
+        $column = $column === 'cover_url' ? 'cover_url' : 'title';
+
+        return "(SELECT b.{$column} FROM books b WHERE b.circle_id = c.id AND b.status = 'owned' ORDER BY b.updated_at DESC, b.id DESC LIMIT 1 OFFSET {$offset})";
     }
 
     private function applyFilters($builder, string $q, string $day, string $relation, string $priority): void
@@ -276,6 +332,52 @@ class C108 extends BaseController
             'height' => (int) $size[1],
             'marker_offset_x' => 20,
             'marker_offset_y' => 20,
+        ];
+    }
+
+    private function currentCirclemsToken(): ?array
+    {
+        return (new CirclemsTokenModel())
+            ->orderBy('id', 'DESC')
+            ->first();
+    }
+
+    private function refreshCirclemsTokenIfNeeded(array $token, CirclemsClient $client): array
+    {
+        $expiresAt = strtotime((string) ($token['expires_at'] ?? ''));
+        if ($expiresAt === false || $expiresAt > time() + 300) {
+            return $token;
+        }
+
+        if (empty($token['refresh_token'])) {
+            throw new RuntimeException('Circle.ms token 已過期，且沒有 refresh token。');
+        }
+
+        $tokenResponse = $client->refreshToken((string) $token['refresh_token']);
+        $data = [
+            'access_token' => (string) ($tokenResponse['access_token'] ?? ''),
+            'refresh_token' => (string) ($tokenResponse['refresh_token'] ?? ''),
+            'expires_at' => $client->tokenExpiresAt($tokenResponse),
+            'scope' => isset($tokenResponse['scope']) ? (string) $tokenResponse['scope'] : null,
+        ];
+
+        (new CirclemsTokenModel())->insert($data);
+
+        return array_merge($token, $data);
+    }
+
+    private function formatWorkItem(array $row): array
+    {
+        return [
+            'name' => (string) ($row['name'] ?? ''),
+            'image_url' => (string) ($row['image_url'] ?? ''),
+            'introduction' => (string) ($row['introduction'] ?? ''),
+            'new_book' => (int) ($row['new_book'] ?? 0),
+            'price' => isset($row['price']) ? (int) $row['price'] : null,
+            'page' => (int) ($row['page'] ?? 0),
+            'size' => (string) ($row['size'] ?? ''),
+            'r18' => (int) ($row['r18'] ?? 0),
+            'update_date' => (string) ($row['update_date'] ?? ''),
         ];
     }
 }
