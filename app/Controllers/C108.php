@@ -71,6 +71,18 @@ class C108 extends BaseController
 
         $requestedDay = $day;
         $maps = $this->mapOptions($db);
+        if ($q !== '') {
+            $targetMap = $this->firstMatchingMap($db, $q, $day, $relation, $priority);
+            if ($targetMap === null && $day !== '') {
+                $targetMap = $this->firstMatchingMap($db, $q, '', $relation, $priority);
+            }
+            if ($targetMap !== null) {
+                $day = (string) $targetMap['day'];
+                $map = (string) $targetMap['map_filename'];
+                $requestedDay = $day;
+            }
+        }
+
         if ($maps !== []) {
             $selected = $this->selectedMap($maps, $requestedDay, $map);
             $day = (string) $selected['day'];
@@ -185,6 +197,34 @@ class C108 extends BaseController
             ->orderBy('c108.map_filename', 'ASC')
             ->get()
             ->getResultArray();
+    }
+
+    private function firstMatchingMap($db, string $q, string $day, string $relation, string $priority): ?array
+    {
+        $builder = $this->baseBuilder($db)
+            ->where('c108.map_filename IS NOT NULL', null, false)
+            ->where('c108.xpos2 IS NOT NULL', null, false)
+            ->where('c108.ypos2 IS NOT NULL', null, false);
+
+        $this->applyFilters($builder, $q, $day, $relation, $priority);
+
+        $row = $builder
+            ->orderBy('c.is_tracked', 'DESC')
+            ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+            ->orderBy('c108.day', 'ASC')
+            ->orderBy('c108.map_id', 'ASC')
+            ->orderBy('c108.block_id', 'ASC')
+            ->orderBy('c108.space_no', 'ASC')
+            ->orderBy('c108.space_no_sub', 'ASC')
+            ->limit(1)
+            ->get()
+            ->getRowArray();
+
+        if (! $row || empty($row['map_filename'])) {
+            return null;
+        }
+
+        return $row;
     }
 
     private function circleJoinCondition(): string

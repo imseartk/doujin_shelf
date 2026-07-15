@@ -121,8 +121,10 @@
     <section class="c108-map-scroll">
         <div class="c108-map-stage" style="width: <?= (int) $image['width'] ?>px; height: <?= (int) $image['height'] ?>px;">
             <img class="c108-map-image" src="<?= esc($image['url']) ?>" alt="">
+            <?php $markerIndex = 0; ?>
             <?php foreach ($markerRows as $row): ?>
                 <?php
+                    $markerIndex++;
                     $left = (int) $row['_marker_left'];
                     $top = (int) $row['_marker_top'];
                     $label = trim((string) ($row['position_label'] ?? '') . ' ' . (string) ($row['circle_name'] ?? ''));
@@ -133,7 +135,7 @@
                 ?>
                 <button
                     type="button"
-                    class="c108-map-marker <?= esc($markerClass($row)) ?> js-c108-map-marker"
+                    class="c108-map-marker <?= esc($markerClass($row)) ?> <?= $q !== '' && $markerIndex === 1 ? 'c108-map-marker-focus js-c108-map-focus' : '' ?> js-c108-map-marker"
                     style="left: <?= $left ?>px; top: <?= $top ?>px;"
                     title="<?= esc($label) ?>"
                     data-name="<?= esc($row['circle_name'] ?? '') ?>"
@@ -190,6 +192,7 @@ $(function () {
     var mapsByDay = $map.data('maps') || {};
     var currentDay = String($day.data('current-day') || '');
     var currentMap = String($map.data('current-map') || '');
+    var hasSearch = <?= json_encode($q !== '') ?>;
 
     function rebuildMapOptions(selectedDay, selectedMap) {
         var options = mapsByDay[String(selectedDay)] || [];
@@ -214,6 +217,20 @@ $(function () {
     $day.on('change', function () {
         rebuildMapOptions($day.val(), '');
     });
+
+    function focusSearchMarker() {
+        if (!hasSearch) return;
+
+        var $marker = $('.js-c108-map-focus').first();
+        var $scroll = $('.c108-map-scroll').first();
+        if (!$marker.length || !$scroll.length) return;
+
+        var markerPosition = $marker.position();
+        var left = Math.max(0, markerPosition.left - ($scroll.width() / 2));
+        var top = Math.max(0, markerPosition.top - ($scroll.height() / 2));
+
+        $scroll.animate({ scrollLeft: left, scrollTop: top }, 280);
+    }
 
     var $modal = $('.js-c108-map-modal');
     var $modalImage = $('.js-c108-map-modal-image');
@@ -252,6 +269,8 @@ $(function () {
             closeCircleModal();
         }
     });
+
+    setTimeout(focusSearchMarker, 120);
 });
 </script>
 <?= $this->endSection() ?>

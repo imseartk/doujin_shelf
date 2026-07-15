@@ -805,6 +805,11 @@ label input, label select, label textarea { font-weight: 400; }
     z-index: 3;
     outline: 4px solid rgba(255, 0, 128, .25);
 }
+.c108-map-marker-focus {
+    z-index: 4;
+    outline: 5px solid rgba(255, 0, 128, .38);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, .9), 0 0 18px rgba(255, 0, 128, .65);
+}
 .c108-map-marker-unknown {
     width: 24px;
     height: 18px;
