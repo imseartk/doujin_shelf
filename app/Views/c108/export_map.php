@@ -53,7 +53,11 @@
     $printWidth = 0;
     $printHeight = 0;
     if ($image !== null) {
-        $printScale = min(1.0, 980 / max(1, (int) $image['width']));
+        $printScale = min(
+            1.0,
+            980 / max(1, (int) $image['width']),
+            680 / max(1, (int) $image['height'])
+        );
         $printWidth = (int) round((int) $image['width'] * $printScale);
         $printHeight = (int) round((int) $image['height'] * $printScale);
 
