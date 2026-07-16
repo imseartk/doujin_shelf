@@ -1019,6 +1019,9 @@ label input, label select, label textarea { font-weight: 400; }
     position: relative;
     background: #fff;
 }
+.export-map-print-fit {
+    width: max-content;
+}
 .export-map-image,
 .export-map-lines {
     position: absolute;
@@ -1083,6 +1086,10 @@ label input, label select, label textarea { font-weight: 400; }
     }
 }
 @media print {
+    @page {
+        size: A4 landscape;
+        margin: 6mm;
+    }
     .topbar,
     .no-print,
     .export-map-head p {
@@ -1100,6 +1107,15 @@ label input, label select, label textarea { font-weight: 400; }
         padding: 0;
         border: 0;
         border-radius: 0;
+    }
+    .export-map-print-fit {
+        width: var(--print-width);
+        height: var(--print-height);
+        overflow: hidden;
+    }
+    .export-map-stage {
+        transform: scale(var(--print-scale));
+        transform-origin: top left;
     }
 }
 .circles-table {

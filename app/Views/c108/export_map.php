@@ -49,7 +49,14 @@
     $currentMap = (string) $map;
     $mapSelectData = json_encode($mapsByDay, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $markerRows = [];
+    $printScale = 1.0;
+    $printWidth = 0;
+    $printHeight = 0;
     if ($image !== null) {
+        $printScale = min(1.0, 980 / max(1, (int) $image['width']));
+        $printWidth = (int) round((int) $image['width'] * $printScale);
+        $printHeight = (int) round((int) $image['height'] * $printScale);
+
         foreach ($rows as $row) {
             $left = max(0, (int) ($row['xpos2'] ?? 0) + (int) ($image['marker_offset_x'] ?? 0));
             $top = max(0, (int) ($row['ypos2'] ?? 0) + (int) ($image['marker_offset_y'] ?? 0));
@@ -169,38 +176,40 @@
             <strong><?= esc($day) ?>日目 / <?= esc($map) ?></strong>
             <span><?= number_format(count($markerRows)) ?> 個標記</span>
         </div>
-        <div class="export-map-stage" style="width: <?= (int) $image['width'] ?>px; height: <?= (int) $image['height'] ?>px;">
-            <img class="export-map-image" src="<?= esc($image['url']) ?>" alt="">
-            <svg class="export-map-lines" viewBox="0 0 <?= (int) $image['width'] ?> <?= (int) $image['height'] ?>" aria-hidden="true">
+        <div class="export-map-print-fit" style="--print-scale: <?= esc(number_format($printScale, 6, '.', '')) ?>; --print-width: <?= $printWidth ?>px; --print-height: <?= $printHeight ?>px;">
+            <div class="export-map-stage" style="width: <?= (int) $image['width'] ?>px; height: <?= (int) $image['height'] ?>px;">
+                <img class="export-map-image" src="<?= esc($image['url']) ?>" alt="">
+                <svg class="export-map-lines" viewBox="0 0 <?= (int) $image['width'] ?> <?= (int) $image['height'] ?>" aria-hidden="true">
+                    <?php foreach ($markerRows as $row): ?>
+                        <?php if (empty($row['_label_visible'])) { continue; } ?>
+                        <line
+                            class="<?= ! empty($row['is_tracked']) ? 'tracked' : 'known' ?>"
+                            x1="<?= (int) $row['_marker_left'] ?>"
+                            y1="<?= (int) $row['_marker_top'] ?>"
+                            x2="<?= (int) $row['_line_x2'] ?>"
+                            y2="<?= (int) $row['_line_y2'] ?>"
+                        />
+                    <?php endforeach; ?>
+                </svg>
                 <?php foreach ($markerRows as $row): ?>
+                    <div
+                        class="c108-map-marker export-map-marker <?= esc($markerClass($row)) ?>"
+                        style="left: <?= (int) $row['_marker_left'] ?>px; top: <?= (int) $row['_marker_top'] ?>px;"
+                        title="<?= esc(trim((string) ($row['position_label'] ?? '') . ' ' . (string) ($row['circle_name'] ?? ''))) ?>"
+                    ></div>
                     <?php if (empty($row['_label_visible'])) { continue; } ?>
-                    <line
-                        class="<?= ! empty($row['is_tracked']) ? 'tracked' : 'known' ?>"
-                        x1="<?= (int) $row['_marker_left'] ?>"
-                        y1="<?= (int) $row['_marker_top'] ?>"
-                        x2="<?= (int) $row['_line_x2'] ?>"
-                        y2="<?= (int) $row['_line_y2'] ?>"
-                    />
+                    <article
+                        class="export-map-label <?= ! empty($row['is_tracked']) ? 'tracked' : 'known' ?>"
+                        style="left: <?= (int) $row['_label_x'] ?>px; top: <?= (int) $row['_label_y'] ?>px;"
+                    >
+                        <h2><?= esc($row['circle_name'] ?? '') ?></h2>
+                        <div class="meta"><?= esc($row['position_label'] ?? '') ?></div>
+                        <?php if ($labelText($row) !== ''): ?>
+                            <p><?= nl2br(esc($labelText($row))) ?></p>
+                        <?php endif; ?>
+                    </article>
                 <?php endforeach; ?>
-            </svg>
-            <?php foreach ($markerRows as $row): ?>
-                <div
-                    class="c108-map-marker export-map-marker <?= esc($markerClass($row)) ?>"
-                    style="left: <?= (int) $row['_marker_left'] ?>px; top: <?= (int) $row['_marker_top'] ?>px;"
-                    title="<?= esc(trim((string) ($row['position_label'] ?? '') . ' ' . (string) ($row['circle_name'] ?? ''))) ?>"
-                ></div>
-                <?php if (empty($row['_label_visible'])) { continue; } ?>
-                <article
-                    class="export-map-label <?= ! empty($row['is_tracked']) ? 'tracked' : 'known' ?>"
-                    style="left: <?= (int) $row['_label_x'] ?>px; top: <?= (int) $row['_label_y'] ?>px;"
-                >
-                    <h2><?= esc($row['circle_name'] ?? '') ?></h2>
-                    <div class="meta"><?= esc($row['position_label'] ?? '') ?></div>
-                    <?php if ($labelText($row) !== ''): ?>
-                        <p><?= nl2br(esc($labelText($row))) ?></p>
-                    <?php endif; ?>
-                </article>
-            <?php endforeach; ?>
+            </div>
         </div>
     </section>
 <?php endif; ?>
