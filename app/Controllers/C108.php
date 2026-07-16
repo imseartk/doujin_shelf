@@ -142,6 +142,9 @@ class C108 extends BaseController
         if ($relation === '') {
             $relation = 'known';
         }
+        if ($relation === 'all') {
+            $relation = 'known';
+        }
 
         $maps = $this->mapOptions($db);
         if ($maps !== []) {

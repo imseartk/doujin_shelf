@@ -74,20 +74,58 @@
             }
         }
 
-        $index = 0;
+        $labelRects = [];
+        $labelWidth = 156;
+        $labelHeight = 50;
         foreach ($markerRows as &$row) {
             $left = (int) $row['_marker_left'];
             $top = (int) $row['_marker_top'];
-            $preferRight = $left < ((int) $image['width'] * 0.62);
-            $labelWidth = 176;
-            $labelHeight = 58;
-            $row['_label_x'] = $preferRight ? $left + 72 : $left - $labelWidth - 48;
-            $row['_label_y'] = $top - 42 + (($index % 4) * 28);
-            $row['_label_x'] = max(8, min((int) $row['_label_x'], (int) $image['width'] - $labelWidth - 8));
-            $row['_label_y'] = max(8, min((int) $row['_label_y'], (int) $image['height'] - $labelHeight - 8));
-            $row['_line_x2'] = $preferRight ? (int) $row['_label_x'] : (int) $row['_label_x'] + $labelWidth;
-            $row['_line_y2'] = (int) $row['_label_y'] + 24;
-            $index++;
+            $candidateOffsets = [
+                [52, -42],
+                [-$labelWidth - 40, -42],
+                [52, 12],
+                [-$labelWidth - 40, 12],
+                [12, -$labelHeight - 36],
+                [12, 44],
+                [92, -82],
+                [-$labelWidth - 82, -82],
+                [92, 54],
+                [-$labelWidth - 82, 54],
+            ];
+            $placed = false;
+            foreach ($candidateOffsets as $offset) {
+                $labelX = max(8, min($left + $offset[0], (int) $image['width'] - $labelWidth - 8));
+                $labelY = max(8, min($top + $offset[1], (int) $image['height'] - $labelHeight - 8));
+                $rect = ['x' => $labelX, 'y' => $labelY, 'w' => $labelWidth, 'h' => $labelHeight];
+                $hasCollision = false;
+                foreach ($labelRects as $existingRect) {
+                    if (
+                        $rect['x'] < $existingRect['x'] + $existingRect['w'] + 8
+                        && $rect['x'] + $rect['w'] + 8 > $existingRect['x']
+                        && $rect['y'] < $existingRect['y'] + $existingRect['h'] + 8
+                        && $rect['y'] + $rect['h'] + 8 > $existingRect['y']
+                    ) {
+                        $hasCollision = true;
+                        break;
+                    }
+                }
+                if ($hasCollision) {
+                    continue;
+                }
+
+                $row['_label_x'] = $labelX;
+                $row['_label_y'] = $labelY;
+                $row['_line_x2'] = $labelX < $left ? $labelX + $labelWidth : $labelX;
+                $row['_line_y2'] = $labelY + 22;
+                $row['_label_visible'] = true;
+                $labelRects[] = $rect;
+                $placed = true;
+                break;
+            }
+
+            if (! $placed) {
+                $row['_label_visible'] = false;
+            }
         }
         unset($row);
     }
@@ -123,7 +161,6 @@
     <select name="relation">
         <option value="known" <?= $relation === 'known' ? 'selected' : '' ?>>買過的社團</option>
         <option value="tracked" <?= $relation === 'tracked' ? 'selected' : '' ?>>追蹤中</option>
-        <option value="all" <?= $relation === 'all' ? 'selected' : '' ?>>全部社團</option>
     </select>
     <select name="priority">
         <option value="">全部優先度</option>
@@ -146,6 +183,7 @@
             <img class="export-map-image" src="<?= esc($image['url']) ?>" alt="">
             <svg class="export-map-lines" viewBox="0 0 <?= (int) $image['width'] ?> <?= (int) $image['height'] ?>" aria-hidden="true">
                 <?php foreach ($markerRows as $row): ?>
+                    <?php if (empty($row['_label_visible'])) { continue; } ?>
                     <line
                         class="<?= ! empty($row['is_tracked']) ? 'tracked' : 'known' ?>"
                         x1="<?= (int) $row['_marker_left'] ?>"
@@ -161,6 +199,7 @@
                     style="left: <?= (int) $row['_marker_left'] ?>px; top: <?= (int) $row['_marker_top'] ?>px;"
                     title="<?= esc(trim((string) ($row['position_label'] ?? '') . ' ' . (string) ($row['circle_name'] ?? ''))) ?>"
                 ></div>
+                <?php if (empty($row['_label_visible'])) { continue; } ?>
                 <article
                     class="export-map-label <?= ! empty($row['is_tracked']) ? 'tracked' : 'known' ?>"
                     style="left: <?= (int) $row['_label_x'] ?>px; top: <?= (int) $row['_label_y'] ?>px;"
