@@ -23,16 +23,6 @@
 
         return 'c108-map-marker-unknown';
     };
-    $statusLabel = static function (array $row): string {
-        if (! empty($row['is_tracked'])) {
-            return '追蹤中';
-        }
-        if (! empty($row['local_circle_id'])) {
-            return '買過的社團';
-        }
-
-        return '一般社團';
-    };
     $markerRank = static function (array $row): int {
         if (! empty($row['is_tracked'])) {
             return 3;
@@ -205,7 +195,7 @@
                     style="left: <?= (int) $row['_label_x'] ?>px; top: <?= (int) $row['_label_y'] ?>px;"
                 >
                     <h2><?= esc($row['circle_name'] ?? '') ?></h2>
-                    <div class="meta"><?= esc($statusLabel($row)) ?> / <?= esc($row['position_label'] ?? '') ?></div>
+                    <div class="meta"><?= esc($row['position_label'] ?? '') ?></div>
                     <?php if ($labelText($row) !== ''): ?>
                         <p><?= nl2br(esc($labelText($row))) ?></p>
                     <?php endif; ?>

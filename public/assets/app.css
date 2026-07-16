@@ -1049,14 +1049,14 @@ label input, label select, label textarea { font-weight: 400; }
     z-index: 5;
     width: 156px;
     padding: 4px 6px;
-    border-left: 3px solid rgba(31, 111, 58, .72);
+    border: 2px solid rgba(31, 111, 58, .78);
     background: rgba(255, 255, 255, .88);
     color: #17252a;
     font-size: 12px;
     line-height: 1.28;
 }
 .export-map-label.tracked {
-    border-left-color: rgba(22, 78, 148, .78);
+    border-color: rgba(22, 78, 148, .82);
 }
 .export-map-label h2 {
     margin: 0 0 2px;
