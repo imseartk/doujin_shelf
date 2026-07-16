@@ -149,7 +149,7 @@
         <?php endforeach; ?>
     </select>
     <select name="relation">
-        <option value="known" <?= $relation === 'known' ? 'selected' : '' ?>>買過的社團</option>
+        <option value="known" <?= $relation === 'known' ? 'selected' : '' ?>>追蹤中 + 買過的社團</option>
         <option value="tracked" <?= $relation === 'tracked' ? 'selected' : '' ?>>追蹤中</option>
     </select>
     <select name="priority">
