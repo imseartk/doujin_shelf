@@ -128,6 +128,61 @@ class C108 extends BaseController
         ]);
     }
 
+    public function exportMap(): string
+    {
+        $db = db_connect();
+        $day = trim((string) $this->request->getGet('day'));
+        $map = trim((string) $this->request->getGet('map'));
+        $relation = trim((string) $this->request->getGet('relation'));
+        $priority = trim((string) $this->request->getGet('priority'));
+
+        if ($day === '') {
+            $day = '1';
+        }
+        if ($relation === '') {
+            $relation = 'known';
+        }
+
+        $maps = $this->mapOptions($db);
+        if ($maps !== []) {
+            $selected = $this->selectedMap($maps, $day, $map);
+            $day = (string) $selected['day'];
+            $map = (string) $selected['map_filename'];
+        }
+
+        $rows = [];
+        $image = null;
+        if ($day !== '' && $map !== '') {
+            $builder = $this->baseBuilder($db)
+                ->where('c108.day', (int) $day)
+                ->where('c108.map_filename', $map)
+                ->where('c108.xpos2 IS NOT NULL', null, false)
+                ->where('c108.ypos2 IS NOT NULL', null, false);
+            $this->applyFilters($builder, '', '', $relation, $priority);
+
+            $rows = $builder
+                ->orderBy('c.is_tracked', 'DESC')
+                ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+                ->orderBy('c108.block_id', 'ASC')
+                ->orderBy('c108.space_no', 'ASC')
+                ->orderBy('c108.space_no_sub', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            $image = $this->mapImage($day, $map);
+        }
+
+        return view('c108/export_map', [
+            'rows' => $rows,
+            'maps' => $maps,
+            'image' => $image,
+            'day' => $day,
+            'map' => $map,
+            'relation' => $relation,
+            'priority' => $priority,
+        ]);
+    }
+
     public function works(int $wcid): ResponseInterface
     {
         if ($wcid <= 0) {

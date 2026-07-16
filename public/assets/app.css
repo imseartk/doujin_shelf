@@ -998,12 +998,108 @@ label input, label select, label textarea { font-weight: 400; }
     margin-top: 6px;
     white-space: pre-wrap;
 }
+.export-map-head {
+    align-items: center;
+}
+.export-map-sheet {
+    overflow: auto;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+}
+.export-map-title {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 8px;
+    color: var(--muted);
+}
+.export-map-stage {
+    position: relative;
+    background: #fff;
+}
+.export-map-image,
+.export-map-lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+.export-map-image {
+    z-index: 1;
+}
+.export-map-lines {
+    z-index: 3;
+    pointer-events: none;
+}
+.export-map-lines line {
+    stroke: rgba(31, 111, 58, .7);
+    stroke-width: 3;
+}
+.export-map-lines line.tracked {
+    stroke: rgba(22, 78, 148, .8);
+}
+.export-map-marker {
+    z-index: 4;
+    pointer-events: none;
+}
+.export-map-label {
+    position: absolute;
+    z-index: 5;
+    width: 176px;
+    padding: 4px 6px;
+    border-left: 3px solid rgba(31, 111, 58, .72);
+    background: rgba(255, 255, 255, .76);
+    color: #17252a;
+    font-size: 13px;
+    line-height: 1.35;
+}
+.export-map-label.tracked {
+    border-left-color: rgba(22, 78, 148, .78);
+}
+.export-map-label h2 {
+    margin: 0 0 2px;
+    color: #1b5fa7;
+    font-size: 14px;
+    line-height: 1.25;
+    overflow-wrap: break-word;
+}
+.export-map-label .meta {
+    color: var(--muted);
+    font-size: 11px;
+}
+.export-map-label p {
+    margin: 3px 0 0;
+    font-weight: 600;
+    overflow-wrap: break-word;
+}
 @media (max-width: 560px) {
     .c108-map-modal-body {
         grid-template-columns: 1fr;
     }
     .c108-work-card {
         grid-template-columns: 1fr;
+    }
+}
+@media print {
+    .topbar,
+    .no-print,
+    .export-map-head p {
+        display: none !important;
+    }
+    body {
+        background: #fff;
+    }
+    .page {
+        width: auto;
+        margin: 0;
+    }
+    .export-map-sheet {
+        overflow: visible;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
     }
 }
 .circles-table {
