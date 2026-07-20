@@ -251,6 +251,7 @@ $(function () {
     var $modalImage = $('.js-c108-map-modal-image');
     var $works = $('.js-c108-map-works');
     var currentWcid = '';
+    var circleImageCache = {};
 
     function closeCircleModal() {
         $modal.prop('hidden', true);
@@ -288,10 +289,31 @@ $(function () {
             $modalImage.attr('src', image).prop('hidden', false);
         } else {
             $modalImage.attr('src', '').prop('hidden', true);
+            loadCircleImage(currentWcid, $marker);
         }
 
         $modal.prop('hidden', false);
     });
+
+    function loadCircleImage(wcid, $marker) {
+        if (!wcid) return;
+
+        if (circleImageCache[wcid]) {
+            $modalImage.attr('src', circleImageCache[wcid]).prop('hidden', false);
+            $marker.data('image', circleImageCache[wcid]);
+            return;
+        }
+
+        $.getJSON('/c108/circle/' + encodeURIComponent(wcid))
+            .done(function (response) {
+                var imageUrl = response.circle && response.circle.image_url ? response.circle.image_url : '';
+                if (!imageUrl || String(currentWcid) !== String(wcid)) return;
+
+                circleImageCache[wcid] = imageUrl;
+                $marker.data('image', imageUrl);
+                $modalImage.attr('src', imageUrl).prop('hidden', false);
+            });
+    }
 
     function renderOwnedBooks(books) {
         var $owned = $('.js-c108-map-owned').empty();

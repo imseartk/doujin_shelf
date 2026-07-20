@@ -265,6 +265,44 @@ class C108 extends BaseController
         ]);
     }
 
+    public function circle(int $wcid): ResponseInterface
+    {
+        if ($wcid <= 0) {
+            return $this->response->setStatusCode(404)->setJSON(['message' => '找不到攤位。']);
+        }
+
+        $row = db_connect()->table('c108_circles')
+            ->select('event_id, wcid')
+            ->where('wcid', $wcid)
+            ->get()
+            ->getRowArray();
+
+        if (! $row) {
+            return $this->response->setStatusCode(404)->setJSON(['message' => '找不到攤位。']);
+        }
+
+        $token = $this->currentCirclemsToken();
+        if (! $token) {
+            return $this->response->setStatusCode(422)->setJSON(['message' => '尚未連線 Circle.ms。']);
+        }
+
+        try {
+            $client = new CirclemsClient();
+            $token = $this->refreshCirclemsTokenIfNeeded($token, $client);
+            $result = $client->circleDetail((string) $token['access_token'], $wcid, (int) $row['event_id']);
+        } catch (RuntimeException $exception) {
+            return $this->response->setStatusCode(502)->setJSON(['message' => $exception->getMessage()]);
+        }
+
+        $circle = $this->circleFromResponse($result);
+
+        return $this->response->setJSON([
+            'circle' => [
+                'image_url' => (string) ($circle['cut_url'] ?? $circle['cut_web_url'] ?? $circle['cut_base_url'] ?? ''),
+            ],
+        ]);
+    }
+
     private function baseBuilder($db, bool $countOnly = false)
     {
         $builder = $db->table('c108_circles c108')
@@ -489,5 +527,20 @@ class C108 extends BaseController
             'r18' => (int) ($row['r18'] ?? 0),
             'update_date' => (string) ($row['update_date'] ?? ''),
         ];
+    }
+
+    private function circleFromResponse(array $result): array
+    {
+        $circle = $result['response']['circle'] ?? null;
+        if (is_array($circle)) {
+            return $circle;
+        }
+
+        $list = $result['response']['list'] ?? null;
+        if (is_array($list) && isset($list[0]) && is_array($list[0])) {
+            return $list[0];
+        }
+
+        return [];
     }
 }
