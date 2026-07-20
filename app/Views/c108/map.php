@@ -151,7 +151,7 @@
                     data-position="<?= esc($row['position_label'] ?? '') ?>"
                     data-book-name="<?= esc($row['book_name'] ?? '') ?>"
                     data-description="<?= esc($row['description'] ?? '') ?>"
-                    data-webcatalog-url="<?= esc($row['circlems_portal_url'] ?? '') ?>"
+                    data-webcatalog-url="<?= ! empty($row['wcid']) ? esc('https://webcatalog.circle.ms/circle/' . (int) $row['wcid']) : '' ?>"
                     data-wcid="<?= esc((string) ($row['wcid'] ?? '')) ?>"
                     data-note="<?= esc($row['note'] ?? '') ?>"
                     data-image="<?= esc($imageUrl) ?>"
