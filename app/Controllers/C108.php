@@ -611,11 +611,37 @@ class C108 extends BaseController
         $block = (string) ($row['block_name'] ?? '');
         $spaceNo = (int) ($row['space_no'] ?? 0);
 
-        if ($map === 'E123' && $block === 'ア' && in_array($spaceNo, [1, 22, 23, 73, 74, 95], true)) {
-            return $axis === 'x' ? 'y' : 'x';
+        foreach (self::axisOverrides() as $override) {
+            if ((string) $override['map'] !== $map) {
+                continue;
+            }
+            if (! self::blockMatches($block, (string) $override['block'])) {
+                continue;
+            }
+            if (! in_array($spaceNo, $override['spaces'], true)) {
+                continue;
+            }
+
+            return (string) $override['axis'];
         }
 
         return $axis;
+    }
+
+    private static function axisOverrides(): array
+    {
+        return [
+            ['map' => 'E123', 'block' => 'ア', 'spaces' => [1, 22, 23, 73, 74, 95], 'axis' => 'y'],
+            ['map' => 'E123', 'block' => 'ア', 'spaces' => [30, 31, 32], 'axis' => 'x'],
+        ];
+    }
+
+    private static function blockMatches(string $actual, string $expected): bool
+    {
+        $actual = trim($actual);
+        $expected = trim($expected);
+
+        return $actual === $expected || str_contains($actual, $expected);
     }
 
     private static function isLaneEdge(array $spaces, array $current, string $axis): bool
