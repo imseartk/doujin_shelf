@@ -691,6 +691,9 @@ class C108 extends BaseController
         if (preg_match('/^[A-Za-z]$/', $expected) === 1) {
             $actual = self::normalizeAsciiLetters($actual);
             $positionLabel = self::normalizeAsciiLetters($positionLabel);
+
+            return $actual === $expected
+                || preg_match('/(?:^|[\s　])' . preg_quote($expected, '/') . '\s*\d+/u', $positionLabel) === 1;
         }
 
         return $actual === $expected
