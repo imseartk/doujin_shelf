@@ -514,6 +514,7 @@ class C108 extends BaseController
             $groupKey = self::markerGroupKey($row);
             $spaceNo = (int) ($row['space_no'] ?? 0);
             $axis = self::splitAxis($spaceMap[$groupKey] ?? [], $spaceNo);
+            $axis = self::overrideAxis($row, $axis);
             $positions[$index] = self::adjustMarkerPosition(
                 self::baseMarkerPosition($row, $image),
                 strtolower((string) ($row['space_no_sub'] ?? '')),
@@ -601,7 +602,20 @@ class C108 extends BaseController
             return self::isLaneEdge($spaces, $current, 'y') ? 'x' : 'y';
         }
 
-        return self::isLaneEdge($spaces, $current, 'x') ? 'y' : 'x';
+        return 'x';
+    }
+
+    private static function overrideAxis(array $row, string $axis): string
+    {
+        $map = (string) ($row['map_filename'] ?? '');
+        $block = (string) ($row['block_name'] ?? '');
+        $spaceNo = (int) ($row['space_no'] ?? 0);
+
+        if ($map === 'E123' && $block === 'ア' && in_array($spaceNo, [1, 22, 23, 73, 74, 95], true)) {
+            return $axis === 'x' ? 'y' : 'x';
+        }
+
+        return $axis;
     }
 
     private static function isLaneEdge(array $spaces, array $current, string $axis): bool
