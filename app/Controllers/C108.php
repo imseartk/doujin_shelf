@@ -515,6 +515,7 @@ class C108 extends BaseController
             $groupKey = self::markerGroupKey($row);
             $spaceNo = (int) ($row['space_no'] ?? 0);
             $basePosition = self::baseMarkerPosition($row, $image);
+            $basePosition = self::overrideBaseMarkerPosition($row, $basePosition, $spaceMap[$groupKey] ?? []);
             $axis = $componentAxes[self::positionKey($basePosition)] ?? self::splitAxis($spaceMap[$groupKey] ?? [], $spaceNo);
             $axis = self::overrideAxis($row, $axis);
             $positions[$index] = self::adjustMarkerPosition(
@@ -556,6 +557,44 @@ class C108 extends BaseController
         return [
             'left' => (int) ($row['xpos2'] ?? 0) + (int) ($image['marker_offset_x'] ?? 0),
             'top' => (int) ($row['ypos2'] ?? 0) + (int) ($image['marker_offset_y'] ?? 0),
+        ];
+    }
+
+    private static function overrideBaseMarkerPosition(array $row, array $position, array $spaces): array
+    {
+        $map = (string) ($row['map_filename'] ?? '');
+        $block = (string) ($row['block_name'] ?? '');
+        $positionLabel = (string) ($row['position_label'] ?? '');
+        $spaceNo = (int) ($row['space_no'] ?? 0);
+
+        if (
+            $map !== 'E123'
+            || ! self::blockMatches($block, $positionLabel, 'ア')
+            || ! in_array($spaceNo, [30, 31, 32], true)
+        ) {
+            return $position;
+        }
+
+        foreach ([33, 34, 35] as $referenceSpaceNo) {
+            if (! isset($spaces[$referenceSpaceNo])) {
+                return $position;
+            }
+        }
+
+        $direction = (int) $spaces[33]['left'] >= (int) $spaces[34]['left'] ? 1 : -1;
+        $boothStep = max(1, abs((int) $spaces[33]['left'] - (int) $spaces[34]['left']));
+        $gapStep = max($boothStep, abs((int) $spaces[34]['left'] - (int) $spaces[35]['left']));
+        $top = (int) round(((int) $spaces[33]['top'] + (int) $spaces[34]['top'] + (int) $spaces[35]['top']) / 3);
+
+        $leftBySpaceNo = [
+            32 => (int) $spaces[33]['left'] + ($direction * $gapStep),
+            31 => (int) $spaces[33]['left'] + ($direction * ($gapStep + $boothStep)),
+            30 => (int) $spaces[33]['left'] + ($direction * ($gapStep + ($boothStep * 2))),
+        ];
+
+        return [
+            'left' => max(0, $leftBySpaceNo[$spaceNo]),
+            'top' => max(0, $top),
         ];
     }
 
