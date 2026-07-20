@@ -62,8 +62,9 @@
         $printHeight = (int) round((int) $image['height'] * $printScale);
 
         foreach ($rows as $row) {
-            $left = max(0, (int) ($row['xpos2'] ?? 0) + (int) ($image['marker_offset_x'] ?? 0));
-            $top = max(0, (int) ($row['ypos2'] ?? 0) + (int) ($image['marker_offset_y'] ?? 0));
+            $position = \App\Controllers\C108::markerPosition($row, $image);
+            $left = $position['left'];
+            $top = $position['top'];
             $markerKey = $left . ':' . $top;
             $markerRow = $row;
             $markerRow['_marker_left'] = $left;

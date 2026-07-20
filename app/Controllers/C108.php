@@ -483,6 +483,24 @@ class C108 extends BaseController
         ];
     }
 
+    public static function markerPosition(array $row, array $image): array
+    {
+        $left = (int) ($row['xpos2'] ?? 0) + (int) ($image['marker_offset_x'] ?? 0);
+        $top = (int) ($row['ypos2'] ?? 0) + (int) ($image['marker_offset_y'] ?? 0);
+        $spaceSub = strtolower((string) ($row['space_no_sub'] ?? ''));
+
+        if ($spaceSub === 'a') {
+            $left -= 17;
+        } elseif ($spaceSub === 'b') {
+            $left += 17;
+        }
+
+        return [
+            'left' => max(0, $left),
+            'top' => max(0, $top),
+        ];
+    }
+
     private function currentCirclemsToken(): ?array
     {
         return (new CirclemsTokenModel())
