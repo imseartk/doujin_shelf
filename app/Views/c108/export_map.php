@@ -71,6 +71,7 @@
             $markerRow = $row;
             $markerRow['_marker_left'] = $left;
             $markerRow['_marker_top'] = $top;
+            $markerRow['_marker_axis'] = $position['axis'] ?? 'x';
             $markerRow['_marker_rank'] = $markerRank($row);
 
             if (! isset($markerRows[$markerKey]) || $markerRow['_marker_rank'] > $markerRows[$markerKey]['_marker_rank']) {
@@ -200,7 +201,7 @@
                 </svg>
                 <?php foreach ($markerRows as $row): ?>
                     <div
-                        class="c108-map-marker export-map-marker <?= esc($markerClass($row)) ?>"
+                        class="c108-map-marker export-map-marker c108-map-marker-axis-<?= esc($row['_marker_axis'] ?? 'x') ?> <?= esc($markerClass($row)) ?>"
                         style="left: <?= (int) $row['_marker_left'] ?>px; top: <?= (int) $row['_marker_top'] ?>px;"
                         title="<?= esc(trim((string) ($row['position_label'] ?? '') . ' ' . (string) ($row['circle_name'] ?? ''))) ?>"
                     ></div>

@@ -865,8 +865,8 @@ label input, label select, label textarea { font-weight: 400; }
     position: absolute;
     z-index: 2;
     appearance: none;
-    width: 34px;
-    height: 26px;
+    width: 18px;
+    height: 22px;
     padding: 0;
     border-radius: 3px;
     border: 2px solid rgba(35, 50, 56, .82);
@@ -874,6 +874,10 @@ label input, label select, label textarea { font-weight: 400; }
     cursor: pointer;
     box-shadow: 0 1px 3px rgba(0, 0, 0, .28);
     line-height: 0;
+}
+.c108-map-marker-axis-y {
+    width: 34px;
+    height: 12px;
 }
 .c108-map-marker:hover {
     z-index: 3;
@@ -885,8 +889,6 @@ label input, label select, label textarea { font-weight: 400; }
     box-shadow: 0 0 0 4px rgba(255, 255, 255, .9), 0 0 18px rgba(255, 0, 128, .65);
 }
 .c108-map-marker-unknown {
-    width: 24px;
-    height: 18px;
     border-color: rgba(35, 50, 56, .32);
     background: rgba(255, 255, 255, .48);
     box-shadow: none;

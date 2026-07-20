@@ -59,6 +59,7 @@
             $markerRow = $row;
             $markerRow['_marker_left'] = $left;
             $markerRow['_marker_top'] = $top;
+            $markerRow['_marker_axis'] = $position['axis'] ?? 'x';
             $markerRow['_marker_rank'] = $markerRank($row);
 
             if (! isset($markerRows[$markerKey]) || $markerRow['_marker_rank'] > $markerRows[$markerKey]['_marker_rank']) {
@@ -144,7 +145,7 @@
                 ?>
                 <button
                     type="button"
-                    class="c108-map-marker <?= esc($markerClass($row)) ?> <?= $q !== '' && $markerIndex === 1 ? 'c108-map-marker-focus js-c108-map-focus' : '' ?> js-c108-map-marker"
+                    class="c108-map-marker c108-map-marker-axis-<?= esc($row['_marker_axis'] ?? 'x') ?> <?= esc($markerClass($row)) ?> <?= $q !== '' && $markerIndex === 1 ? 'c108-map-marker-focus js-c108-map-focus' : '' ?> js-c108-map-marker"
                     style="left: <?= $left ?>px; top: <?= $top ?>px;"
                     title="<?= esc($label) ?>"
                     data-name="<?= esc($row['circle_name'] ?? '') ?>"

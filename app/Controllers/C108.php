@@ -633,17 +633,17 @@ class C108 extends BaseController
 
         if ($axis === 'y') {
             if ($spaceSub === 'a') {
-                $top += 13;
+                $top += 7;
             } elseif ($spaceSub === 'b') {
-                $top -= 13;
+                $top -= 7;
             }
         } elseif ($spaceSub === 'a') {
-            $left -= 17;
+            $left -= 9;
         } elseif ($spaceSub === 'b') {
-            $left += 17;
+            $left += 9;
         }
 
-        return ['left' => max(0, $left), 'top' => max(0, $top)];
+        return ['left' => max(0, $left), 'top' => max(0, $top), 'axis' => $axis];
     }
 
     private function currentCirclemsToken(): ?array
