@@ -634,8 +634,8 @@ class C108 extends BaseController
     private static function axisOverrides(): array
     {
         return [
-            ['map' => 'E123', 'block' => 'ア', 'spaces' => [1, 22, 23, 73, 74, 95], 'axis' => 'y'],
-            ['map' => 'E123', 'block' => 'ア', 'spaces' => [30, 31, 32], 'axis' => 'x'],
+            ['map' => 'E123', 'block' => 'ア', 'spaces' => array_merge(range(1, 22), range(74, 95)), 'axis' => 'y'],
+            ['map' => 'E123', 'block' => 'ア', 'spaces' => range(23, 73), 'axis' => 'x'],
         ];
     }
 

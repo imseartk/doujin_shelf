@@ -159,6 +159,13 @@
                     data-wcid="<?= esc((string) ($row['wcid'] ?? '')) ?>"
                     data-note="<?= esc($row['note'] ?? '') ?>"
                     data-image="<?= esc($imageUrl) ?>"
+                    data-raw-xpos="<?= esc((string) ($row['xpos'] ?? '')) ?>"
+                    data-raw-ypos="<?= esc((string) ($row['ypos'] ?? '')) ?>"
+                    data-raw-xpos2="<?= esc((string) ($row['xpos2'] ?? '')) ?>"
+                    data-raw-ypos2="<?= esc((string) ($row['ypos2'] ?? '')) ?>"
+                    data-marker-left="<?= esc((string) $left) ?>"
+                    data-marker-top="<?= esc((string) $top) ?>"
+                    data-marker-axis="<?= esc((string) ($row['_marker_axis'] ?? 'x')) ?>"
                     data-owned-books="<?= esc(json_encode($ownedBooks, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"
                 ></button>
             <?php endforeach; ?>
