@@ -675,8 +675,8 @@ class C108 extends BaseController
         return [
             ['map' => 'E123', 'block' => 'ア', 'spaces' => array_merge(range(1, 22), range(74, 95)), 'axis' => 'y'],
             ['map' => 'E123', 'block' => 'ア', 'spaces' => range(23, 73), 'axis' => 'x'],
-            ['map' => 'E7', 'block' => 'A', 'spaces' => array_merge(range(1, 18), range(35, 48)), 'axis' => 'x'],
-            ['map' => 'E7', 'block' => 'A', 'spaces' => range(19, 34), 'axis' => 'y'],
+            ['map' => 'E7', 'block' => 'A', 'spaces' => array_merge(range(1, 18), range(35, 48)), 'axis' => 'y'],
+            ['map' => 'E7', 'block' => 'A', 'spaces' => range(19, 34), 'axis' => 'x'],
         ];
     }
 
@@ -686,9 +686,46 @@ class C108 extends BaseController
         $positionLabel = trim($positionLabel);
         $expected = trim($expected);
 
+        if (preg_match('/^[A-Za-z]$/', $expected) === 1) {
+            $actual = self::normalizeAsciiLetters($actual);
+            $positionLabel = self::normalizeAsciiLetters($positionLabel);
+        }
+
         return $actual === $expected
             || str_contains($actual, $expected)
             || str_contains($positionLabel, $expected);
+    }
+
+    private static function normalizeAsciiLetters(string $value): string
+    {
+        return strtr($value, [
+            'Ａ' => 'A',
+            'Ｂ' => 'B',
+            'Ｃ' => 'C',
+            'Ｄ' => 'D',
+            'Ｅ' => 'E',
+            'Ｆ' => 'F',
+            'Ｇ' => 'G',
+            'Ｈ' => 'H',
+            'Ｉ' => 'I',
+            'Ｊ' => 'J',
+            'Ｋ' => 'K',
+            'Ｌ' => 'L',
+            'Ｍ' => 'M',
+            'Ｎ' => 'N',
+            'Ｏ' => 'O',
+            'Ｐ' => 'P',
+            'Ｑ' => 'Q',
+            'Ｒ' => 'R',
+            'Ｓ' => 'S',
+            'Ｔ' => 'T',
+            'Ｕ' => 'U',
+            'Ｖ' => 'V',
+            'Ｗ' => 'W',
+            'Ｘ' => 'X',
+            'Ｙ' => 'Y',
+            'Ｚ' => 'Z',
+        ]);
     }
 
     private static function componentAxes(array $rows, array $image): array
