@@ -677,6 +677,8 @@ class C108 extends BaseController
             ['map' => 'E123', 'block' => 'ア', 'spaces' => range(23, 73), 'axis' => 'x'],
             ['map' => 'E7', 'block' => 'A', 'spaces' => array_merge(range(1, 18), range(35, 48)), 'axis' => 'y'],
             ['map' => 'E7', 'block' => 'A', 'spaces' => range(19, 34), 'axis' => 'x'],
+            ['map' => 'S12', 'block' => 'a', 'spaces' => array_merge(range(5, 20), range(45, 50)), 'axis' => 'y'],
+            ['map' => 'S12', 'block' => 'a', 'spaces' => array_merge(range(1, 4), range(21, 44), range(51, 54)), 'axis' => 'x'],
         ];
     }
 
@@ -725,6 +727,32 @@ class C108 extends BaseController
             'Ｘ' => 'X',
             'Ｙ' => 'Y',
             'Ｚ' => 'Z',
+            'ａ' => 'a',
+            'ｂ' => 'b',
+            'ｃ' => 'c',
+            'ｄ' => 'd',
+            'ｅ' => 'e',
+            'ｆ' => 'f',
+            'ｇ' => 'g',
+            'ｈ' => 'h',
+            'ｉ' => 'i',
+            'ｊ' => 'j',
+            'ｋ' => 'k',
+            'ｌ' => 'l',
+            'ｍ' => 'm',
+            'ｎ' => 'n',
+            'ｏ' => 'o',
+            'ｐ' => 'p',
+            'ｑ' => 'q',
+            'ｒ' => 'r',
+            'ｓ' => 's',
+            'ｔ' => 't',
+            'ｕ' => 'u',
+            'ｖ' => 'v',
+            'ｗ' => 'w',
+            'ｘ' => 'x',
+            'ｙ' => 'y',
+            'ｚ' => 'z',
         ]);
     }
 
