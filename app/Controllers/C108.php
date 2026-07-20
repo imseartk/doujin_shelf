@@ -509,16 +509,14 @@ class C108 extends BaseController
             $spaceMap[$groupKey][$spaceNo] ??= $position;
         }
 
-        $componentAxes = self::componentAxes($geometryRows, $image);
         $positions = [];
         foreach ($rows as $index => $row) {
             $groupKey = self::markerGroupKey($row);
             $spaceNo = (int) ($row['space_no'] ?? 0);
-            $basePosition = self::baseMarkerPosition($row, $image);
-            $axis = $componentAxes[self::positionKey($basePosition)] ?? self::splitAxis($spaceMap[$groupKey] ?? [], $spaceNo);
+            $axis = self::splitAxis($spaceMap[$groupKey] ?? [], $spaceNo);
             $axis = self::overrideAxis($row, $axis);
             $positions[$index] = self::adjustMarkerPosition(
-                $basePosition,
+                self::baseMarkerPosition($row, $image),
                 strtolower((string) ($row['space_no_sub'] ?? '')),
                 $axis
             );
@@ -611,14 +609,13 @@ class C108 extends BaseController
     {
         $map = (string) ($row['map_filename'] ?? '');
         $block = (string) ($row['block_name'] ?? '');
-        $positionLabel = (string) ($row['position_label'] ?? '');
         $spaceNo = (int) ($row['space_no'] ?? 0);
 
         foreach (self::axisOverrides() as $override) {
             if ((string) $override['map'] !== $map) {
                 continue;
             }
-            if (! self::blockMatches($block, $positionLabel, (string) $override['block'])) {
+            if (! self::blockMatches($block, (string) $override['block'])) {
                 continue;
             }
             if (! in_array($spaceNo, $override['spaces'], true)) {
@@ -639,102 +636,12 @@ class C108 extends BaseController
         ];
     }
 
-    private static function blockMatches(string $actual, string $positionLabel, string $expected): bool
+    private static function blockMatches(string $actual, string $expected): bool
     {
         $actual = trim($actual);
-        $positionLabel = trim($positionLabel);
         $expected = trim($expected);
 
-        return $actual === $expected
-            || str_contains($actual, $expected)
-            || str_contains($positionLabel, $expected);
-    }
-
-    private static function componentAxes(array $rows, array $image): array
-    {
-        $points = [];
-        foreach ($rows as $row) {
-            $spaceNo = (int) ($row['space_no'] ?? 0);
-            if ($spaceNo <= 0) {
-                continue;
-            }
-
-            $position = self::baseMarkerPosition($row, $image);
-            $points[] = ['left' => $position['left'], 'top' => $position['top']];
-        }
-
-        $components = self::positionComponents($points, 64);
-        $axes = [];
-        foreach ($components as $component) {
-            if (count($component) < 4) {
-                continue;
-            }
-
-            $lefts = array_column($component, 'left');
-            $tops = array_column($component, 'top');
-            $minLeft = min($lefts);
-            $maxLeft = max($lefts);
-            $minTop = min($tops);
-            $maxTop = max($tops);
-            $width = max(1, $maxLeft - $minLeft);
-            $height = max(1, $maxTop - $minTop);
-            $edge = 24;
-
-            foreach ($component as $point) {
-                if ($height >= $width) {
-                    $axis = ((int) $point['top'] <= $minTop + $edge || (int) $point['top'] >= $maxTop - $edge) ? 'x' : 'y';
-                } else {
-                    $axis = ((int) $point['left'] <= $minLeft + $edge || (int) $point['left'] >= $maxLeft - $edge) ? 'y' : 'x';
-                }
-
-                $axes[self::positionKey($point)] = $axis;
-            }
-        }
-
-        return $axes;
-    }
-
-    private static function positionComponents(array $points, int $threshold): array
-    {
-        $components = [];
-        $visited = [];
-        foreach ($points as $index => $point) {
-            if (isset($visited[$index])) {
-                continue;
-            }
-
-            $queue = [$index];
-            $visited[$index] = true;
-            $component = [];
-            while ($queue !== []) {
-                $currentIndex = array_pop($queue);
-                $current = $points[$currentIndex];
-                $component[] = $current;
-
-                foreach ($points as $nextIndex => $next) {
-                    if (isset($visited[$nextIndex])) {
-                        continue;
-                    }
-
-                    $distance = abs((int) $current['left'] - (int) $next['left']) + abs((int) $current['top'] - (int) $next['top']);
-                    if ($distance > $threshold) {
-                        continue;
-                    }
-
-                    $visited[$nextIndex] = true;
-                    $queue[] = $nextIndex;
-                }
-            }
-
-            $components[] = $component;
-        }
-
-        return $components;
-    }
-
-    private static function positionKey(array $position): string
-    {
-        return (int) $position['left'] . ':' . (int) $position['top'];
+        return $actual === $expected || str_contains($actual, $expected);
     }
 
     private static function isLaneEdge(array $spaces, array $current, string $axis): bool
