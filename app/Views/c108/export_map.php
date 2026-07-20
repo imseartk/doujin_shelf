@@ -61,8 +61,10 @@
         $printWidth = (int) round((int) $image['width'] * $printScale);
         $printHeight = (int) round((int) $image['height'] * $printScale);
 
-        foreach ($rows as $row) {
-            $position = \App\Controllers\C108::markerPosition($row, $image);
+        $image['position_rows'] = $positionRows ?? [];
+        $markerPositions = \App\Controllers\C108::markerPositions($rows, $image);
+        foreach ($rows as $rowIndex => $row) {
+            $position = $markerPositions[$rowIndex] ?? \App\Controllers\C108::markerPosition($row, $image);
             $left = $position['left'];
             $top = $position['top'];
             $markerKey = $left . ':' . $top;

@@ -118,6 +118,7 @@ class C108 extends BaseController
 
         $rows = [];
         $image = null;
+        $positionRows = [];
         if ($day !== '' && $map !== '') {
             $builder = $this->baseBuilder($db)
                 ->where('c108.day', (int) $day)
@@ -136,10 +137,12 @@ class C108 extends BaseController
                 ->getResultArray();
 
             $image = $this->mapImage($day, $map);
+            $positionRows = $this->mapPositionRows($db, $day, $map);
         }
 
         return view('c108/map', [
             'rows' => $rows,
+            'positionRows' => $positionRows,
             'maps' => $maps,
             'image' => $image,
             'q' => $q,
@@ -177,6 +180,7 @@ class C108 extends BaseController
 
         $rows = [];
         $image = null;
+        $positionRows = [];
         if ($day !== '' && $map !== '') {
             $builder = $this->baseBuilder($db)
                 ->where('c108.day', (int) $day)
@@ -195,10 +199,12 @@ class C108 extends BaseController
                 ->getResultArray();
 
             $image = $this->mapImage($day, $map);
+            $positionRows = $this->mapPositionRows($db, $day, $map);
         }
 
         return view('c108/export_map', [
             'rows' => $rows,
+            'positionRows' => $positionRows,
             'maps' => $maps,
             'image' => $image,
             'day' => $day,
@@ -485,20 +491,159 @@ class C108 extends BaseController
 
     public static function markerPosition(array $row, array $image): array
     {
-        $left = (int) ($row['xpos2'] ?? 0) + (int) ($image['marker_offset_x'] ?? 0);
-        $top = (int) ($row['ypos2'] ?? 0) + (int) ($image['marker_offset_y'] ?? 0);
-        $spaceSub = strtolower((string) ($row['space_no_sub'] ?? ''));
+        return self::adjustMarkerPosition(self::baseMarkerPosition($row, $image), strtolower((string) ($row['space_no_sub'] ?? '')), 'x');
+    }
 
-        if ($spaceSub === 'a') {
+    public static function markerPositions(array $rows, array $image): array
+    {
+        $spaceMap = [];
+        $geometryRows = ! empty($image['position_rows']) && is_array($image['position_rows']) ? $image['position_rows'] : $rows;
+        foreach ($geometryRows as $row) {
+            $spaceNo = (int) ($row['space_no'] ?? 0);
+            if ($spaceNo <= 0) {
+                continue;
+            }
+
+            $groupKey = self::markerGroupKey($row);
+            $position = self::baseMarkerPosition($row, $image);
+            $spaceMap[$groupKey][$spaceNo] ??= $position;
+        }
+
+        $positions = [];
+        foreach ($rows as $index => $row) {
+            $groupKey = self::markerGroupKey($row);
+            $spaceNo = (int) ($row['space_no'] ?? 0);
+            $axis = self::splitAxis($spaceMap[$groupKey] ?? [], $spaceNo);
+            $positions[$index] = self::adjustMarkerPosition(
+                self::baseMarkerPosition($row, $image),
+                strtolower((string) ($row['space_no_sub'] ?? '')),
+                $axis
+            );
+        }
+
+        return $positions;
+    }
+
+    private function mapPositionRows($db, string $day, string $map): array
+    {
+        return $db->table('c108_circles')
+            ->select('day, map_filename, block_id, block_name, space_no, xpos2, ypos2')
+            ->where('day', (int) $day)
+            ->where('map_filename', $map)
+            ->where('xpos2 IS NOT NULL', null, false)
+            ->where('ypos2 IS NOT NULL', null, false)
+            ->orderBy('block_id', 'ASC')
+            ->orderBy('space_no', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
+    private static function markerGroupKey(array $row): string
+    {
+        return implode(':', [
+            (string) ($row['day'] ?? ''),
+            (string) ($row['map_filename'] ?? ''),
+            (string) ($row['block_id'] ?? ''),
+            (string) ($row['block_name'] ?? ''),
+        ]);
+    }
+
+    private static function baseMarkerPosition(array $row, array $image): array
+    {
+        return [
+            'left' => (int) ($row['xpos2'] ?? 0) + (int) ($image['marker_offset_x'] ?? 0),
+            'top' => (int) ($row['ypos2'] ?? 0) + (int) ($image['marker_offset_y'] ?? 0),
+        ];
+    }
+
+    private static function splitAxis(array $spaces, int $spaceNo): string
+    {
+        if (! isset($spaces[$spaceNo])) {
+            return 'x';
+        }
+
+        $current = $spaces[$spaceNo];
+        $nearest = null;
+        foreach ($spaces as $otherSpaceNo => $position) {
+            if ((int) $otherSpaceNo === $spaceNo) {
+                continue;
+            }
+
+            $spaceDistance = abs((int) $otherSpaceNo - $spaceNo);
+            $distance = abs((int) $position['left'] - (int) $current['left'])
+                + abs((int) $position['top'] - (int) $current['top']);
+
+            if ($distance <= 0) {
+                continue;
+            }
+
+            if (
+                $nearest === null
+                || $spaceDistance < $nearest['spaceDistance']
+                || ($spaceDistance === $nearest['spaceDistance'] && $distance < $nearest['distance'])
+            ) {
+                $nearest = [
+                    'spaceDistance' => $spaceDistance,
+                    'distance' => $distance,
+                    'position' => $position,
+                ];
+            }
+        }
+
+        if ($nearest === null) {
+            return 'x';
+        }
+
+        $dx = abs((int) $nearest['position']['left'] - (int) $current['left']);
+        $dy = abs((int) $nearest['position']['top'] - (int) $current['top']);
+
+        if ($dy > $dx) {
+            return self::isLaneEdge($spaces, $current, 'y') ? 'x' : 'y';
+        }
+
+        return self::isLaneEdge($spaces, $current, 'x') ? 'y' : 'x';
+    }
+
+    private static function isLaneEdge(array $spaces, array $current, string $axis): bool
+    {
+        $positions = [];
+        foreach ($spaces as $position) {
+            if ($axis === 'y') {
+                if (abs((int) $position['left'] - (int) $current['left']) <= 12) {
+                    $positions[] = (int) $position['top'];
+                }
+            } elseif (abs((int) $position['top'] - (int) $current['top']) <= 12) {
+                $positions[] = (int) $position['left'];
+            }
+        }
+
+        if (count($positions) < 2) {
+            return false;
+        }
+
+        $currentValue = $axis === 'y' ? (int) $current['top'] : (int) $current['left'];
+
+        return abs($currentValue - min($positions)) <= 4 || abs($currentValue - max($positions)) <= 4;
+    }
+
+    private static function adjustMarkerPosition(array $position, string $spaceSub, string $axis): array
+    {
+        $left = (int) $position['left'];
+        $top = (int) $position['top'];
+
+        if ($axis === 'y') {
+            if ($spaceSub === 'a') {
+                $top += 13;
+            } elseif ($spaceSub === 'b') {
+                $top -= 13;
+            }
+        } elseif ($spaceSub === 'a') {
             $left -= 17;
         } elseif ($spaceSub === 'b') {
             $left += 17;
         }
 
-        return [
-            'left' => max(0, $left),
-            'top' => max(0, $top),
-        ];
+        return ['left' => max(0, $left), 'top' => max(0, $top)];
     }
 
     private function currentCirclemsToken(): ?array

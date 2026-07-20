@@ -49,8 +49,10 @@
     $currentMap = (string) $map;
     $markerRows = [];
     if ($image !== null) {
-        foreach ($rows as $row) {
-            $position = \App\Controllers\C108::markerPosition($row, $image);
+        $image['position_rows'] = $positionRows ?? [];
+        $markerPositions = \App\Controllers\C108::markerPositions($rows, $image);
+        foreach ($rows as $rowIndex => $row) {
+            $position = $markerPositions[$rowIndex] ?? \App\Controllers\C108::markerPosition($row, $image);
             $left = $position['left'];
             $top = $position['top'];
             $markerKey = $left . ':' . $top;
