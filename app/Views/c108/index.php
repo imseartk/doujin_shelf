@@ -24,6 +24,16 @@
 
         return 'c108-row-unknown';
     };
+    $mapNoticeUrl = static function (array $row): string {
+        $params = array_filter([
+            'q' => (string) ($row['circle_name'] ?? ''),
+            'day' => (string) ($row['day'] ?? ''),
+            'map' => (string) ($row['map_filename'] ?? ''),
+            'relation' => 'all',
+        ], static fn ($value) => $value !== '' && $value !== null);
+
+        return '/c108/map?' . http_build_query($params);
+    };
 ?>
 <section class="page-head">
     <div>
@@ -32,6 +42,51 @@
     </div>
     <a class="button ghost" href="/c108/map">地圖</a>
 </section>
+
+<?php if (! empty($unreadNotices)): ?>
+    <section class="c108-notices">
+        <div class="c108-notices-head">
+            <div>
+                <h2>追蹤社團更新</h2>
+                <p><?= number_format(count($unreadNotices)) ?> 件未讀更新。點進確認後可以標記已讀。</p>
+            </div>
+            <form method="post" action="/c108/notices/read-all">
+                <button class="button small ghost" type="submit">全部已讀</button>
+            </form>
+        </div>
+        <div class="c108-notice-list">
+            <?php foreach ($unreadNotices as $notice): ?>
+                <article class="c108-notice-card <?= ! empty($notice['is_tracked']) ? 'tracked' : 'known' ?>">
+                    <?php if (! empty($notice['webcatalog_cut_url'])): ?>
+                        <img class="c108-notice-cut" src="<?= esc($notice['webcatalog_cut_url']) ?>" alt="">
+                    <?php else: ?>
+                        <div class="c108-notice-cut c108-notice-cut-empty">no image</div>
+                    <?php endif; ?>
+                    <div class="c108-notice-body">
+                        <div class="c108-notice-title">
+                            <strong><?= esc($notice['circle_name'] ?? '') ?></strong>
+                            <span><?= esc($notice['position_label'] ?? '') ?></span>
+                        </div>
+                        <div><?= esc($notice['update_notice_text'] ?? '社團資訊更新') ?></div>
+                        <?php if (! empty($notice['description'])): ?>
+                            <div class="muted"><?= esc(mb_strimwidth((string) $notice['description'], 0, 120, '...', 'UTF-8')) ?></div>
+                        <?php endif; ?>
+                        <div class="muted">偵測時間 <?= esc($notice['update_detected_at'] ?? '') ?></div>
+                    </div>
+                    <div class="c108-notice-actions">
+                        <a class="button small" href="<?= esc($mapNoticeUrl($notice)) ?>">地圖</a>
+                        <?php if (! empty($notice['circlems_portal_url'])): ?>
+                            <a class="button small ghost" href="<?= esc($notice['circlems_portal_url']) ?>" target="_blank" rel="noopener">Web</a>
+                        <?php endif; ?>
+                        <form method="post" action="/c108/notices/<?= (int) $notice['id'] ?>/read">
+                            <button class="button small ghost" type="submit">已讀</button>
+                        </form>
+                    </div>
+                </article>
+            <?php endforeach; ?>
+        </div>
+    </section>
+<?php endif; ?>
 
 <section class="c108-summary">
     <div><strong><?= number_format((int) $summary['total']) ?></strong><span>全部社團</span></div>

@@ -716,6 +716,80 @@ label input, label select, label textarea { font-weight: 400; }
     color: var(--muted);
     font-size: 13px;
 }
+.c108-notices {
+    margin-bottom: 14px;
+    padding: 12px;
+    border: 1px solid #b9d2cf;
+    border-radius: 8px;
+    background: #f7fbfa;
+}
+.c108-notices-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+.c108-notices-head h2 {
+    margin-bottom: 2px;
+}
+.c108-notices-head p {
+    margin: 0;
+}
+.c108-notice-list {
+    display: grid;
+    gap: 8px;
+}
+.c108-notice-card {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-left-width: 4px;
+    border-radius: 6px;
+    background: #fff;
+}
+.c108-notice-card.known {
+    border-left-color: rgba(31, 111, 58, .88);
+}
+.c108-notice-card.tracked {
+    border-left-color: rgba(22, 78, 148, .88);
+}
+.c108-notice-cut {
+    width: 54px;
+    height: 54px;
+    border-radius: 6px;
+}
+.c108-notice-card img {
+    object-fit: cover;
+    border: 1px solid var(--line);
+}
+.c108-notice-cut-empty {
+    display: grid;
+    place-items: center;
+    border: 1px dashed #b8c2bd;
+    color: var(--muted);
+    font-size: 11px;
+    text-align: center;
+}
+.c108-notice-title {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: baseline;
+}
+.c108-notice-title span {
+    color: var(--muted);
+    font-size: 13px;
+}
+.c108-notice-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
 .c108-legend {
     display: flex;
     flex-wrap: wrap;
@@ -1306,4 +1380,14 @@ label input, label select, label textarea { font-weight: 400; }
     .circlems-book-card { grid-template-columns: 1fr; }
     .circlems-result-head { flex-direction: column; }
     .circlems-meta { justify-content: flex-start; }
+    .c108-notices-head,
+    .c108-notice-card {
+        grid-template-columns: 1fr;
+    }
+    .c108-notices-head {
+        display: grid;
+    }
+    .c108-notice-actions {
+        justify-content: flex-start;
+    }
 }

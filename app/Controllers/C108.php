@@ -44,6 +44,7 @@ class C108 extends BaseController
         return view('c108/index', [
             'rows' => $rows,
             'summary' => $this->summary($db),
+            'unreadNotices' => $this->unreadNotices($db),
             'q' => $q,
             'day' => $day,
             'relation' => $relation,
@@ -53,6 +54,27 @@ class C108 extends BaseController
             'totalPages' => $totalPages,
             'perPage' => self::PER_PAGE,
         ]);
+    }
+
+    public function readNotice(int $id): ResponseInterface
+    {
+        if ($id > 0) {
+            db_connect()->table('c108_circles')
+                ->where('id', $id)
+                ->update(['update_read' => 1]);
+        }
+
+        return redirect()->back()->with('message', '已標記通知為已讀。');
+    }
+
+    public function readAllNotices(): ResponseInterface
+    {
+        db_connect()->table('c108_circles')
+            ->where('update_read', 0)
+            ->where('update_notice_text IS NOT NULL', null, false)
+            ->update(['update_read' => 1]);
+
+        return redirect()->back()->with('message', '已標記所有 C108 通知為已讀。');
     }
 
     public function map(): string
@@ -312,6 +334,19 @@ class C108 extends BaseController
             'known' => (int) ($row['known_count'] ?? 0),
             'tracked' => (int) ($row['tracked_count'] ?? 0),
         ];
+    }
+
+    private function unreadNotices($db): array
+    {
+        return $this->baseBuilder($db)
+            ->where('c108.update_read', 0)
+            ->where('c108.update_notice_text IS NOT NULL', null, false)
+            ->orderBy('c108.update_detected_at', 'DESC')
+            ->orderBy('c108.day', 'ASC')
+            ->orderBy('c108.position_label', 'ASC')
+            ->limit(20)
+            ->get()
+            ->getResultArray();
     }
 
     private function mapOptions($db): array
