@@ -34,6 +34,14 @@
 
         return '/c108/map?' . http_build_query($params);
     };
+    $webCatalogNoticeUrl = static function (array $row): string {
+        $wcid = (int) ($row['wcid'] ?? 0);
+        if ($wcid <= 0) {
+            return '';
+        }
+
+        return 'https://webcatalog.circle.ms/circle/' . $wcid;
+    };
 ?>
 <section class="page-head">
     <div>
@@ -75,8 +83,9 @@
                     </div>
                     <div class="c108-notice-actions">
                         <a class="button small" href="<?= esc($mapNoticeUrl($notice)) ?>">地圖</a>
-                        <?php if (! empty($notice['circlems_portal_url'])): ?>
-                            <a class="button small ghost" href="<?= esc($notice['circlems_portal_url']) ?>" target="_blank" rel="noopener">Web</a>
+                        <?php $webCatalogUrl = $webCatalogNoticeUrl($notice); ?>
+                        <?php if ($webCatalogUrl !== ''): ?>
+                            <a class="button small ghost" href="<?= esc($webCatalogUrl) ?>" target="_blank" rel="noopener">公式</a>
                         <?php endif; ?>
                         <form method="post" action="/c108/notices/<?= (int) $notice['id'] ?>/read">
                             <button class="button small ghost" type="submit">已讀</button>
