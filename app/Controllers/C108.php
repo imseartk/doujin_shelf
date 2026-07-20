@@ -679,6 +679,10 @@ class C108 extends BaseController
             ['map' => 'E7', 'block' => 'A', 'spaces' => range(19, 34), 'axis' => 'x'],
             ['map' => 'S12', 'block' => 'a', 'spaces' => array_merge(range(5, 20), range(45, 50)), 'axis' => 'y'],
             ['map' => 'S12', 'block' => 'a', 'spaces' => array_merge(range(1, 4), range(21, 44), range(51, 54)), 'axis' => 'x'],
+            ['map' => 'W12', 'block' => 'め', 'spaces' => array_merge(range(16, 39), range(66, 73)), 'axis' => 'y'],
+            ['map' => 'W12', 'block' => 'め', 'spaces' => array_merge(range(1, 15), range(40, 61)), 'axis' => 'x'],
+            ['map' => 'W12', 'block' => 'あ', 'spaces' => array_merge(range(22, 39), range(66, 73)), 'axis' => 'y'],
+            ['map' => 'W12', 'block' => 'あ', 'spaces' => array_merge(range(1, 15), range(40, 61)), 'axis' => 'x'],
         ];
     }
 
