@@ -42,6 +42,11 @@ $routes->get('c108/works/(:num)', 'C108::works/$1');
 $routes->post('c108/notices/(:num)/read', 'C108::readNotice/$1');
 $routes->post('c108/notices/read-all', 'C108::readAllNotices');
 
+$routes->get('api/app/c108/summary', 'C108::appSummary');
+$routes->get('api/app/c108/maps', 'C108::appMaps');
+$routes->get('api/app/c108/map', 'C108::appMap');
+$routes->get('api/app/c108/notices', 'C108::appNotices');
+
 $routes->get('circlems', 'Circlems::index');
 $routes->get('circlems/connect', 'Circlems::connect');
 $routes->get('oauth/circlems/callback', 'Circlems::callback');

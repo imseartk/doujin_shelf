@@ -77,6 +77,124 @@ class C108 extends BaseController
         return redirect()->back()->with('message', '已標記所有 C108 通知為已讀。');
     }
 
+    public function appSummary(): ResponseInterface
+    {
+        if ($failure = $this->appApiAuthFailure()) {
+            return $failure;
+        }
+
+        $db = db_connect();
+
+        return $this->response->setJSON([
+            'summary' => $this->summary($db),
+            'maps' => array_map([$this, 'formatMapOption'], $this->mapOptions($db)),
+            'unread_notices' => array_map([$this, 'formatAppCircleRow'], $this->unreadNotices($db)),
+        ]);
+    }
+
+    public function appMaps(): ResponseInterface
+    {
+        if ($failure = $this->appApiAuthFailure()) {
+            return $failure;
+        }
+
+        return $this->response->setJSON([
+            'maps' => array_map([$this, 'formatMapOption'], $this->mapOptions(db_connect())),
+        ]);
+    }
+
+    public function appMap(): ResponseInterface
+    {
+        if ($failure = $this->appApiAuthFailure()) {
+            return $failure;
+        }
+
+        $db = db_connect();
+        $q = trim((string) $this->request->getGet('q'));
+        $day = trim((string) $this->request->getGet('day'));
+        $map = trim((string) $this->request->getGet('map'));
+        $relation = trim((string) $this->request->getGet('relation'));
+        $priority = trim((string) $this->request->getGet('priority'));
+
+        if ($day === '') {
+            $day = '1';
+        }
+        if ($relation === '') {
+            $relation = 'known';
+        }
+
+        $maps = $this->mapOptions($db);
+        if ($maps !== []) {
+            $selected = $this->selectedMap($maps, $day, $map);
+            $day = (string) $selected['day'];
+            $map = (string) $selected['map_filename'];
+        }
+
+        $rows = [];
+        $image = null;
+        if ($day !== '' && $map !== '') {
+            $builder = $this->baseBuilder($db)
+                ->where('c108.day', (int) $day)
+                ->where('c108.map_filename', $map)
+                ->where('c108.xpos2 IS NOT NULL', null, false)
+                ->where('c108.ypos2 IS NOT NULL', null, false);
+            $this->applyFilters($builder, $q, '', $relation, $priority);
+
+            $rows = $builder
+                ->orderBy('c.is_tracked', 'DESC')
+                ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+                ->orderBy('c108.block_id', 'ASC')
+                ->orderBy('c108.space_no', 'ASC')
+                ->orderBy('c108.space_no_sub', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            $image = $this->mapImage($day, $map);
+            if ($image !== null) {
+                $image['position_rows'] = $this->mapPositionRows($db, $day, $map);
+                $positions = self::markerPositions($rows, $image);
+                foreach ($rows as $index => $row) {
+                    $rows[$index]['_marker'] = $positions[$index] ?? self::markerPosition($row, $image);
+                }
+                unset($image['position_rows']);
+            }
+        }
+
+        return $this->response->setJSON([
+            'day' => $day,
+            'map' => $map,
+            'image' => $this->formatAppMapImage($image),
+            'rows' => array_map([$this, 'formatAppCircleRow'], $rows),
+            'count' => count($rows),
+        ]);
+    }
+
+    public function appNotices(): ResponseInterface
+    {
+        if ($failure = $this->appApiAuthFailure()) {
+            return $failure;
+        }
+
+        $limit = (int) $this->request->getGet('limit');
+        if ($limit <= 0 || $limit > 100) {
+            $limit = 50;
+        }
+
+        $rows = $this->baseBuilder(db_connect())
+            ->where('c108.update_notice_text IS NOT NULL', null, false)
+            ->orderBy('c108.update_read', 'ASC')
+            ->orderBy('c108.update_detected_at', 'DESC')
+            ->orderBy('c108.day', 'ASC')
+            ->orderBy('c108.position_label', 'ASC')
+            ->limit($limit)
+            ->get()
+            ->getResultArray();
+
+        return $this->response->setJSON([
+            'notices' => array_map([$this, 'formatAppCircleRow'], $rows),
+        ]);
+    }
+
     public function map(): string
     {
         $db = db_connect();
@@ -307,6 +425,128 @@ class C108 extends BaseController
                 'image_url' => (string) ($circle['cut_url'] ?? $circle['cut_web_url'] ?? $circle['cut_base_url'] ?? ''),
             ],
         ]);
+    }
+
+    private function appApiAuthFailure(): ?ResponseInterface
+    {
+        $expectedHash = trim((string) env('app.apiKeyHash', ''));
+        if ($expectedHash === '') {
+            $expectedHash = trim((string) env('admin.passwordHash', ''));
+        }
+
+        if ($expectedHash === '') {
+            return $this->response->setStatusCode(503)->setJSON(['message' => 'app api is not configured']);
+        }
+
+        $passcode = trim($this->request->getHeaderLine('X-App-Passcode'));
+        $authorization = trim($this->request->getHeaderLine('Authorization'));
+        if ($passcode === '' && str_starts_with($authorization, 'Bearer ')) {
+            $passcode = trim(substr($authorization, 7));
+        }
+
+        if ($passcode === '' || ! password_verify($passcode, $expectedHash)) {
+            return $this->response->setStatusCode(401)->setJSON(['message' => 'unauthorized']);
+        }
+
+        return null;
+    }
+
+    private function formatMapOption(array $row): array
+    {
+        return [
+            'day' => (int) ($row['day'] ?? 0),
+            'map' => (string) ($row['map_filename'] ?? ''),
+            'name' => (string) ($row['map_name'] ?? ''),
+            'total_count' => (int) ($row['total_count'] ?? 0),
+            'known_count' => (int) ($row['known_count'] ?? 0),
+            'tracked_count' => (int) ($row['tracked_count'] ?? 0),
+        ];
+    }
+
+    private function formatAppMapImage(?array $image): ?array
+    {
+        if ($image === null) {
+            return null;
+        }
+
+        return [
+            'file' => (string) ($image['file'] ?? ''),
+            'url' => $this->absoluteUrl((string) ($image['url'] ?? '')),
+            'width' => (int) ($image['width'] ?? 0),
+            'height' => (int) ($image['height'] ?? 0),
+        ];
+    }
+
+    private function formatAppCircleRow(array $row): array
+    {
+        $wcid = (int) ($row['wcid'] ?? 0);
+
+        return [
+            'id' => (int) ($row['id'] ?? 0),
+            'event_id' => (int) ($row['event_id'] ?? 0),
+            'wcid' => $wcid,
+            'circlems_id' => (string) ($row['circlems_id'] ?? ''),
+            'circle_name' => (string) ($row['circle_name'] ?? ''),
+            'circle_kana' => (string) ($row['circle_kana'] ?? ''),
+            'pen_name' => (string) ($row['pen_name'] ?? ''),
+            'day' => (int) ($row['day'] ?? 0),
+            'map' => (string) ($row['map_filename'] ?? ''),
+            'map_name' => (string) ($row['map_name'] ?? ''),
+            'block_name' => (string) ($row['block_name'] ?? ''),
+            'space_no' => (int) ($row['space_no'] ?? 0),
+            'space_no_sub' => (string) ($row['space_no_sub'] ?? ''),
+            'position_label' => (string) ($row['position_label'] ?? ''),
+            'book_name' => (string) ($row['book_name'] ?? ''),
+            'description' => (string) ($row['description'] ?? ''),
+            'tag' => (string) ($row['tag'] ?? ''),
+            'is_known' => ! empty($row['local_circle_id']),
+            'is_tracked' => (int) ($row['is_tracked'] ?? 0) === 1,
+            'priority' => (string) ($row['priority'] ?? ''),
+            'note' => (string) ($row['note'] ?? ''),
+            'cut_url' => $this->absoluteUrl((string) ($row['webcatalog_cut_url'] ?? '')),
+            'webcatalog_url' => $wcid > 0 ? 'https://webcatalog.circle.ms/circle/' . $wcid : '',
+            'marker' => [
+                'left' => (int) ($row['_marker']['left'] ?? 0),
+                'top' => (int) ($row['_marker']['top'] ?? 0),
+                'axis' => (string) ($row['_marker']['axis'] ?? ''),
+            ],
+            'owned_books' => array_values(array_filter([
+                $this->formatOwnedBook($row, 1),
+                $this->formatOwnedBook($row, 2),
+            ])),
+            'update_notice_text' => (string) ($row['update_notice_text'] ?? ''),
+            'update_detected_at' => (string) ($row['update_detected_at'] ?? ''),
+            'update_read' => (int) ($row['update_read'] ?? 1) === 1,
+        ];
+    }
+
+    private function formatOwnedBook(array $row, int $index): ?array
+    {
+        $title = trim((string) ($row['owned_book_' . $index . '_title'] ?? ''));
+        $cover = trim((string) ($row['owned_book_' . $index . '_cover'] ?? ''));
+        if ($title === '' && $cover === '') {
+            return null;
+        }
+
+        return [
+            'title' => $title,
+            'cover_url' => $this->absoluteUrl($cover),
+        ];
+    }
+
+    private function absoluteUrl(string $url): string
+    {
+        if ($url === '' || str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        $uri = $this->request->getUri();
+        $base = $uri->getScheme() . '://' . $uri->getHost();
+        if ($uri->getPort() !== null) {
+            $base .= ':' . $uri->getPort();
+        }
+
+        return rtrim($base, '/') . '/' . ltrim($url, '/');
     }
 
     private function baseBuilder($db, bool $countOnly = false)
