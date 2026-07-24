@@ -11,6 +11,10 @@ class Circlems extends BaseController
 {
     public function index(): string
     {
+        if (ENVIRONMENT === 'production') {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
         $client = new CirclemsClient();
         $token = $this->currentToken();
         $events = [];
