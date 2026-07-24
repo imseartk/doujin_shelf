@@ -44,6 +44,10 @@ class AdminAuth implements FilterInterface
 
     private function isPublicRoute(string $method, string $path): bool
     {
+        if (ENVIRONMENT === 'production' && $method === 'get' && $path === 'circlems') {
+            return true;
+        }
+
         if ($method === 'get' && ($path === '' || $path === 'books' || $path === 'manage')) {
             return true;
         }
