@@ -25,10 +25,12 @@
         return $html . '</div>';
     };
 
-    $bookPageUrl = static function (int $targetPage) use ($q, $status, $sort, $dir): string {
+    $bookPageUrl = static function (int $targetPage) use ($q, $type, $status, $tagId, $sort, $dir): string {
         $query = [
             'q' => $q,
+            'type' => $type,
             'status' => $status,
+            'tag_id' => $tagId > 0 ? $tagId : '',
             'sort' => $sort,
             'dir' => $dir,
             'page' => $targetPage,
@@ -90,11 +92,23 @@
 <form class="toolbar" method="get" action="/books">
     <input type="hidden" name="sort" value="<?= esc($sort) ?>">
     <input type="hidden" name="dir" value="<?= esc($dir) ?>">
-    <input type="search" name="q" value="<?= esc($q) ?>" placeholder="搜尋標題、社團、作者、首字、tag、原作、角色">
+    <input class="books-keyword-input" type="search" name="q" value="<?= esc($q) ?>" placeholder="搜尋標題、社團、作者、首字、tag、原作、角色">
+    <select name="type">
+        <option value="">所有類型</option>
+        <?php foreach ($typeOptions as $value => $label): ?>
+            <option value="<?= esc($value) ?>" <?= $type === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
+        <?php endforeach; ?>
+    </select>
     <select name="status">
         <option value="">所有狀態</option>
         <?php foreach ($statusOptions as $value => $label): ?>
             <option value="<?= esc($value) ?>" <?= $status === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <select name="tag_id">
+        <option value="">常用 tag</option>
+        <?php foreach ($quickTagOptions as $tag): ?>
+            <option value="<?= (int) $tag['id'] ?>" <?= (int) $tagId === (int) $tag['id'] ? 'selected' : '' ?>><?= esc($tag['name']) ?></option>
         <?php endforeach; ?>
     </select>
     <button class="button" type="submit">搜尋</button>
@@ -157,7 +171,11 @@
                     <div class="title-main"><?= esc($book['title']) ?></div>
                     <div class="muted"><?= esc($typeOptions[$book['type']] ?? $book['type']) ?><?= $book['circle_kana'] ? ' / ' . esc($book['circle_kana']) : '' ?></div>
                 </td>
-                <td data-sort-value="<?= esc($book['circle'] ?? '') ?>"><?= esc($book['circle'] ?? '') ?></td>
+                <td data-sort-value="<?= esc($book['circle'] ?? '') ?>">
+                    <?php if (! empty($book['circle'])): ?>
+                        <a href="/circles?q=<?= rawurlencode((string) $book['circle']) ?>" target="_blank" rel="noopener noreferrer"><?= esc($book['circle']) ?></a>
+                    <?php endif; ?>
+                </td>
                 <td data-sort-value="<?= esc($book['author'] ?? '') ?>"><?= esc($book['author'] ?? '') ?></td>
                 <td data-sort-value="<?= esc($book['tag_names'] ?? '') ?>"><?= $renderTagList($book['tag_names'] ?? '') ?></td>
                 <td data-sort-value="<?= esc($book['work_names'] ?? '') ?>"><?= $renderTagList($book['work_names'] ?? '') ?></td>
@@ -165,7 +183,7 @@
                 <td data-sort-value="<?= esc($locationText) ?>"><?= esc($locationText) ?></td>
                 <td data-sort-value="<?= $sourceSort ?>">
                     <?php if ((int) $book['source_count'] > 0): ?>
-                        <span class="pill"><?= (int) $book['source_count'] ?> 件</span>
+                        <a class="pill" href="/wishlist?q=<?= rawurlencode((string) $book['title']) ?>" target="_blank" rel="noopener noreferrer"><?= (int) $book['source_count'] ?> 件</a>
                         <?php if ($book['min_price'] !== null): ?>
                             <span class="muted">最低 ¥<?= number_format((int) $book['min_price']) ?></span>
                         <?php endif; ?>

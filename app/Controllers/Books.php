@@ -47,15 +47,35 @@ class Books extends BaseController
     {
         $db = db_connect();
         $q = trim((string) $this->request->getGet('q'));
+        $type = trim((string) $this->request->getGet('type'));
         $status = trim((string) $this->request->getGet('status'));
+        $tagId = (int) $this->request->getGet('tag_id');
         $shopId = (int) $this->request->getGet('shop_id');
         $page = max(1, (int) $this->request->getGet('page'));
         $sort = (string) ($this->request->getGet('sort') ?? 'title');
         $dir = strtolower((string) ($this->request->getGet('dir') ?? 'asc')) === 'desc' ? 'DESC' : 'ASC';
+        if ($type !== '' && ! array_key_exists($type, self::TYPE_OPTIONS)) {
+            $type = '';
+        }
+        if ($status !== '' && ! array_key_exists($status, self::STATUS_OPTIONS)) {
+            $status = '';
+        }
+        if ($tagId > 0 && ! in_array($tagId, self::QUICK_TAG_IDS, true)) {
+            $tagId = 0;
+        }
 
-        $applyFilters = static function ($builder) use ($db, $q, $status, $shopId) {
+        $quickTagIds = self::QUICK_TAG_IDS;
+        $applyFilters = static function ($builder) use ($db, $q, $type, $status, $tagId, $quickTagIds, $shopId) {
+            if ($type !== '' && array_key_exists($type, self::TYPE_OPTIONS)) {
+                $builder->where('b.type', $type);
+            }
+
             if ($status !== '' && array_key_exists($status, self::STATUS_OPTIONS)) {
                 $builder->where('b.status', $status);
+            }
+
+            if ($tagId > 0 && in_array($tagId, $quickTagIds, true)) {
+                $builder->where("EXISTS (SELECT 1 FROM book_tags quick_bt WHERE quick_bt.book_id = b.id AND quick_bt.tag_id = {$tagId})", null, false);
             }
 
             if ($shopId > 0) {
@@ -126,7 +146,9 @@ class Books extends BaseController
         return view('books/index', [
             'books' => $books,
             'q' => $q,
+            'type' => $type,
             'status' => $status,
+            'tagId' => $tagId,
             'shopId' => $shopId,
             'page' => $page,
             'perPage' => self::BOOKS_PER_PAGE,
@@ -137,6 +159,7 @@ class Books extends BaseController
             'shops' => (new ShopModel())->orderBy('sort_order', 'ASC')->orderBy('name', 'ASC')->findAll(),
             'statusOptions' => self::STATUS_OPTIONS,
             'typeOptions' => self::TYPE_OPTIONS,
+            'quickTagOptions' => $this->quickTagOptions(),
         ]);
     }
 
