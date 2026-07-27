@@ -24,6 +24,7 @@ vendor/
 .DS_Store
 Thumbs.db
 Desktop.ini
+garmin-weekly-artick.json
 .idea/
 .vscode/
 *.iml

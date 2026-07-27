@@ -24,6 +24,49 @@
         }
         return $html . '</div>';
     };
+
+    $bookPageUrl = static function (int $targetPage) use ($q, $status, $sort, $dir): string {
+        $query = [
+            'q' => $q,
+            'status' => $status,
+            'sort' => $sort,
+            'dir' => $dir,
+            'page' => $targetPage,
+        ];
+        $query = array_filter($query, static fn ($value): bool => $value !== '' && $value !== null);
+
+        return '/books' . ($query === [] ? '' : '?' . http_build_query($query));
+    };
+
+    $renderPagination = static function () use ($page, $totalPages, $bookPageUrl): string {
+        if ($totalPages <= 1) {
+            return '';
+        }
+
+        $start = max(1, $page - 2);
+        $end = min($totalPages, $page + 2);
+        $html = '<nav class="pagination book-pagination">';
+        $html .= '<a class="button small ' . ($page <= 1 ? 'disabled' : '') . '" href="' . esc($bookPageUrl(1)) . '">First</a>';
+        $html .= '<a class="button small ' . ($page <= 1 ? 'disabled' : '') . '" href="' . esc($bookPageUrl(max(1, $page - 1))) . '">Prev</a>';
+        if ($start > 1) {
+            $html .= '<a class="button small" href="' . esc($bookPageUrl(1)) . '">1</a>';
+            if ($start > 2) {
+                $html .= '<span class="pagination-gap">...</span>';
+            }
+        }
+        for ($i = $start; $i <= $end; $i++) {
+            $html .= '<a class="button small ' . ($i === $page ? 'primary' : '') . '" href="' . esc($bookPageUrl($i)) . '">' . $i . '</a>';
+        }
+        if ($end < $totalPages) {
+            if ($end < $totalPages - 1) {
+                $html .= '<span class="pagination-gap">...</span>';
+            }
+            $html .= '<a class="button small" href="' . esc($bookPageUrl($totalPages)) . '">' . $totalPages . '</a>';
+        }
+        $html .= '<a class="button small ' . ($page >= $totalPages ? 'disabled' : '') . '" href="' . esc($bookPageUrl(min($totalPages, $page + 1))) . '">Next</a>';
+        $html .= '<a class="button small ' . ($page >= $totalPages ? 'disabled' : '') . '" href="' . esc($bookPageUrl($totalPages)) . '">Last</a>';
+        return $html . '</nav>';
+    };
 ?>
 <style>
 .cover-action { display: inline-grid; place-items: center; padding: 0; border: 0; background: transparent; cursor: pointer; }
@@ -45,6 +88,8 @@
 </section>
 
 <form class="toolbar" method="get" action="/books">
+    <input type="hidden" name="sort" value="<?= esc($sort) ?>">
+    <input type="hidden" name="dir" value="<?= esc($dir) ?>">
     <input type="search" name="q" value="<?= esc($q) ?>" placeholder="搜尋標題、社團、作者、首字、tag、原作、角色">
     <select name="status">
         <option value="">所有狀態</option>
@@ -55,6 +100,13 @@
     <button class="button" type="submit">搜尋</button>
     <a class="button ghost" href="/books">清除</a>
 </form>
+
+<div class="list-summary book-list-summary">
+    <span>Total <?= number_format((int) $totalBooks) ?> books</span>
+    <span>Page <?= number_format((int) $page) ?> / <?= number_format((int) $totalPages) ?></span>
+</div>
+
+<?= $renderPagination() ?>
 
 <?php if ($canManage): ?>
     <div class="js-book-cover-upload-csrf" hidden><?= csrf_field() ?></div>
@@ -132,6 +184,8 @@
         </tbody>
     </table>
 </div>
+
+<?= $renderPagination() ?>
 
 <div class="cover-lightbox js-cover-lightbox" hidden>
     <img class="js-cover-lightbox-image" src="" alt="">

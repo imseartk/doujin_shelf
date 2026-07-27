@@ -223,6 +223,12 @@ label input, label select, label textarea { font-weight: 400; }
     align-items: center;
     margin-top: 14px;
 }
+.book-pagination {
+    margin: 0 0 14px;
+}
+.table-wrap + .book-pagination {
+    margin: 14px 0 0;
+}
 .pagination .disabled {
     opacity: .45;
     pointer-events: none;

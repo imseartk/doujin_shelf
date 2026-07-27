@@ -41,6 +41,7 @@ class Books extends BaseController
 
     private const QUICK_TAG_IDS = [8, 9, 11, 14];
     private const QUICK_WORK_IDS = [1];
+    private const BOOKS_PER_PAGE = 30;
 
     public function index(): string
     {
@@ -48,8 +49,37 @@ class Books extends BaseController
         $q = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
         $shopId = (int) $this->request->getGet('shop_id');
+        $page = max(1, (int) $this->request->getGet('page'));
+        $sort = (string) ($this->request->getGet('sort') ?? 'title');
+        $dir = strtolower((string) ($this->request->getGet('dir') ?? 'asc')) === 'desc' ? 'DESC' : 'ASC';
 
-        $builder = $db->table('books b')
+        $applyFilters = static function ($builder) use ($db, $q, $status, $shopId) {
+            if ($status !== '' && array_key_exists($status, self::STATUS_OPTIONS)) {
+                $builder->where('b.status', $status);
+            }
+
+            if ($shopId > 0) {
+                $builder->join('book_sources shop_filter', 'shop_filter.book_id = b.id', 'inner')
+                    ->where('shop_filter.shop_id', $shopId);
+            }
+
+            if ($q !== '') {
+                $escaped = $db->escapeLikeString($q);
+                $builder->groupStart()
+                    ->like('b.title', $q)
+                    ->orLike('b.circle', $q)
+                    ->orLike('b.author', $q)
+                    ->orLike('b.circle_kana', $q)
+                    ->orWhere("EXISTS (SELECT 1 FROM book_tags bt JOIN tags t ON t.id = bt.tag_id WHERE bt.book_id = b.id AND t.name LIKE '%{$escaped}%' ESCAPE '!')", null, false)
+                    ->orWhere("EXISTS (SELECT 1 FROM book_works bw JOIN works w ON w.id = bw.work_id WHERE bw.book_id = b.id AND w.name LIKE '%{$escaped}%' ESCAPE '!')", null, false)
+                    ->orWhere("EXISTS (SELECT 1 FROM book_characters bc JOIN characters c ON c.id = bc.character_id WHERE bc.book_id = b.id AND c.name LIKE '%{$escaped}%' ESCAPE '!')", null, false)
+                    ->groupEnd();
+            }
+
+            return $builder;
+        };
+
+        $builder = $applyFilters($db->table('books b')
             ->select('b.*')
             ->select('l.name AS location_name, lp.name AS parent_location_name')
             ->select('(SELECT COUNT(*) FROM book_sources bs WHERE bs.book_id = b.id) AS source_count', false)
@@ -58,34 +88,38 @@ class Books extends BaseController
             ->select("(SELECT GROUP_CONCAT(w.name ORDER BY w.name SEPARATOR ', ') FROM book_works bw JOIN works w ON w.id = bw.work_id WHERE bw.book_id = b.id) AS work_names", false)
             ->select("(SELECT GROUP_CONCAT(c.name ORDER BY c.name SEPARATOR ', ') FROM book_characters bc JOIN characters c ON c.id = bc.character_id WHERE bc.book_id = b.id) AS character_names", false)
             ->join('locations l', 'l.id = b.location_id', 'left')
-            ->join('locations lp', 'lp.id = l.parent_id', 'left');
+            ->join('locations lp', 'lp.id = l.parent_id', 'left'));
 
-        if ($status !== '' && array_key_exists($status, self::STATUS_OPTIONS)) {
-            $builder->where('b.status', $status);
+        $sortOptions = [
+            'status' => ['column' => 'b.status', 'escape' => true],
+            'cover' => ['column' => "(CASE WHEN b.cover_url IS NULL OR b.cover_url = '' THEN 0 ELSE 1 END)", 'escape' => false],
+            'title' => ['column' => 'b.title', 'escape' => true],
+            'circle' => ['column' => 'b.circle', 'escape' => true],
+            'author' => ['column' => 'b.author', 'escape' => true],
+            'tags' => ['column' => 'tag_names', 'escape' => false],
+            'works' => ['column' => 'work_names', 'escape' => false],
+            'characters' => ['column' => 'character_names', 'escape' => false],
+            'location' => ['column' => 'parent_location_name', 'escape' => false],
+            'source' => ['column' => 'COALESCE(min_price, 999999999)', 'escape' => false],
+        ];
+        if (! array_key_exists($sort, $sortOptions)) {
+            $sort = 'title';
         }
 
-        if ($shopId > 0) {
-            $builder->join('book_sources shop_filter', 'shop_filter.book_id = b.id', 'inner')
-                ->where('shop_filter.shop_id', $shopId);
-        }
+        $countBuilder = $applyFilters($db->table('books b'));
+        $totalBooks = (int) ($countBuilder
+            ->select('COUNT(DISTINCT b.id) AS total', false)
+            ->get()
+            ->getRow('total') ?? 0);
+        $totalPages = max(1, (int) ceil($totalBooks / self::BOOKS_PER_PAGE));
+        $page = min($page, $totalPages);
 
-        if ($q !== '') {
-            $escaped = $db->escapeLikeString($q);
-            $builder->groupStart()
-                ->like('b.title', $q)
-                ->orLike('b.circle', $q)
-                ->orLike('b.author', $q)
-                ->orLike('b.circle_kana', $q)
-                ->orWhere("EXISTS (SELECT 1 FROM book_tags bt JOIN tags t ON t.id = bt.tag_id WHERE bt.book_id = b.id AND t.name LIKE '%{$escaped}%' ESCAPE '!')", null, false)
-                ->orWhere("EXISTS (SELECT 1 FROM book_works bw JOIN works w ON w.id = bw.work_id WHERE bw.book_id = b.id AND w.name LIKE '%{$escaped}%' ESCAPE '!')", null, false)
-                ->orWhere("EXISTS (SELECT 1 FROM book_characters bc JOIN characters c ON c.id = bc.character_id WHERE bc.book_id = b.id AND c.name LIKE '%{$escaped}%' ESCAPE '!')", null, false)
-                ->groupEnd();
-        }
-
+        $sortOption = $sortOptions[$sort];
         $books = $builder
             ->groupBy('b.id')
-            ->orderBy('b.updated_at', 'DESC')
+            ->orderBy($sortOption['column'], $dir, $sortOption['escape'])
             ->orderBy('b.id', 'DESC')
+            ->limit(self::BOOKS_PER_PAGE, ($page - 1) * self::BOOKS_PER_PAGE)
             ->get()
             ->getResultArray();
 
@@ -94,6 +128,12 @@ class Books extends BaseController
             'q' => $q,
             'status' => $status,
             'shopId' => $shopId,
+            'page' => $page,
+            'perPage' => self::BOOKS_PER_PAGE,
+            'totalBooks' => $totalBooks,
+            'totalPages' => $totalPages,
+            'sort' => $sort,
+            'dir' => strtolower($dir),
             'shops' => (new ShopModel())->orderBy('sort_order', 'ASC')->orderBy('name', 'ASC')->findAll(),
             'statusOptions' => self::STATUS_OPTIONS,
             'typeOptions' => self::TYPE_OPTIONS,

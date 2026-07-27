@@ -421,6 +421,17 @@ $(function () {
     $('.js-sortable-table th[data-sort]').on('click', function () {
         var $header = $(this);
         var direction = $header.hasClass('sort-asc') ? 'desc' : 'asc';
+
+        if ($header.closest('table').hasClass('books-table')) {
+            saveBookScrollPosition();
+            var url = new URL(window.location.href);
+            url.searchParams.set('sort', $header.data('sort'));
+            url.searchParams.set('dir', direction);
+            url.searchParams.set('page', '1');
+            window.location.href = url.pathname + url.search;
+            return;
+        }
+
         sortTableByHeader($header, direction, true);
         updateBookReturnLinks();
     });
