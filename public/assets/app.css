@@ -294,6 +294,14 @@ label input, label select, label textarea { font-weight: 400; }
     background: #edf0ed;
     white-space: nowrap;
 }
+.status-link-trigger {
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+}
+.status-link-trigger:hover {
+    filter: brightness(.96);
+}
 .pill {
     color: var(--accent-dark);
     text-decoration: none;
@@ -302,6 +310,69 @@ label input, label select, label textarea { font-weight: 400; }
 .status-blacklisted { background: #f5e5e3; color: var(--danger); }
 .status-ordered { background: #fff0c7; color: var(--warn); }
 .status-wishlist { background: #e5eff5; color: #2a607e; }
+.shop-search-modal[hidden] {
+    display: none;
+}
+.shop-search-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+}
+.shop-search-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 20, .58);
+}
+.shop-search-modal-card {
+    position: relative;
+    z-index: 1;
+    width: min(420px, 100%);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    padding: 18px;
+    box-shadow: 0 18px 52px rgba(15, 23, 20, .24);
+}
+.shop-search-modal-card h2 {
+    margin-right: 40px;
+}
+.shop-search-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+}
+.shop-search-link-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+}
+.shop-search-link-list a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    border: 1px solid #b8c2bd;
+    border-radius: 6px;
+    color: var(--accent-dark);
+    text-decoration: none;
+    background: #fff;
+    font-weight: 700;
+}
+.shop-search-link-list a:hover {
+    background: #eef5f3;
+}
 
 .form-grid {
     display: grid;

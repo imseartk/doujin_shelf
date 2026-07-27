@@ -151,7 +151,13 @@
                 $displayCoverUrl = cover_display_url($book['cover_url'] ?? '');
             ?>
             <tr>
-                <td data-sort-value="<?= esc($statusOptions[$book['status']] ?? $book['status']) ?>"><span class="status status-<?= esc($book['status']) ?>"><?= esc($statusOptions[$book['status']] ?? $book['status']) ?></span></td>
+                <td data-sort-value="<?= esc($statusOptions[$book['status']] ?? $book['status']) ?>">
+                    <button
+                        class="status status-<?= esc($book['status']) ?> status-link-trigger js-shop-search-open"
+                        type="button"
+                        data-title="<?= esc($book['title']) ?>"
+                    ><?= esc($statusOptions[$book['status']] ?? $book['status']) ?></button>
+                </td>
                 <td data-sort-value="<?= ! empty($book['cover_url']) ? 1 : 0 ?>">
                     <?php if (! empty($book['cover_url'])): ?>
                         <button class="cover-action js-cover-lightbox-open" type="button" data-cover-url="<?= esc($displayCoverUrl) ?>" aria-label="檢視封面大圖">
@@ -209,10 +215,59 @@
     <img class="js-cover-lightbox-image" src="" alt="">
 </div>
 
+<div class="shop-search-modal js-shop-search-modal" hidden>
+    <div class="shop-search-modal-backdrop js-shop-search-close"></div>
+    <section class="shop-search-modal-card" role="dialog" aria-modal="true" aria-labelledby="shop-search-title">
+        <button class="shop-search-modal-close js-shop-search-close" type="button" aria-label="Close">×</button>
+        <h2 id="shop-search-title">Search shops</h2>
+        <p class="muted js-shop-search-book-title"></p>
+        <div class="shop-search-link-list js-shop-search-link-list"></div>
+    </section>
+</div>
+
 <script>
 $(function () {
     var $lightbox = $('.js-cover-lightbox');
     var $lightboxImage = $('.js-cover-lightbox-image');
+    var shopSearchLinks = [
+        ['Mandarake', 'https://order.mandarake.co.jp/order/listPage/list?categoryCode=03&keyword={name}'],
+        ['駿河屋', 'https://www.suruga-ya.jp/search?searchbox=1&category=11000002&search_word={name}'],
+        ['らしんばん', 'https://shop.lashinbang.com/products/list?keyword={name}'],
+        ['秋コミ', 'https://akicomi.com/products/list?category_id=3&name={name}'],
+        ['Melonbooks', 'https://www.melonbooks.co.jp/search/search.php?mode=search&search_disp=&chara=&orderby=&disp_number=100&pageno=1&is_sp_view=0&name={name}&text_type=all&fromagee_flg=0&search_target%5B%5D=1&additional%5B%5D=r18&category_ids%5B%5D=1&is_end_of_sale2=1&sale_date_before=&sale_date_after=&publication_date_before=&publication_date_after=&co_name=&ci_name=&price_low=0&price_high=0'],
+        ['とらのあな', 'https://ec.toranoana.jp/tora_r/ec/app/catalog/list?searchDisplay=12&searchBackorderFlg=1&searchCategoryCode=04&searchChildrenCategoryCode=cot&searchWord={name}']
+    ];
+    var $shopSearchModal = $('.js-shop-search-modal');
+    var $shopSearchBookTitle = $('.js-shop-search-book-title');
+    var $shopSearchLinkList = $('.js-shop-search-link-list');
+
+    function closeShopSearchModal() {
+        $shopSearchModal.prop('hidden', true);
+        $shopSearchBookTitle.text('');
+        $shopSearchLinkList.empty();
+    }
+
+    $('.js-shop-search-open').on('click', function () {
+        var title = String($(this).data('title') || '').trim();
+        var encodedTitle = encodeURIComponent(title);
+        $shopSearchBookTitle.text(title);
+        $shopSearchLinkList.empty();
+
+        shopSearchLinks.forEach(function (item) {
+            $('<a></a>')
+                .attr({
+                    href: item[1].replace('{name}', encodedTitle),
+                    target: '_blank',
+                    rel: 'noopener noreferrer'
+                })
+                .text(item[0])
+                .appendTo($shopSearchLinkList);
+        });
+
+        $shopSearchModal.prop('hidden', false);
+    });
+
+    $('.js-shop-search-close').on('click', closeShopSearchModal);
 
     $('.js-cover-lightbox-open').on('click', function () {
         $lightboxImage.attr('src', $(this).data('cover-url'));
@@ -229,6 +284,7 @@ $(function () {
         if (event.key === 'Escape') {
             $lightbox.prop('hidden', true);
             $lightboxImage.attr('src', '');
+            closeShopSearchModal();
         }
     });
 
