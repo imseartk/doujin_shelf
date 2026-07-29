@@ -21,6 +21,9 @@ $routes->post('preferences/cover-privacy', 'Preferences::coverPrivacy');
 $routes->get('manage', 'Admin::manage');
 $routes->post('manage', 'Admin::unlock');
 
+$routes->get('tools/book-tags', 'BookTagBatch::index');
+$routes->post('tools/book-tags/apply', 'BookTagBatch::apply');
+
 $routes->get('wishlist', 'Wishlist::index');
 $routes->post('wishlist/books/(:num)/sources', 'Wishlist::createSource/$1');
 $routes->post('wishlist/sources/(:num)', 'Wishlist::updateSource/$1');

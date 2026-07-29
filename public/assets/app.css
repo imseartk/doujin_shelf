@@ -373,6 +373,78 @@ label input, label select, label textarea { font-weight: 400; }
 .shop-search-link-list a:hover {
     background: #eef5f3;
 }
+.batch-tag-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+}
+.batch-tag-actions select {
+    width: auto;
+    min-width: 220px;
+}
+.batch-tag-select-all {
+    display: inline-flex;
+    grid-auto-flow: column;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 8px;
+    font-weight: 700;
+}
+.batch-tag-select-all input {
+    width: auto;
+}
+.batch-book-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+}
+.batch-book-card {
+    display: grid;
+    grid-template-columns: auto 68px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    min-height: 118px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    cursor: pointer;
+}
+.batch-book-card:has(input:checked) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(47, 111, 115, .16);
+}
+.batch-book-card input {
+    width: auto;
+    margin-top: 4px;
+}
+.batch-book-cover {
+    width: 68px;
+    height: 96px;
+    object-fit: cover;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #f0f2f0;
+}
+.batch-book-cover-empty {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+}
+.batch-book-body {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
 
 .form-grid {
     display: grid;
