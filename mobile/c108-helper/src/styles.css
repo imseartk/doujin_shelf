@@ -87,6 +87,11 @@ select {
   font-size: 1.35rem;
 }
 
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -136,6 +141,7 @@ select {
 }
 
 .book-search,
+.circle-search,
 .map-controls,
 .settings {
   display: grid;
@@ -143,6 +149,7 @@ select {
 }
 
 .book-search button,
+.circle-search button,
 .map-controls button,
 .settings-actions button:first-child,
 .empty button {
@@ -192,6 +199,12 @@ select {
   margin-top: 12px;
 }
 
+.circle-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 .book-card {
   display: grid;
   grid-template-columns: 84px minmax(0, 1fr);
@@ -200,6 +213,61 @@ select {
   border: 1px solid #d5dedb;
   border-radius: 8px;
   background: #fff;
+}
+
+.circle-card {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #d5dedb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.circle-card.tracked {
+  border-color: #8cb4dc;
+  box-shadow: inset 4px 0 0 #5197df;
+}
+
+.circle-cut {
+  width: 76px;
+  height: 76px;
+  object-fit: cover;
+  border: 1px solid #d7e0dd;
+  border-radius: 6px;
+  background: #eef3f1;
+}
+
+.circle-cut.placeholder {
+  display: block;
+}
+
+.circle-info {
+  min-width: 0;
+}
+
+.circle-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.circle-title-row h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.circle-note {
+  display: -webkit-box;
+  margin: 6px 0 0;
+  overflow: hidden;
+  color: #40565a;
+  font-size: 0.84rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .book-cover {
@@ -287,6 +355,25 @@ select {
   border-color: #d7dfdd;
   background: #f7faf9;
   color: #5b6f73;
+}
+
+.link-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.link-chips a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 8px;
+  border-color: #bdd9d5;
+  border-radius: 6px;
+  color: #0c4e57;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .pager {
@@ -485,6 +572,10 @@ select {
   }
 
   .book-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .circle-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

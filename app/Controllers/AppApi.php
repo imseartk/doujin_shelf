@@ -22,6 +22,12 @@ class AppApi extends BaseController
         'wishlist' => '願望清單',
     ];
 
+    private const PRIORITY_OPTIONS = [
+        'normal' => '普通',
+        'high' => '優先',
+        'must' => '必看',
+    ];
+
     public function books(): ResponseInterface
     {
         if ($failure = $this->appApiAuthFailure()) {
@@ -125,6 +131,89 @@ class AppApi extends BaseController
         ]);
     }
 
+    public function circles(): ResponseInterface
+    {
+        if ($failure = $this->appApiAuthFailure()) {
+            return $failure;
+        }
+
+        $db = db_connect();
+        $q = trim((string) $this->request->getGet('q'));
+        $tracked = trim((string) $this->request->getGet('tracked'));
+        $priority = trim((string) $this->request->getGet('priority'));
+        $page = max(1, (int) $this->request->getGet('page'));
+        $limit = (int) $this->request->getGet('limit');
+        if ($limit <= 0) {
+            $limit = self::DEFAULT_LIMIT;
+        }
+        $limit = min($limit, self::MAX_LIMIT);
+
+        if ($tracked !== '1' && $tracked !== '0') {
+            $tracked = '';
+        }
+        if ($priority !== '' && ! array_key_exists($priority, self::PRIORITY_OPTIONS)) {
+            $priority = '';
+        }
+
+        $applyFilters = static function ($builder) use ($q, $tracked, $priority) {
+            if ($q !== '') {
+                $builder->groupStart()
+                    ->like('c.name', $q)
+                    ->orLike('c.name_kana', $q)
+                    ->orLike('c.note', $q)
+                    ->groupEnd();
+            }
+
+            if ($tracked !== '') {
+                $builder->where('c.is_tracked', (int) $tracked);
+            }
+
+            if ($priority !== '') {
+                $builder->where('c.priority', $priority);
+            }
+
+            return $builder;
+        };
+
+        $total = (int) ($applyFilters($db->table('circles c'))
+            ->select('COUNT(*) AS total', false)
+            ->get()
+            ->getRow('total') ?? 0);
+        $totalPages = max(1, (int) ceil($total / $limit));
+        $page = min($page, $totalPages);
+
+        $rows = $applyFilters($db->table('circles c')
+            ->select('c.id, c.name, c.name_kana, c.is_tracked, c.priority, c.pixiv_url, c.twitter_url, c.website_url, c.booth_url, c.melonbooks_url, c.toranoana_url, c.webcatalog_circle_id, c.webcatalog_cut_url, c.note')
+            ->select("COUNT(CASE WHEN b.type <> 'comic' THEN b.id END) AS book_count", false)
+            ->select("SUM(CASE WHEN b.type <> 'comic' AND b.status = 'wishlist' THEN 1 ELSE 0 END) AS wishlist_count", false)
+            ->join('books b', 'b.circle_id = c.id', 'left'))
+            ->groupBy('c.id')
+            ->orderBy('c.is_tracked', 'DESC')
+            ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+            ->orderBy('c.name', 'ASC')
+            ->limit($limit, ($page - 1) * $limit)
+            ->get()
+            ->getResultArray();
+
+        return $this->response->setJSON([
+            'circles' => array_map([$this, 'formatCircle'], $rows),
+            'pagination' => [
+                'page' => $page,
+                'limit' => $limit,
+                'total' => $total,
+                'total_pages' => $totalPages,
+            ],
+            'filters' => [
+                'q' => $q,
+                'tracked' => $tracked,
+                'priority' => $priority,
+            ],
+            'options' => [
+                'priorities' => $this->formatOptions(self::PRIORITY_OPTIONS),
+            ],
+        ]);
+    }
+
     private function formatBook(array $row): array
     {
         $location = trim(($row['parent_location_name'] ? $row['parent_location_name'] . ' / ' : '') . ($row['location_name'] ?? ''));
@@ -149,6 +238,44 @@ class AppApi extends BaseController
             'works' => $this->splitNames($row['work_names'] ?? ''),
             'characters' => $this->splitNames($row['character_names'] ?? ''),
             'note' => (string) ($row['note'] ?? ''),
+        ];
+    }
+
+    private function formatCircle(array $row): array
+    {
+        return [
+            'id' => (int) ($row['id'] ?? 0),
+            'name' => (string) ($row['name'] ?? ''),
+            'name_kana' => (string) ($row['name_kana'] ?? ''),
+            'is_tracked' => (int) ($row['is_tracked'] ?? 0) === 1,
+            'priority' => (string) ($row['priority'] ?? ''),
+            'priority_label' => self::PRIORITY_OPTIONS[(string) ($row['priority'] ?? '')] ?? '未設定',
+            'cut_url' => $this->absoluteUrl((string) ($row['webcatalog_cut_url'] ?? '')),
+            'circlems_id' => (string) ($row['webcatalog_circle_id'] ?? ''),
+            'book_count' => (int) ($row['book_count'] ?? 0),
+            'wishlist_count' => (int) ($row['wishlist_count'] ?? 0),
+            'note' => (string) ($row['note'] ?? ''),
+            'links' => array_values(array_filter([
+                $this->linkRow('Web', $row['website_url'] ?? ''),
+                $this->linkRow('Pixiv', $row['pixiv_url'] ?? ''),
+                $this->linkRow('X', $row['twitter_url'] ?? ''),
+                $this->linkRow('BOOTH', $row['booth_url'] ?? ''),
+                $this->linkRow('Melon', $row['melonbooks_url'] ?? ''),
+                $this->linkRow('Tora', $row['toranoana_url'] ?? ''),
+            ])),
+        ];
+    }
+
+    private function linkRow(string $label, ?string $url): ?array
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return null;
+        }
+
+        return [
+            'label' => $label,
+            'url' => $url,
         ];
     }
 

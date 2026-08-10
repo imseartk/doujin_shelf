@@ -31,6 +31,25 @@ const state = {
       tags: [],
     },
   },
+  circles: {
+    loading: false,
+    loaded: false,
+    rows: [],
+    pagination: {
+      page: 1,
+      limit: 30,
+      total: 0,
+      total_pages: 1,
+    },
+    filters: {
+      q: '',
+      tracked: '',
+      priority: '',
+    },
+    options: {
+      priorities: [],
+    },
+  },
   maps: [],
   map: {
     loading: false,
@@ -136,6 +155,31 @@ async function loadBooks(page = state.books.pagination.page) {
   }
 }
 
+async function loadCircles(page = state.circles.pagination.page) {
+  state.circles.loading = true;
+  clearStatus();
+  render();
+
+  try {
+    const data = await requestJson('/api/app/circles', {
+      q: state.circles.filters.q,
+      tracked: state.circles.filters.tracked,
+      priority: state.circles.filters.priority,
+      page,
+      limit: 30,
+    });
+    state.circles.rows = data.circles || [];
+    state.circles.pagination = data.pagination || state.circles.pagination;
+    state.circles.options = data.options || state.circles.options;
+    state.circles.loaded = true;
+  } catch (error) {
+    setError(error);
+  } finally {
+    state.circles.loading = false;
+    render();
+  }
+}
+
 async function loadMaps() {
   if (state.maps.length > 0) {
     return;
@@ -178,6 +222,10 @@ function switchTab(tab) {
   state.activeTab = tab;
   if (tab === 'books' && !state.books.loaded) {
     loadBooks(1);
+    return;
+  }
+  if (tab === 'circles' && !state.circles.loaded) {
+    loadCircles(1);
     return;
   }
   if (tab === 'map' && !state.map.loaded) {
@@ -239,20 +287,30 @@ function boothLabel(row) {
 }
 
 function render() {
+  const title = {
+    books: '藏書',
+    circles: '社團',
+    map: '地圖',
+    settings: '設定',
+  }[state.activeTab] || '藏書';
+
   app.innerHTML = `
     <div class="app-shell">
       <header class="topbar">
         <div>
           <div class="eyebrow">Personal Doujin Helper</div>
-          <h1>${state.activeTab === 'map' ? '地圖' : state.activeTab === 'settings' ? '設定' : '藏書'}</h1>
+          <h1>${title}</h1>
         </div>
-        <button class="icon-button" data-action="refresh" title="重新整理">↻</button>
+        <div class="topbar-actions">
+          <button class="icon-button" data-action="refresh" title="重新整理">↻</button>
+          <button class="icon-button" data-action="open-settings" title="設定">⚙</button>
+        </div>
       </header>
 
       <nav class="tabs">
         ${tabButton('books', '書籍')}
+        ${tabButton('circles', '社團')}
         ${tabButton('map', '地圖')}
-        ${tabButton('settings', '設定')}
       </nav>
 
       ${state.error ? `<div class="notice error">${h(state.error)}</div>` : ''}
@@ -260,6 +318,7 @@ function render() {
 
       <main>
         ${state.activeTab === 'books' ? renderBooks() : ''}
+        ${state.activeTab === 'circles' ? renderCircles() : ''}
         ${state.activeTab === 'map' ? renderMap() : ''}
         ${state.activeTab === 'settings' ? renderSettings() : ''}
       </main>
@@ -349,6 +408,77 @@ function renderPager(page, totalPages) {
       <button data-action="page-books" data-page="${Math.max(1, page - 1)}" ${page <= 1 ? 'disabled' : ''}>上一頁</button>
       <span>${h(page)} / ${h(totalPages)}</span>
       <button data-action="page-books" data-page="${Math.min(totalPages, page + 1)}" ${page >= totalPages ? 'disabled' : ''}>下一頁</button>
+    </section>
+  `;
+}
+
+function renderCircles() {
+  const page = state.circles.pagination.page || 1;
+  const totalPages = state.circles.pagination.total_pages || 1;
+
+  return `
+    <section class="panel circle-search">
+      <input data-circle-field="q" value="${h(state.circles.filters.q)}" placeholder="搜尋社團、首字、備註" enterkeyhint="search" />
+      <div class="control-row two">
+        <select data-circle-field="tracked">
+          ${option('', '全部社團', state.circles.filters.tracked)}
+          ${option('1', '追蹤中', state.circles.filters.tracked)}
+          ${option('0', '未追蹤', state.circles.filters.tracked)}
+        </select>
+        <select data-circle-field="priority">
+          ${option('', '全部優先度', state.circles.filters.priority)}
+          ${state.circles.options.priorities.map((item) => option(item.value, item.label, state.circles.filters.priority)).join('')}
+        </select>
+      </div>
+      <button data-action="search-circles">搜尋</button>
+    </section>
+
+    <section class="list-meta">
+      <span>${h(state.circles.pagination.total || 0)} 個社團</span>
+      <span>第 ${h(page)} / ${h(totalPages)} 頁</span>
+    </section>
+
+    ${state.circles.loading ? '<div class="notice">讀取社團中...</div>' : ''}
+    ${!state.circles.loaded && !state.circles.loading ? '<section class="empty"><button data-action="search-circles">讀取社團</button></section>' : ''}
+    ${state.circles.loaded && state.circles.rows.length === 0 ? '<section class="empty">沒有符合條件的社團。</section>' : ''}
+    <section class="circle-list">
+      ${state.circles.rows.map(renderCircleCard).join('')}
+    </section>
+    ${state.circles.loaded ? renderCirclePager(page, totalPages) : ''}
+  `;
+}
+
+function renderCircleCard(circle) {
+  const links = circle.links || [];
+  const stats = [
+    `${circle.book_count || 0} 本`,
+    circle.wishlist_count ? `願望 ${circle.wishlist_count} 本` : '',
+    circle.circlems_id ? `Circle.ms ${circle.circlems_id}` : '',
+  ].filter(Boolean).join(' / ');
+
+  return `
+    <article class="circle-card ${circle.is_tracked ? 'tracked' : ''}">
+      ${circle.cut_url ? `<img class="circle-cut" src="${h(circle.cut_url)}" alt="" loading="lazy" />` : '<div class="circle-cut placeholder"></div>'}
+      <div class="circle-info">
+        <div class="circle-title-row">
+          <h2>${h(circle.name)}</h2>
+          <span class="status-badge">${circle.is_tracked ? '追蹤中' : '未追蹤'}</span>
+        </div>
+        <p class="muted">${h([circle.name_kana, circle.priority_label].filter(Boolean).join(' / '))}</p>
+        ${stats ? `<p class="muted">${h(stats)}</p>` : ''}
+        ${circle.note ? `<p class="circle-note">${h(circle.note)}</p>` : ''}
+        ${links.length > 0 ? `<div class="link-chips">${links.map((link) => `<a href="${h(link.url)}" target="_blank" rel="noreferrer">${h(link.label)}</a>`).join('')}</div>` : ''}
+      </div>
+    </article>
+  `;
+}
+
+function renderCirclePager(page, totalPages) {
+  return `
+    <section class="pager">
+      <button data-action="page-circles" data-page="${Math.max(1, page - 1)}" ${page <= 1 ? 'disabled' : ''}>上一頁</button>
+      <span>${h(page)} / ${h(totalPages)}</span>
+      <button data-action="page-circles" data-page="${Math.min(totalPages, page + 1)}" ${page >= totalPages ? 'disabled' : ''}>下一頁</button>
     </section>
   `;
 }
@@ -524,6 +654,17 @@ function bindEvents() {
     });
   });
 
+  app.querySelectorAll('[data-circle-field]').forEach((input) => {
+    input.addEventListener('input', () => {
+      state.circles.filters[input.dataset.circleField] = input.value;
+    });
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        loadCircles(1);
+      }
+    });
+  });
+
   app.querySelectorAll('[data-map-field]').forEach((input) => {
     input.addEventListener('input', () => {
       state.map[input.dataset.mapField] = input.value;
@@ -553,12 +694,19 @@ function bindEvents() {
         saveSettings();
         state.activeTab = 'books';
         loadBooks(1);
+      } else if (action === 'open-settings') {
+        state.activeTab = 'settings';
+        render();
       } else if (action === 'refresh') {
         refreshActive();
       } else if (action === 'search-books') {
         loadBooks(1);
       } else if (action === 'page-books') {
         loadBooks(Number(element.dataset.page || 1));
+      } else if (action === 'search-circles') {
+        loadCircles(1);
+      } else if (action === 'page-circles') {
+        loadCircles(Number(element.dataset.page || 1));
       } else if (action === 'load-map') {
         loadMap();
       } else if (action === 'circle') {
@@ -578,6 +726,8 @@ function bindEvents() {
 function refreshActive() {
   if (state.activeTab === 'map') {
     loadMap();
+  } else if (state.activeTab === 'circles') {
+    loadCircles(state.circles.pagination.page || 1);
   } else if (state.activeTab === 'settings') {
     state.message = '設定頁沒有需要重新整理的資料。';
     render();
