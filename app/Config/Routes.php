@@ -49,6 +49,7 @@ $routes->get('api/app/c108/summary', 'C108::appSummary');
 $routes->get('api/app/c108/maps', 'C108::appMaps');
 $routes->get('api/app/c108/map', 'C108::appMap');
 $routes->get('api/app/c108/notices', 'C108::appNotices');
+$routes->get('api/app/books', 'AppApi::books');
 
 $routes->get('circlems', 'Circlems::index');
 $routes->get('circlems/connect', 'Circlems::connect');

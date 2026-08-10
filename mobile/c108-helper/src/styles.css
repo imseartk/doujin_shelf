@@ -37,7 +37,11 @@ button {
   padding: 0 14px;
 }
 
-button:active,
+button:disabled {
+  opacity: 0.45;
+}
+
+button:active:not(:disabled),
 a:active {
   transform: translateY(1px);
 }
@@ -83,33 +87,6 @@ select {
   font-size: 1.35rem;
 }
 
-.settings {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid #d5dedb;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.settings label {
-  display: grid;
-  gap: 4px;
-  color: #526366;
-  font-size: 0.82rem;
-}
-
-.settings button,
-.map-controls button,
-.section-title button,
-.empty button {
-  background: #28737a;
-  border-color: #28737a;
-  color: #fff;
-  font-weight: 700;
-}
-
 .tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -143,35 +120,10 @@ select {
   color: #9d2e1b;
 }
 
-.metric-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.metric {
-  padding: 14px;
-  border: 1px solid #d5dedb;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.metric span {
-  display: block;
-  color: #637376;
-  font-size: 0.82rem;
-}
-
-.metric strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 1.6rem;
-}
-
-.section,
+.panel,
 .empty,
-.map-controls,
-.map-meta {
+.map-meta,
+.hint-panel {
   margin-top: 14px;
   padding: 12px;
   border: 1px solid #d5dedb;
@@ -179,66 +131,175 @@ select {
   background: #fff;
 }
 
-.section h2 {
-  margin: 0 0 10px;
-  font-size: 1.15rem;
+.hint-panel {
+  color: #526366;
 }
 
-.section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.map-list,
-.notice-list {
+.book-search,
+.map-controls,
+.settings {
   display: grid;
   gap: 10px;
 }
 
-.map-list button,
-.notice-item {
-  display: grid;
-  gap: 3px;
-  min-height: 58px;
-  padding: 10px 12px;
-  text-align: left;
-}
-
-.map-list span,
-.notice-item span,
-.notice-item p {
-  margin: 0;
-  color: #5e6f72;
-  font-size: 0.85rem;
-}
-
-.notice-item.unread {
+.book-search button,
+.map-controls button,
+.settings-actions button:first-child,
+.empty button {
+  background: #28737a;
   border-color: #28737a;
-  box-shadow: inset 4px 0 0 #28737a;
+  color: #fff;
+  font-weight: 700;
 }
 
-.map-controls {
+.settings label {
   display: grid;
-  gap: 10px;
+  gap: 4px;
+  color: #526366;
+  font-size: 0.82rem;
+}
+
+.settings-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .control-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.control-row:has(button) {
-  grid-template-columns: 1fr 1fr auto;
+.control-row.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.control-row.three {
+  grid-template-columns: 1fr;
+}
+
+.list-meta,
 .map-meta {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   color: #53686b;
+}
+
+.book-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.book-card {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #d5dedb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.book-cover {
+  width: 84px;
+  height: 118px;
+  object-fit: cover;
+  border: 1px solid #d7e0dd;
+  border-radius: 6px;
+  background: #eef3f1;
+}
+
+.book-info {
+  min-width: 0;
+}
+
+.book-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.book-title-row h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.muted {
+  margin: 4px 0 0;
+  color: #617074;
+  font-size: 0.84rem;
+}
+
+.status-badge {
+  padding: 3px 7px;
+  border: 1px solid #cbd8d5;
+  border-radius: 999px;
+  color: #36565b;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.status-owned {
+  border-color: #91c9a4;
+  background: #ecf8ef;
+}
+
+.status-wishlist {
+  border-color: #8cb4dc;
+  background: #eef6ff;
+}
+
+.status-ordered {
+  border-color: #d7bd77;
+  background: #fff8df;
+}
+
+.status-blacklisted {
+  border-color: #d6a2a2;
+  background: #fff0f0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.chips span {
+  max-width: 100%;
+  padding: 2px 7px;
+  overflow: hidden;
+  border: 1px solid #bdd9d5;
+  border-radius: 999px;
+  background: #f0fbfa;
+  color: #1f6168;
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chips.subtle span {
+  border-color: #d7dfdd;
+  background: #f7faf9;
+  color: #5b6f73;
+}
+
+.pager {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pager span {
+  color: #53686b;
+  white-space: nowrap;
 }
 
 .map-scroll {
@@ -410,12 +471,20 @@ select {
     margin: 0 auto;
   }
 
+  .control-row.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .settings {
     grid-template-columns: 1fr 220px auto;
     align-items: end;
   }
 
-  .metric-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .settings-actions {
+    grid-template-columns: auto auto;
+  }
+
+  .book-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

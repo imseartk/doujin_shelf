@@ -1,8 +1,8 @@
-# C108 Helper Android Shell
+# Personal Doujin Helper Android Shell
 
-Personal Android client for Doujin Shelf C108 data.
+Personal Android client for Doujin Shelf books and offline map data.
 
-The app reads only the private Doujin Shelf API under `/api/app/c108/*`. It does not call Circle.ms directly and does not store Circle.ms OAuth credentials.
+The app reads only the private Doujin Shelf API under `/api/app/books` and `/api/app/c108/map(s)`. It does not call Circle.ms directly and does not store Circle.ms OAuth credentials.
 
 ## Local Setup
 
