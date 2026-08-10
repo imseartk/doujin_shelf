@@ -72,7 +72,7 @@ function loadSettings() {
     return {
       apiBase: saved.apiBase || DEFAULT_API_BASE,
       passcode: saved.passcode || '',
-      showImages: saved.showImages === true,
+      showImages: saved.showImages === true || saved.showImages === '1',
     };
   } catch {
     return {
@@ -85,6 +85,14 @@ function loadSettings() {
 
 function saveSettings() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.settings));
+}
+
+function syncSettingInput(input) {
+  if (input.dataset.field === 'showImages') {
+    state.settings.showImages = input.value === '1';
+  } else {
+    state.settings[input.dataset.field] = input.value;
+  }
 }
 
 function endpoint(path, params = {}) {
@@ -726,13 +734,8 @@ function bindEvents() {
   });
 
   app.querySelectorAll('[data-field]').forEach((input) => {
-    input.addEventListener('input', () => {
-      if (input.dataset.field === 'showImages') {
-        state.settings.showImages = input.value === '1';
-      } else {
-        state.settings[input.dataset.field] = input.value;
-      }
-    });
+    input.addEventListener('input', () => syncSettingInput(input));
+    input.addEventListener('change', () => syncSettingInput(input));
   });
 
   app.querySelectorAll('[data-book-field]').forEach((input) => {
@@ -779,6 +782,7 @@ function bindEvents() {
     element.addEventListener('click', (event) => {
       const action = element.dataset.action;
       if (action === 'save-settings') {
+        app.querySelectorAll('[data-field]').forEach((input) => syncSettingInput(input));
         saveSettings();
         state.message = '已儲存設定。';
         render();

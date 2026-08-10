@@ -499,8 +499,8 @@ select {
 
 .marker {
   position: absolute;
-  width: 30px;
-  height: 20px;
+  width: 18px;
+  height: 22px;
   min-height: 0;
   padding: 0;
   border: 2px solid #2f4c52;
@@ -511,8 +511,8 @@ select {
 }
 
 .marker.axis-y {
-  width: 20px;
-  height: 30px;
+  width: 34px;
+  height: 12px;
 }
 
 .marker.known {
