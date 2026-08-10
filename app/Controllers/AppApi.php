@@ -127,7 +127,36 @@ class AppApi extends BaseController
                 'types' => $this->formatOptions(self::TYPE_OPTIONS),
                 'statuses' => $this->formatOptions(self::STATUS_OPTIONS),
                 'tags' => $this->tagOptions(),
+                'new_book_url' => $this->absoluteUrl('/books/new'),
             ],
+        ]);
+    }
+
+    public function toggleCircleTracking(int $id): ResponseInterface
+    {
+        if ($failure = $this->appApiAuthFailure()) {
+            return $failure;
+        }
+
+        $db = db_connect();
+        $circle = $db->table('circles')
+            ->select('id, is_tracked')
+            ->where('id', $id)
+            ->get()
+            ->getRowArray();
+
+        if (! $circle) {
+            return $this->response->setStatusCode(404)->setJSON(['message' => 'circle not found']);
+        }
+
+        $tracked = (int) ($circle['is_tracked'] ?? 0) === 1 ? 0 : 1;
+        $db->table('circles')
+            ->where('id', $id)
+            ->update(['is_tracked' => $tracked]);
+
+        return $this->response->setJSON([
+            'id' => $id,
+            'is_tracked' => $tracked === 1,
         ]);
     }
 
@@ -238,6 +267,7 @@ class AppApi extends BaseController
             'works' => $this->splitNames($row['work_names'] ?? ''),
             'characters' => $this->splitNames($row['character_names'] ?? ''),
             'note' => (string) ($row['note'] ?? ''),
+            'edit_url' => $this->absoluteUrl('/books/' . (int) ($row['id'] ?? 0) . '/edit'),
         ];
     }
 
@@ -255,6 +285,7 @@ class AppApi extends BaseController
             'book_count' => (int) ($row['book_count'] ?? 0),
             'wishlist_count' => (int) ($row['wishlist_count'] ?? 0),
             'note' => (string) ($row['note'] ?? ''),
+            'books' => $this->circleBooks((int) ($row['id'] ?? 0)),
             'links' => array_values(array_filter([
                 $this->linkRow('Web', $row['website_url'] ?? ''),
                 $this->linkRow('Pixiv', $row['pixiv_url'] ?? ''),
@@ -264,6 +295,36 @@ class AppApi extends BaseController
                 $this->linkRow('Tora', $row['toranoana_url'] ?? ''),
             ])),
         ];
+    }
+
+    private function circleBooks(int $circleId): array
+    {
+        if ($circleId <= 0) {
+            return [];
+        }
+
+        $rows = db_connect()->table('books')
+            ->select('id, title, cover_url, status, type')
+            ->where('circle_id', $circleId)
+            ->where('type <>', 'comic')
+            ->orderBy("FIELD(status, 'owned', 'wishlist', 'ordered', 'blacklisted')", '', false)
+            ->orderBy('title', 'ASC')
+            ->limit(6)
+            ->get()
+            ->getResultArray();
+
+        return array_map(function (array $row): array {
+            $cover = trim((string) ($row['cover_url'] ?? ''));
+
+            return [
+                'id' => (int) ($row['id'] ?? 0),
+                'title' => (string) ($row['title'] ?? ''),
+                'cover_url' => $this->absoluteUrl($cover === '' ? '' : cover_display_url($cover)),
+                'status' => (string) ($row['status'] ?? ''),
+                'status_label' => self::STATUS_OPTIONS[(string) ($row['status'] ?? '')] ?? (string) ($row['status'] ?? ''),
+                'edit_url' => $this->absoluteUrl('/books/' . (int) ($row['id'] ?? 0) . '/edit'),
+            ];
+        }, $rows);
     }
 
     private function linkRow(string $label, ?string $url): ?array

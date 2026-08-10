@@ -215,6 +215,27 @@ select {
   background: #fff;
 }
 
+.button-row,
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button-row {
+  margin-top: 10px;
+}
+
+.card-actions {
+  margin-top: 10px;
+}
+
+.card-actions button {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
+
 .circle-card {
   display: grid;
   grid-template-columns: 76px minmax(0, 1fr);
@@ -240,7 +261,8 @@ select {
 }
 
 .circle-cut.placeholder {
-  display: block;
+  display: grid;
+  place-items: center;
 }
 
 .circle-info {
@@ -277,6 +299,27 @@ select {
   border: 1px solid #d7e0dd;
   border-radius: 6px;
   background: #eef3f1;
+}
+
+.book-cover.placeholder,
+.circle-cut.placeholder,
+.modal-cut.placeholder,
+.book-chip-cover.placeholder,
+.related-book-cover.placeholder {
+  display: grid;
+  place-items: center;
+  color: #7e8d90;
+}
+
+.book-cover.placeholder::after,
+.circle-cut.placeholder::after,
+.modal-cut.placeholder::after,
+.book-chip-cover.placeholder::after,
+.related-book-cover.placeholder::after {
+  content: "OFF";
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 
 .book-info {
@@ -376,6 +419,50 @@ select {
   font-weight: 700;
 }
 
+.related-books {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.related-book {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  min-height: 54px;
+  padding: 6px;
+  text-align: left;
+}
+
+.related-book-cover {
+  width: 36px;
+  height: 48px;
+  border: 1px solid #d7e0dd;
+  border-radius: 4px;
+  background: #eef3f1;
+  object-fit: cover;
+}
+
+.related-book strong,
+.related-book small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.related-book strong {
+  color: #183236;
+  font-size: 0.78rem;
+}
+
+.related-book small {
+  color: #69797d;
+  font-size: 0.7rem;
+}
+
 .pager {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -412,8 +499,8 @@ select {
 
 .marker {
   position: absolute;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 20px;
   min-height: 0;
   padding: 0;
   border: 2px solid #2f4c52;
@@ -421,6 +508,11 @@ select {
   background: rgba(255, 255, 255, 0.72);
   color: transparent;
   transform: translate(-50%, -50%);
+}
+
+.marker.axis-y {
+  width: 20px;
+  height: 30px;
 }
 
 .marker.known {
@@ -472,6 +564,7 @@ select {
 }
 
 .circle-header img,
+.modal-cut,
 .cut-placeholder {
   width: 88px;
   height: 88px;
@@ -539,6 +632,14 @@ select {
   border-radius: 4px;
 }
 
+.book-chip-cover {
+  width: 44px;
+  height: 58px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: #eef3f1;
+}
+
 .modal-actions {
   display: flex;
   gap: 8px;
@@ -563,7 +664,7 @@ select {
   }
 
   .settings {
-    grid-template-columns: 1fr 220px auto;
+    grid-template-columns: minmax(0, 1fr) 220px 160px auto;
     align-items: end;
   }
 

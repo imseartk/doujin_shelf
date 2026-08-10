@@ -72,11 +72,13 @@ function loadSettings() {
     return {
       apiBase: saved.apiBase || DEFAULT_API_BASE,
       passcode: saved.passcode || '',
+      showImages: saved.showImages === true,
     };
   } catch {
     return {
       apiBase: DEFAULT_API_BASE,
       passcode: '',
+      showImages: false,
     };
   }
 }
@@ -96,22 +98,57 @@ function endpoint(path, params = {}) {
   return url.toString();
 }
 
-async function requestJson(path, params = {}) {
+function webUrl(path, params = {}) {
+  return endpoint(path, params);
+}
+
+function openExternal(url) {
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function imagesVisible() {
+  return state.settings.showImages === true;
+}
+
+function coverElement(url, className, alt = '') {
+  if (imagesVisible() && url) {
+    return `<img class="${h(className)}" src="${h(url)}" alt="${h(alt)}" loading="lazy" />`;
+  }
+
+  return `<div class="${h(className)} placeholder" aria-label="圖片已遮蔽"></div>`;
+}
+
+async function requestJson(path, params = {}, options = {}) {
   const url = endpoint(path, params);
   const headers = {
     Accept: 'application/json',
     'X-App-Passcode': state.settings.passcode,
   };
+  const method = options.method || 'GET';
+  const body = options.body || null;
+  if (body !== null) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (Capacitor.isNativePlatform()) {
-    const response = await CapacitorHttp.get({ url, headers });
+    const request = { url, headers };
+    if (body !== null) {
+      request.data = body;
+    }
+    const response = method === 'POST'
+      ? await CapacitorHttp.post(request)
+      : await CapacitorHttp.get(request);
     if (response.status < 200 || response.status >= 300) {
       throw new Error(response.data?.message || `HTTP ${response.status}`);
     }
     return typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
   }
 
-  const response = await fetch(url, { headers });
+  const response = await fetch(url, {
+    method,
+    headers,
+    body: body === null ? undefined : JSON.stringify(body),
+  });
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
   if (!response.ok) {
@@ -176,6 +213,23 @@ async function loadCircles(page = state.circles.pagination.page) {
     setError(error);
   } finally {
     state.circles.loading = false;
+    render();
+  }
+}
+
+async function toggleCircleTracking(circleId) {
+  clearStatus();
+  try {
+    const result = await requestJson(`/api/app/circles/${circleId}/track`, {}, { method: 'POST', body: {} });
+    state.circles.rows = state.circles.rows.map((circle) => (
+      Number(circle.id) === Number(circleId)
+        ? { ...circle, is_tracked: result.is_tracked === true }
+        : circle
+    ));
+    state.message = result.is_tracked ? '已加入追蹤。' : '已取消追蹤。';
+  } catch (error) {
+    setError(error);
+  } finally {
     render();
   }
 }
@@ -354,7 +408,10 @@ function renderBooks() {
           ${state.books.options.tags.map((item) => option(item.value, item.label, state.books.filters.tag_id)).join('')}
         </select>
       </div>
-      <button data-action="search-books">搜尋</button>
+      <div class="button-row">
+        <button data-action="search-books">搜尋</button>
+        <button data-action="open-url" data-url="${h(state.books.options.new_book_url || webUrl('/books/new'))}">新增書本</button>
+      </div>
     </section>
 
     <section class="list-meta">
@@ -386,7 +443,7 @@ function renderBookCard(book) {
 
   return `
     <article class="book-card">
-      <img class="book-cover" src="${h(book.cover_url)}" alt="" loading="lazy" />
+      ${coverElement(book.cover_url, 'book-cover')}
       <div class="book-info">
         <div class="book-title-row">
           <h2>${h(book.title)}</h2>
@@ -397,6 +454,9 @@ function renderBookCard(book) {
         ${source ? `<p class="muted">${h(source)}</p>` : ''}
         ${tags.length > 0 ? `<div class="chips">${tags.map((tag) => `<span>${h(tag)}</span>`).join('')}</div>` : ''}
         ${works.length > 0 ? `<div class="chips subtle">${works.map((tag) => `<span>${h(tag)}</span>`).join('')}</div>` : ''}
+        <div class="card-actions">
+          <button data-action="open-url" data-url="${h(book.edit_url || webUrl(`/books/${book.id}/edit`))}">編輯</button>
+        </div>
       </div>
     </article>
   `;
@@ -450,6 +510,7 @@ function renderCircles() {
 
 function renderCircleCard(circle) {
   const links = circle.links || [];
+  const books = circle.books || [];
   const stats = [
     `${circle.book_count || 0} 本`,
     circle.wishlist_count ? `願望 ${circle.wishlist_count} 本` : '',
@@ -458,7 +519,7 @@ function renderCircleCard(circle) {
 
   return `
     <article class="circle-card ${circle.is_tracked ? 'tracked' : ''}">
-      ${circle.cut_url ? `<img class="circle-cut" src="${h(circle.cut_url)}" alt="" loading="lazy" />` : '<div class="circle-cut placeholder"></div>'}
+      ${coverElement(circle.cut_url, 'circle-cut')}
       <div class="circle-info">
         <div class="circle-title-row">
           <h2>${h(circle.name)}</h2>
@@ -468,8 +529,28 @@ function renderCircleCard(circle) {
         ${stats ? `<p class="muted">${h(stats)}</p>` : ''}
         ${circle.note ? `<p class="circle-note">${h(circle.note)}</p>` : ''}
         ${links.length > 0 ? `<div class="link-chips">${links.map((link) => `<a href="${h(link.url)}" target="_blank" rel="noreferrer">${h(link.label)}</a>`).join('')}</div>` : ''}
+        ${books.length > 0 ? renderCircleBooks(books) : ''}
+        <div class="card-actions">
+          <button data-action="toggle-circle-track" data-id="${h(circle.id)}">${circle.is_tracked ? '取消追蹤' : '追蹤'}</button>
+        </div>
       </div>
     </article>
+  `;
+}
+
+function renderCircleBooks(books) {
+  return `
+    <div class="related-books">
+      ${books.slice(0, 6).map((book) => `
+        <button class="related-book" data-action="open-url" data-url="${h(book.edit_url || webUrl(`/books/${book.id}/edit`))}">
+          ${coverElement(book.cover_url, 'related-book-cover')}
+          <span>
+            <strong>${h(book.title)}</strong>
+            <small>${h(book.status_label || '')}</small>
+          </span>
+        </button>
+      `).join('')}
+    </div>
   `;
 }
 
@@ -544,7 +625,7 @@ function renderMapCanvas(data) {
 
 function renderMarker(row, index) {
   const marker = row.marker || {};
-  const classes = ['marker'];
+  const classes = ['marker', marker.axis === 'y' ? 'axis-y' : 'axis-x'];
   if (row.is_tracked) {
     classes.push('tracked');
   } else if (row.is_known) {
@@ -572,6 +653,13 @@ function renderSettings() {
         管理碼
         <input data-field="passcode" value="${h(state.settings.passcode)}" type="password" autocomplete="current-password" />
       </label>
+      <label>
+        圖片顯示
+        <select data-field="showImages">
+          ${option('0', '遮蔽圖片', state.settings.showImages ? '1' : '0')}
+          ${option('1', '顯示圖片', state.settings.showImages ? '1' : '0')}
+        </select>
+      </label>
       <div class="settings-actions">
         <button data-action="save-settings">儲存設定</button>
         <button data-action="test-connection">測試連線</button>
@@ -589,7 +677,7 @@ function renderCircleModal(row) {
       <article class="modal" role="dialog" aria-modal="true">
         <button class="modal-close" data-action="close-modal">×</button>
         <header class="circle-header">
-          ${row.cut_url ? `<img src="${h(row.cut_url)}" alt="" />` : '<div class="cut-placeholder"></div>'}
+          ${coverElement(row.cut_url, 'modal-cut')}
           <div>
             <h2>${h(row.circle_name)}</h2>
             <p>${h(row.circle_kana)}${row.pen_name ? ` / ${h(row.pen_name)}` : ''}</p>
@@ -623,7 +711,7 @@ function renderOwnedBooks(row) {
       <div>
         ${books.map((book) => `
           <div class="book-chip">
-            ${book.cover_url ? `<img src="${h(book.cover_url)}" alt="" />` : ''}
+            ${coverElement(book.cover_url, 'book-chip-cover')}
             <span>${h(book.title)}</span>
           </div>
         `).join('')}
@@ -639,7 +727,11 @@ function bindEvents() {
 
   app.querySelectorAll('[data-field]').forEach((input) => {
     input.addEventListener('input', () => {
-      state.settings[input.dataset.field] = input.value;
+      if (input.dataset.field === 'showImages') {
+        state.settings.showImages = input.value === '1';
+      } else {
+        state.settings[input.dataset.field] = input.value;
+      }
     });
   });
 
@@ -707,6 +799,13 @@ function bindEvents() {
         loadCircles(1);
       } else if (action === 'page-circles') {
         loadCircles(Number(element.dataset.page || 1));
+      } else if (action === 'toggle-circle-track') {
+        toggleCircleTracking(Number(element.dataset.id || 0));
+      } else if (action === 'open-url') {
+        const url = element.dataset.url || '';
+        if (url) {
+          openExternal(url);
+        }
       } else if (action === 'load-map') {
         loadMap();
       } else if (action === 'circle') {

@@ -51,6 +51,7 @@ $routes->get('api/app/c108/map', 'C108::appMap');
 $routes->get('api/app/c108/notices', 'C108::appNotices');
 $routes->get('api/app/books', 'AppApi::books');
 $routes->get('api/app/circles', 'AppApi::circles');
+$routes->post('api/app/circles/(:num)/track', 'AppApi::toggleCircleTracking/$1');
 
 $routes->get('circlems', 'Circlems::index');
 $routes->get('circlems/connect', 'Circlems::connect');
