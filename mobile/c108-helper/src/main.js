@@ -123,7 +123,9 @@ function coverElement(url, className, alt = '') {
     return `<img class="${h(className)}" src="${h(url)}" alt="${h(alt)}" loading="lazy" />`;
   }
 
-  return `<div class="${h(className)} placeholder" aria-label="圖片已遮蔽"></div>`;
+  const label = url ? '圖片已遮蔽' : '沒有圖片';
+  const text = url ? 'OFF' : 'NO IMG';
+  return `<div class="${h(className)} placeholder" aria-label="${h(label)}">${h(text)}</div>`;
 }
 
 async function requestJson(path, params = {}, options = {}) {

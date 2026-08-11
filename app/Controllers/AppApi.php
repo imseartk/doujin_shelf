@@ -256,7 +256,7 @@ class AppApi extends BaseController
             'circle' => (string) ($row['circle'] ?? ''),
             'circle_kana' => (string) ($row['circle_kana'] ?? ''),
             'author' => (string) ($row['author'] ?? ''),
-            'cover_url' => $this->absoluteUrl($cover === '' ? cover_placeholder_url() : cover_display_url($cover)),
+            'cover_url' => $this->absoluteUrl($cover),
             'has_cover' => $cover !== '',
             'status' => (string) ($row['status'] ?? ''),
             'status_label' => self::STATUS_OPTIONS[(string) ($row['status'] ?? '')] ?? (string) ($row['status'] ?? ''),
@@ -319,7 +319,7 @@ class AppApi extends BaseController
             return [
                 'id' => (int) ($row['id'] ?? 0),
                 'title' => (string) ($row['title'] ?? ''),
-                'cover_url' => $this->absoluteUrl($cover === '' ? '' : cover_display_url($cover)),
+                'cover_url' => $this->absoluteUrl($cover),
                 'status' => (string) ($row['status'] ?? ''),
                 'status_label' => self::STATUS_OPTIONS[(string) ($row['status'] ?? '')] ?? (string) ($row['status'] ?? ''),
                 'edit_url' => $this->absoluteUrl('/books/' . (int) ($row['id'] ?? 0) . '/edit'),

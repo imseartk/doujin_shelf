@@ -311,13 +311,12 @@ select {
   color: #7e8d90;
 }
 
-.book-cover.placeholder::after,
-.circle-cut.placeholder::after,
-.modal-cut.placeholder::after,
-.book-chip-cover.placeholder::after,
-.related-book-cover.placeholder::after {
-  content: "OFF";
-  font-size: 0.7rem;
+.book-cover.placeholder,
+.circle-cut.placeholder,
+.modal-cut.placeholder,
+.book-chip-cover.placeholder,
+.related-book-cover.placeholder {
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.04em;
 }
