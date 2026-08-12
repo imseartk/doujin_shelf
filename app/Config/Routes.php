@@ -33,9 +33,11 @@ $routes->get('sources', 'Sources::index');
 $routes->get('circles', 'Circles::index');
 $routes->get('circles/(:num)/circlems', 'Circles::circlems/$1');
 $routes->get('circles/(:num)/circlems/candidates', 'Circles::circlemsCandidatesJson/$1');
+$routes->get('circles/(:num)/c108/candidates', 'Circles::c108CandidatesJson/$1');
 $routes->post('circles/(:num)', 'Circles::update/$1');
 $routes->post('circles/(:num)/track', 'Circles::toggleTrack/$1');
 $routes->post('circles/(:num)/circlems/bind', 'Circles::bindCirclems/$1');
+$routes->post('circles/(:num)/c108/bind', 'Circles::bindC108/$1');
 
 $routes->get('c108', 'C108::index');
 $routes->get('c108/map', 'C108::map');

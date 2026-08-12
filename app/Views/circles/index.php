@@ -115,6 +115,9 @@
                     <div class="muted circlems-binding-state js-circlems-binding-state">
                         <?= ! empty($circle['webcatalog_circle_id']) ? 'Circle.ms ' . esc($circle['webcatalog_circle_id']) : '未連動 Circle.ms' ?>
                     </div>
+                    <div class="muted c108-binding-state js-c108-binding-state">
+                        C108 <?= number_format((int) ($circle['c108_binding_count'] ?? 0)) ?> 攤位
+                    </div>
                     <input class="circle-kana-input" form="<?= esc($formId) ?>" name="name_kana" value="<?= esc($circle['name_kana'] ?? '') ?>" placeholder="首字 / 讀音">
                 </td>
                 <td>
@@ -157,6 +160,14 @@
                             data-url="/circles/<?= $circleId ?>/circlems/candidates"
                             data-bind-url="/circles/<?= $circleId ?>/circlems/bind"
                         >連動</button>
+                        <button
+                            class="button small ghost js-c108-bind-open"
+                            type="button"
+                            data-circle-id="<?= $circleId ?>"
+                            data-circle-name="<?= esc($circle['name']) ?>"
+                            data-url="/circles/<?= $circleId ?>/c108/candidates"
+                            data-bind-url="/circles/<?= $circleId ?>/c108/bind"
+                        >C108</button>
                         <form id="<?= esc($formId) ?>" method="post" action="/circles/<?= $circleId ?>">
                             <?= csrf_field() ?>
                             <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
@@ -194,6 +205,29 @@
         <a class="button small <?= $page >= $totalPages ? 'disabled' : '' ?>" href="<?= $page >= $totalPages ? '#' : esc($pageUrl($page + 1)) ?>">下一頁</a>
     </nav>
 <?php endif; ?>
+
+<div class="circlems-bind-modal js-c108-bind-modal" hidden>
+    <div class="circlems-bind-backdrop js-c108-bind-close"></div>
+    <section class="circlems-bind-card" role="dialog" aria-modal="true" aria-labelledby="c108-bind-title">
+        <button class="circlems-bind-close js-c108-bind-close" type="button" aria-label="關閉">×</button>
+        <div class="circlems-bind-head">
+            <h2 id="c108-bind-title">C108 攤位連動</h2>
+            <div class="muted js-c108-bind-current"></div>
+        </div>
+        <form class="circlems-bind-search js-c108-bind-search">
+            <select name="day" class="js-c108-bind-day">
+                <option value="">全部日程</option>
+                <option value="1">1日目</option>
+                <option value="2">2日目</option>
+            </select>
+            <input type="search" name="q" class="js-c108-bind-q" placeholder="社團、作者、發布物、簡介">
+            <input class="short-input js-c108-bind-page" type="number" name="page" value="1" min="1" placeholder="頁">
+            <button class="button" type="submit">搜尋</button>
+        </form>
+        <div class="notice error js-c108-bind-error" hidden></div>
+        <div class="circlems-bind-results js-c108-bind-results"></div>
+    </section>
+</div>
 
 <div class="circlems-bind-modal js-circlems-bind-modal" hidden>
     <div class="circlems-bind-backdrop js-circlems-bind-close"></div>

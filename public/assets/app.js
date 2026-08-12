@@ -72,6 +72,14 @@ $(function () {
         $row: null
     };
     var $circlemsModal = $('.js-circlems-bind-modal');
+    var c108ModalState = {
+        circleId: null,
+        circleName: '',
+        url: '',
+        bindUrl: '',
+        $row: null
+    };
+    var $c108Modal = $('.js-c108-bind-modal');
 
     $('.js-circlems-bind-open').on('click', function () {
         var $button = $(this);
@@ -104,6 +112,39 @@ $(function () {
     $('.js-circlems-bind-results').on('click', '.js-circlems-bind-candidate', function () {
         var candidate = $(this).data('candidate') || {};
         bindCirclemsCandidate(candidate, $(this).data('import-social') === 1);
+    });
+
+    $('.js-c108-bind-open').on('click', function () {
+        var $button = $(this);
+        c108ModalState = {
+            circleId: $button.data('circle-id'),
+            circleName: String($button.data('circle-name') || ''),
+            url: String($button.data('url') || ''),
+            bindUrl: String($button.data('bind-url') || ''),
+            $row: $button.closest('tr')
+        };
+
+        $('.js-c108-bind-current').text(c108ModalState.circleName);
+        $('.js-c108-bind-q').val(c108ModalState.circleName);
+        $('.js-c108-bind-day').val('');
+        $('.js-c108-bind-page').val('1');
+        $('.js-c108-bind-error').prop('hidden', true).text('');
+        $('.js-c108-bind-results').html('<div class="empty">搜尋中...</div>');
+        $c108Modal.prop('hidden', false);
+        loadC108Candidates();
+    });
+
+    $('.js-c108-bind-close').on('click', function () {
+        $c108Modal.prop('hidden', true);
+    });
+
+    $('.js-c108-bind-search').on('submit', function (event) {
+        event.preventDefault();
+        loadC108Candidates();
+    });
+
+    $('.js-c108-bind-results').on('click', '.js-c108-bind-candidate', function () {
+        bindC108Candidate($(this).data('candidate') || {});
     });
 
     function loadCirclemsCandidates() {
@@ -229,6 +270,94 @@ $(function () {
             var response = xhr.responseJSON || {};
             refreshCsrf(response);
             $('.js-circlems-bind-error').prop('hidden', false).text(response.message || 'Circle.ms 綁定失敗。');
+        });
+    }
+
+    function loadC108Candidates() {
+        if (!c108ModalState.url) return;
+
+        $.ajax({
+            url: c108ModalState.url,
+            method: 'GET',
+            dataType: 'json',
+            data: {
+                day: $('.js-c108-bind-day').val() || '',
+                q: $('.js-c108-bind-q').val() || c108ModalState.circleName,
+                page: $('.js-c108-bind-page').val() || 1
+            }
+        }).done(function (response) {
+            refreshCsrf(response);
+            renderC108Candidates(response.candidates || []);
+            $('.js-c108-bind-error').prop('hidden', true).text('');
+        }).fail(function (xhr) {
+            var response = xhr.responseJSON || {};
+            refreshCsrf(response);
+            $('.js-c108-bind-results').empty();
+            $('.js-c108-bind-error').prop('hidden', false).text(response.message || 'C108 攤位搜尋失敗。');
+        });
+    }
+
+    function renderC108Candidates(candidates) {
+        var $results = $('.js-c108-bind-results').empty();
+        if (!candidates.length) {
+            $results.html('<div class="empty">沒有 C108 攤位候選結果。</div>');
+            return;
+        }
+
+        candidates.forEach(function (candidate) {
+            var $card = $('<article class="circlems-result-card circlems-bind-result-card"></article>');
+            if (candidate.cut_url) {
+                $('<img class="circlems-cut" alt="">').attr('src', candidate.cut_url).appendTo($card);
+            }
+
+            var $body = $('<div class="circlems-result-body"></div>').appendTo($card);
+            var $head = $('<div class="circlems-result-head"></div>').appendTo($body);
+            var $title = $('<div></div>').appendTo($head);
+            $('<h3></h3>').text(candidate.name || '(no name)').appendTo($title);
+            $('<div class="muted"></div>').text([candidate.name_kana, candidate.pen_name].filter(Boolean).join(' / ')).appendTo($title);
+
+            var $meta = $('<div class="circlems-meta"></div>').appendTo($head);
+            if (candidate.position) $('<span></span>').text(candidate.position).appendTo($meta);
+            if (candidate.wcid) $('<span></span>').text('WCID ' + candidate.wcid).appendTo($meta);
+            if (candidate.local_circle_name) $('<span></span>').text('已連動 ' + candidate.local_circle_name).appendTo($meta);
+
+            if (candidate.book_name) {
+                $('<p class="circlems-description"></p>').text('預定發布物：' + truncateText(candidate.book_name, 160)).appendTo($body);
+            }
+            if (candidate.description) {
+                $('<p class="circlems-description"></p>').text(truncateText(candidate.description, 180)).appendTo($body);
+            }
+
+            var $actions = $('<div class="circlems-card-actions"></div>').appendTo($body);
+            $('<button class="button small primary js-c108-bind-candidate" type="button">連動此攤</button>')
+                .data('candidate', candidate)
+                .appendTo($actions);
+
+            $results.append($card);
+        });
+    }
+
+    function bindC108Candidate(candidate) {
+        if (!c108ModalState.bindUrl || !candidate.id) return;
+
+        $.ajax({
+            url: c108ModalState.bindUrl,
+            method: 'POST',
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            data: withCsrf({
+                c108_id: candidate.id
+            })
+        }).done(function (response) {
+            refreshCsrf(response);
+            if (c108ModalState.$row && c108ModalState.$row.length) {
+                c108ModalState.$row.find('.js-c108-binding-state').text('C108 ' + (response.binding_count || 0) + ' 攤位');
+            }
+            $c108Modal.prop('hidden', true);
+        }).fail(function (xhr) {
+            var response = xhr.responseJSON || {};
+            refreshCsrf(response);
+            $('.js-c108-bind-error').prop('hidden', false).text(response.message || 'C108 攤位連動失敗。');
         });
     }
 

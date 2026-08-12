@@ -30,6 +30,7 @@ class Circles extends BaseController
             ->select('c.*')
             ->select('COUNT(b.id) AS book_count', false)
             ->select("SUM(CASE WHEN b.status = 'wishlist' THEN 1 ELSE 0 END) AS wishlist_count", false)
+            ->select("(SELECT COUNT(*) FROM c108_circles c108 WHERE c108.circle_id = c.id) AS c108_binding_count", false)
             ->join('books b', "b.circle_id = c.id AND b.type <> 'comic'", 'left');
 
         if ($q !== '') {
@@ -216,6 +217,115 @@ class Circles extends BaseController
         ]);
     }
 
+    public function c108CandidatesJson(int $id): ResponseInterface
+    {
+        $circleModel = new CircleModel();
+        $circle = $circleModel->find($id);
+        if (! $circle) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '找不到這個社團。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $db = db_connect();
+        if (! $db->tableExists('c108_circles')) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '找不到 C108 匯入資料。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $q = trim((string) ($this->request->getGet('q') ?: $circle['name']));
+        $day = trim((string) $this->request->getGet('day'));
+        $page = max(1, (int) $this->request->getGet('page'));
+        $limit = 20;
+
+        $builder = $db->table('c108_circles c108')
+            ->select('c108.id, c108.wcid, c108.circlems_id, c108.circle_name, c108.circle_kana, c108.pen_name, c108.day, c108.map_name, c108.block_name, c108.space_no, c108.space_no_sub, c108.position_label, c108.book_name, c108.description, c108.webcatalog_cut_url, c108.circle_id')
+            ->select('c.name AS local_circle_name', false)
+            ->join('circles c', 'c.id = c108.circle_id', 'left');
+
+        if ($q !== '') {
+            $builder->groupStart()
+                ->like('c108.circle_name', $q)
+                ->orLike('c108.circle_kana', $q)
+                ->orLike('c108.pen_name', $q)
+                ->orLike('c108.book_name', $q)
+                ->orLike('c108.description', $q)
+                ->groupEnd();
+        }
+
+        if ($day === '1' || $day === '2') {
+            $builder->where('c108.day', (int) $day);
+        }
+
+        $rows = $builder
+            ->orderBy('c108.day', 'ASC')
+            ->orderBy('c108.map_id', 'ASC')
+            ->orderBy('c108.block_id', 'ASC')
+            ->orderBy('c108.space_no', 'ASC')
+            ->orderBy('c108.space_no_sub', 'ASC')
+            ->limit($limit, ($page - 1) * $limit)
+            ->get()
+            ->getResultArray();
+
+        return $this->response->setJSON([
+            'circle' => [
+                'id' => (int) $circle['id'],
+                'name' => (string) $circle['name'],
+            ],
+            'q' => $q,
+            'day' => $day,
+            'page' => $page,
+            'candidates' => array_map([$this, 'c108CandidateRow'], $rows),
+            'csrf' => csrf_hash(),
+        ]);
+    }
+
+    public function bindC108(int $id): ResponseInterface
+    {
+        $circleModel = new CircleModel();
+        $circle = $circleModel->find($id);
+        if (! $circle) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '找不到這個社團。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $c108Id = (int) $this->request->getPost('c108_id');
+        if ($c108Id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'message' => '缺少 C108 攤位 ID。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $db = db_connect();
+        $row = $db->table('c108_circles')
+            ->select('id')
+            ->where('id', $c108Id)
+            ->get()
+            ->getRowArray();
+        if (! $row) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '找不到這個 C108 攤位。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $db->table('c108_circles')
+            ->where('id', $c108Id)
+            ->update(['circle_id' => $id]);
+
+        return $this->response->setJSON([
+            'message' => '已連動 C108 攤位。',
+            'binding_count' => $this->c108BindingCount($id),
+            'csrf' => csrf_hash(),
+        ]);
+    }
+
     public function bindCirclems(int $id): RedirectResponse|ResponseInterface
     {
         $circleModel = new CircleModel();
@@ -294,6 +404,40 @@ class Circles extends BaseController
     {
         $priority = (string) $this->request->getPost('priority');
         return array_key_exists($priority, self::PRIORITY_OPTIONS) ? $priority : 'normal';
+    }
+
+    private function c108CandidateRow(array $row): array
+    {
+        $space = str_pad((string) (int) ($row['space_no'] ?? 0), 2, '0', STR_PAD_LEFT) . (string) ($row['space_no_sub'] ?? '');
+        $position = trim((string) ($row['position_label'] ?? ''));
+        if ($position === '') {
+            $position = trim((int) ($row['day'] ?? 0) . '日目 ' . (string) ($row['map_name'] ?? '') . ' ' . (string) ($row['block_name'] ?? '') . $space);
+        }
+
+        return [
+            'id' => (int) ($row['id'] ?? 0),
+            'wcid' => (int) ($row['wcid'] ?? 0),
+            'circlems_id' => (string) ($row['circlems_id'] ?? ''),
+            'name' => (string) ($row['circle_name'] ?? ''),
+            'name_kana' => (string) ($row['circle_kana'] ?? ''),
+            'pen_name' => (string) ($row['pen_name'] ?? ''),
+            'day' => (int) ($row['day'] ?? 0),
+            'position' => $position,
+            'book_name' => (string) ($row['book_name'] ?? ''),
+            'description' => (string) ($row['description'] ?? ''),
+            'cut_url' => (string) ($row['webcatalog_cut_url'] ?? ''),
+            'local_circle_id' => (int) ($row['circle_id'] ?? 0),
+            'local_circle_name' => (string) ($row['local_circle_name'] ?? ''),
+        ];
+    }
+
+    private function c108BindingCount(int $circleId): int
+    {
+        if (! db_connect()->tableExists('c108_circles')) {
+            return 0;
+        }
+
+        return db_connect()->table('c108_circles')->where('circle_id', $circleId)->countAllResults();
     }
 
     private function nullablePost(string $key): ?string
