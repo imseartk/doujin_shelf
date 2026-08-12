@@ -148,6 +148,7 @@
                     class="c108-map-marker c108-map-marker-axis-<?= esc($row['_marker_axis'] ?? 'x') ?> <?= esc($markerClass($row)) ?> <?= $q !== '' && $markerIndex === 1 ? 'c108-map-marker-focus js-c108-map-focus' : '' ?> js-c108-map-marker"
                     style="left: <?= $left ?>px; top: <?= $top ?>px;"
                     title="<?= esc($label) ?>"
+                    data-id="<?= esc((string) ($row['id'] ?? '')) ?>"
                     data-name="<?= esc($row['circle_name'] ?? '') ?>"
                     data-kana="<?= esc($row['circle_kana'] ?? '') ?>"
                     data-pen-name="<?= esc($row['pen_name'] ?? '') ?>"
@@ -203,6 +204,7 @@
                     <div class="c108-map-modal-note js-c108-map-modal-note"></div>
                     <div class="c108-map-modal-actions">
                         <a class="button small ghost js-c108-map-webcatalog" href="#" target="_blank" rel="noopener" hidden>Web Catalog</a>
+                        <button class="button small ghost js-c108-map-link-local" type="button">加入社團</button>
                         <button class="button small js-c108-map-load-works" type="button">顯示頒布物</button>
                     </div>
                     <div class="c108-map-works js-c108-map-works" hidden></div>
@@ -262,13 +264,31 @@ $(function () {
     var $modalImage = $('.js-c108-map-modal-image');
     var $works = $('.js-c108-map-works');
     var currentWcid = '';
+    var currentC108Id = '';
+    var $currentMarker = $();
     var circleImageCache = {};
+    var csrfName = <?= json_encode(csrf_token()) ?>;
+    var csrfHash = <?= json_encode(csrf_hash()) ?>;
+
+    function csrfData(data) {
+        data = data || {};
+        data[csrfName] = csrfHash;
+        return data;
+    }
+
+    function updateCsrf(response) {
+        if (response && response.csrf) {
+            csrfHash = response.csrf;
+        }
+    }
 
     function closeCircleModal() {
         $modal.prop('hidden', true);
         $modalImage.attr('src', '').prop('hidden', true);
         $works.prop('hidden', true).empty();
         currentWcid = '';
+        currentC108Id = '';
+        $currentMarker = $();
     }
 
     $('.js-c108-map-marker').on('click', function () {
@@ -281,6 +301,8 @@ $(function () {
         var webcatalogUrl = $marker.data('webcatalog-url') || '';
         var ownedBooks = $marker.data('owned-books') || [];
         currentWcid = String($marker.data('wcid') || '');
+        currentC108Id = String($marker.data('id') || '');
+        $currentMarker = $marker;
 
         $('.js-c108-map-modal-title').text($marker.data('name') || '');
         $('.js-c108-map-modal-subtitle').text(subtitle);
@@ -294,6 +316,7 @@ $(function () {
         var $webcatalog = $('.js-c108-map-webcatalog');
         $webcatalog.prop('hidden', !webcatalogUrl).attr('href', webcatalogUrl || '#');
         $('.js-c108-map-load-works').prop('disabled', !currentWcid).text('顯示頒布物');
+        $('.js-c108-map-link-local').prop('disabled', !currentC108Id).text('加入社團');
         renderOwnedBooks(Array.isArray(ownedBooks) ? ownedBooks : []);
 
         if (image) {
@@ -366,6 +389,38 @@ $(function () {
             .always(function () {
                 $button.prop('disabled', false).text('重新讀取頒布物');
             });
+    });
+
+    $('.js-c108-map-link-local').on('click', function () {
+        if (!currentC108Id) return;
+
+        var $button = $(this);
+        $button.prop('disabled', true).text('處理中...');
+
+        $.ajax({
+            url: '/c108/circles/' + encodeURIComponent(currentC108Id) + '/link-local',
+            method: 'POST',
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            data: csrfData({})
+        }).done(function (response) {
+            updateCsrf(response);
+            $('.js-c108-map-modal-status').text('買過的社團');
+            $('.js-c108-map-modal-note').text(response.circle && response.circle.note ? response.circle.note : '未設定');
+            if ($currentMarker.length) {
+                $currentMarker
+                    .removeClass('c108-map-marker-unknown c108-map-marker-tracked')
+                    .addClass('c108-map-marker-known')
+                    .data('status', '買過的社團')
+                    .data('note', response.circle && response.circle.note ? response.circle.note : '');
+            }
+            $button.text(response.created ? '已新增社團' : '已連動社團');
+        }).fail(function (xhr) {
+            var response = xhr.responseJSON || {};
+            updateCsrf(response);
+            window.alert(response.message || '加入社團失敗。');
+            $button.prop('disabled', false).text('加入社團');
+        });
     });
 
     function renderWorks(items) {

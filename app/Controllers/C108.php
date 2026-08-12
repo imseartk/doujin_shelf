@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\CirclemsClient;
+use App\Models\CircleModel;
 use App\Models\CirclemsTokenModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use RuntimeException;
@@ -75,6 +76,70 @@ class C108 extends BaseController
             ->update(['update_read' => 1]);
 
         return redirect()->back()->with('message', '已標記所有 C108 通知為已讀。');
+    }
+
+    public function linkLocalCircle(int $id): ResponseInterface
+    {
+        $db = db_connect();
+        $row = $db->table('c108_circles')
+            ->select('id, circle_id, circle_name, circle_kana')
+            ->where('id', $id)
+            ->get()
+            ->getRowArray();
+
+        if (! $row) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '找不到這個 C108 攤位。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $circleName = trim((string) ($row['circle_name'] ?? ''));
+        if ($circleName === '') {
+            return $this->response->setStatusCode(400)->setJSON([
+                'message' => '這個 C108 攤位沒有社團名稱。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $circleModel = new CircleModel();
+        $circle = $circleModel->where('name', $circleName)->first();
+        $created = false;
+        if (! $circle) {
+            $circleId = (int) $circleModel->insert([
+                'name' => $circleName,
+                'name_kana' => trim((string) ($row['circle_kana'] ?? '')) ?: null,
+                'is_tracked' => 0,
+                'priority' => 'normal',
+            ], true);
+            $circle = $circleModel->find($circleId);
+            $created = true;
+        }
+
+        if (! $circle) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'message' => '建立本地社團失敗。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $circleId = (int) $circle['id'];
+        $db->table('c108_circles')
+            ->where('id', $id)
+            ->update(['circle_id' => $circleId]);
+
+        return $this->response->setJSON([
+            'message' => $created ? '已新增本地社團並連動攤位。' : '已連動既有本地社團。',
+            'created' => $created,
+            'circle' => [
+                'id' => $circleId,
+                'name' => (string) ($circle['name'] ?? $circleName),
+                'is_tracked' => (int) ($circle['is_tracked'] ?? 0) === 1,
+                'priority' => (string) ($circle['priority'] ?? 'normal'),
+                'note' => (string) ($circle['note'] ?? ''),
+            ],
+            'csrf' => csrf_hash(),
+        ]);
     }
 
     public function appSummary(): ResponseInterface
