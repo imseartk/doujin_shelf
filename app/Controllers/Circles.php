@@ -238,12 +238,11 @@ class Circles extends BaseController
 
         $q = trim((string) ($this->request->getGet('q') ?: $circle['name']));
         $day = trim((string) $this->request->getGet('day'));
-        $page = max(1, (int) $this->request->getGet('page'));
-        $limit = 20;
+        $limit = 50;
 
         $builder = $db->table('c108_circles c108')
             ->select('c108.id, c108.wcid, c108.circlems_id, c108.circle_name, c108.circle_kana, c108.pen_name, c108.day, c108.map_name, c108.block_name, c108.space_no, c108.space_no_sub, c108.position_label, c108.book_name, c108.description, c108.webcatalog_cut_url, c108.circle_id')
-            ->select('c.name AS local_circle_name', false)
+            ->select('c.name AS local_circle_name, c.note AS local_note', false)
             ->join('circles c', 'c.id = c108.circle_id', 'left');
 
         if ($q !== '') {
@@ -254,16 +253,22 @@ class Circles extends BaseController
             $builder->where('c108.day', (int) $day);
         }
 
-        $rows = $builder
-            ->orderBy($this->c108CandidateRankSql($q), '', false)
-            ->orderBy('c108.day', 'ASC')
-            ->orderBy('c108.map_id', 'ASC')
-            ->orderBy('c108.block_id', 'ASC')
-            ->orderBy('c108.space_no', 'ASC')
-            ->orderBy('c108.space_no_sub', 'ASC')
-            ->limit($limit, ($page - 1) * $limit)
-            ->get()
-            ->getResultArray();
+        try {
+            $rows = $builder
+                ->orderBy('c108.day', 'ASC')
+                ->orderBy('c108.map_id', 'ASC')
+                ->orderBy('c108.block_id', 'ASC')
+                ->orderBy('c108.space_no', 'ASC')
+                ->orderBy('c108.space_no_sub', 'ASC')
+                ->limit($limit)
+                ->get()
+                ->getResultArray();
+        } catch (\Throwable $exception) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'message' => 'C108 攤位搜尋錯誤：' . $exception->getMessage(),
+                'csrf' => csrf_hash(),
+            ]);
+        }
 
         return $this->response->setJSON([
             'circle' => [
@@ -272,7 +277,6 @@ class Circles extends BaseController
             ],
             'q' => $q,
             'day' => $day,
-            'page' => $page,
             'candidates' => array_map([$this, 'c108CandidateRow'], $rows),
             'csrf' => csrf_hash(),
         ]);
@@ -434,27 +438,31 @@ class Circles extends BaseController
         }
 
         $builder->groupStart();
+        $isFirst = true;
         foreach ($terms as $term) {
-            $builder->orGroupStart()
-                ->like('c108.circle_name', $term)
+            if ($isFirst) {
+                $builder->like('c108.circle_name', $term);
+                $isFirst = false;
+            } else {
+                $builder->orLike('c108.circle_name', $term);
+            }
+
+            $builder
                 ->orLike('c108.circle_kana', $term)
                 ->orLike('c108.pen_name', $term)
                 ->orLike('c108.position_label', $term)
-                ->orLike('c108.map_name', $term)
-                ->orLike('c108.block_name', $term)
                 ->orLike('c108.book_name', $term)
                 ->orLike('c108.description', $term)
-                ->groupEnd();
+                ->orLike('c.note', $term);
         }
 
         if (preg_match('/([\\p{Hiragana}\\p{Katakana}\\p{Han}A-Za-z])\\s*0*([0-9]{1,3})\\s*([abABａ-ｂ]?)/u', $q, $match)) {
-            $builder->orGroupStart()
-                ->where('c108.block_name', $match[1])
-                ->where('c108.space_no', (int) $match[2]);
+            $spaceSub = '';
             if (! empty($match[3])) {
-                $builder->where('c108.space_no_sub', strtolower(strtr($match[3], ['Ａ' => 'a', 'Ｂ' => 'b', 'ａ' => 'a', 'ｂ' => 'b'])));
+                $spaceSub = strtolower(strtr($match[3], ['Ａ' => 'a', 'Ｂ' => 'b', 'ａ' => 'a', 'ｂ' => 'b']));
             }
-            $builder->groupEnd();
+
+            $builder->orWhere($this->c108PositionSql($match[1], (int) $match[2], $spaceSub), null, false);
         }
         $builder->groupEnd();
     }
@@ -485,19 +493,15 @@ class Circles extends BaseController
         return array_values(array_unique(array_filter($terms, static fn (string $term): bool => $term !== '')));
     }
 
-    private function c108CandidateRankSql(string $q): string
+    private function c108PositionSql(string $block, int $spaceNo, string $spaceSub): string
     {
         $db = db_connect();
-        $terms = $this->c108SearchTerms($q);
-        $exact = $terms[0] ?? '';
-        $prefix = $terms[1] ?? $exact;
+        $sql = '(c108.block_name = ' . $db->escape($block) . ' AND c108.space_no = ' . $spaceNo;
+        if ($spaceSub !== '') {
+            $sql .= ' AND c108.space_no_sub = ' . $db->escape($spaceSub);
+        }
 
-        return sprintf(
-            'CASE WHEN c108.circle_name LIKE %s THEN 0 WHEN c108.circle_name LIKE %s THEN 1 WHEN c108.position_label LIKE %s THEN 2 ELSE 9 END',
-            $db->escape('%' . $exact . '%'),
-            $db->escape('%' . $prefix . '%'),
-            $db->escape('%' . $exact . '%')
-        );
+        return $sql . ')';
     }
 
     private function c108BindingCount(int $circleId): int

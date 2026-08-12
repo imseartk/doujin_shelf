@@ -127,7 +127,6 @@ $(function () {
         $('.js-c108-bind-current').text(c108ModalState.circleName);
         $('.js-c108-bind-q').val(c108ModalState.circleName);
         $('.js-c108-bind-day').val('');
-        $('.js-c108-bind-page').val('1');
         $('.js-c108-bind-error').prop('hidden', true).text('');
         $('.js-c108-bind-results').html('<div class="empty">搜尋中...</div>');
         $c108Modal.prop('hidden', false);
@@ -282,8 +281,7 @@ $(function () {
             dataType: 'json',
             data: {
                 day: $('.js-c108-bind-day').val() || '',
-                q: $('.js-c108-bind-q').val() || c108ModalState.circleName,
-                page: $('.js-c108-bind-page').val() || 1
+                q: $('.js-c108-bind-q').val() || c108ModalState.circleName
             }
         }).done(function (response) {
             refreshCsrf(response);
@@ -293,7 +291,7 @@ $(function () {
             var response = xhr.responseJSON || {};
             refreshCsrf(response);
             $('.js-c108-bind-results').empty();
-            $('.js-c108-bind-error').prop('hidden', false).text(response.message || 'C108 攤位搜尋失敗。');
+            $('.js-c108-bind-error').prop('hidden', false).text(response.message || xhr.responseText || 'C108 攤位搜尋失敗。');
         });
     }
 

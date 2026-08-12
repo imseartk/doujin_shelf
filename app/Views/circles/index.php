@@ -221,7 +221,6 @@
                 <option value="2">2日目</option>
             </select>
             <input type="search" name="q" class="js-c108-bind-q" placeholder="社團、作者、發布物、簡介">
-            <input class="short-input js-c108-bind-page" type="number" name="page" value="1" min="1" placeholder="頁">
             <button class="button" type="submit">搜尋</button>
         </form>
         <div class="notice error js-c108-bind-error" hidden></div>
