@@ -247,13 +247,7 @@ class Circles extends BaseController
             ->join('circles c', 'c.id = c108.circle_id', 'left');
 
         if ($q !== '') {
-            $builder->groupStart()
-                ->like('c108.circle_name', $q)
-                ->orLike('c108.circle_kana', $q)
-                ->orLike('c108.pen_name', $q)
-                ->orLike('c108.book_name', $q)
-                ->orLike('c108.description', $q)
-                ->groupEnd();
+            $this->applyC108CandidateSearch($builder, $q);
         }
 
         if ($day === '1' || $day === '2') {
@@ -261,6 +255,7 @@ class Circles extends BaseController
         }
 
         $rows = $builder
+            ->orderBy($this->c108CandidateRankSql($q), '', false)
             ->orderBy('c108.day', 'ASC')
             ->orderBy('c108.map_id', 'ASC')
             ->orderBy('c108.block_id', 'ASC')
@@ -429,6 +424,80 @@ class Circles extends BaseController
             'local_circle_id' => (int) ($row['circle_id'] ?? 0),
             'local_circle_name' => (string) ($row['local_circle_name'] ?? ''),
         ];
+    }
+
+    private function applyC108CandidateSearch($builder, string $q): void
+    {
+        $terms = $this->c108SearchTerms($q);
+        if ($terms === []) {
+            return;
+        }
+
+        $builder->groupStart();
+        foreach ($terms as $term) {
+            $builder->orGroupStart()
+                ->like('c108.circle_name', $term)
+                ->orLike('c108.circle_kana', $term)
+                ->orLike('c108.pen_name', $term)
+                ->orLike('c108.position_label', $term)
+                ->orLike('c108.map_name', $term)
+                ->orLike('c108.block_name', $term)
+                ->orLike('c108.book_name', $term)
+                ->orLike('c108.description', $term)
+                ->groupEnd();
+        }
+
+        if (preg_match('/([\\p{Hiragana}\\p{Katakana}\\p{Han}A-Za-z])\\s*0*([0-9]{1,3})\\s*([abABａ-ｂ]?)/u', $q, $match)) {
+            $builder->orGroupStart()
+                ->where('c108.block_name', $match[1])
+                ->where('c108.space_no', (int) $match[2]);
+            if (! empty($match[3])) {
+                $builder->where('c108.space_no_sub', strtolower(strtr($match[3], ['Ａ' => 'a', 'Ｂ' => 'b', 'ａ' => 'a', 'ｂ' => 'b'])));
+            }
+            $builder->groupEnd();
+        }
+        $builder->groupEnd();
+    }
+
+    private function c108SearchTerms(string $q): array
+    {
+        $q = trim((string) preg_replace('/[\\s　]+/u', ' ', $q));
+        if ($q === '') {
+            return [];
+        }
+
+        $terms = [$q];
+        foreach (preg_split('/[\\s　]+/u', $q) ?: [] as $part) {
+            $part = trim($part);
+            if (mb_strlen($part) >= 2) {
+                $terms[] = $part;
+            }
+        }
+
+        $length = mb_strlen($q);
+        if ($length >= 4) {
+            $terms[] = mb_substr($q, 0, $length - 1);
+        }
+        if ($length >= 6) {
+            $terms[] = mb_substr($q, 0, 5);
+        }
+
+        return array_values(array_unique(array_filter($terms, static fn (string $term): bool => $term !== '')));
+    }
+
+    private function c108CandidateRankSql(string $q): string
+    {
+        $db = db_connect();
+        $terms = $this->c108SearchTerms($q);
+        $exact = $terms[0] ?? '';
+        $prefix = $terms[1] ?? $exact;
+
+        return sprintf(
+            'CASE WHEN c108.circle_name LIKE %s THEN 0 WHEN c108.circle_name LIKE %s THEN 1 WHEN c108.position_label LIKE %s THEN 2 ELSE 9 END',
+            $db->escape('%' . $exact . '%'),
+            $db->escape('%' . $prefix . '%'),
+            $db->escape('%' . $exact . '%')
+        );
     }
 
     private function c108BindingCount(int $circleId): int
