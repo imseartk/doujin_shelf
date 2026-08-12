@@ -131,13 +131,49 @@ class C108 extends BaseController
         return $this->response->setJSON([
             'message' => $created ? '已新增本地社團並連動攤位。' : '已連動既有本地社團。',
             'created' => $created,
-            'circle' => [
-                'id' => $circleId,
-                'name' => (string) ($circle['name'] ?? $circleName),
-                'is_tracked' => (int) ($circle['is_tracked'] ?? 0) === 1,
-                'priority' => (string) ($circle['priority'] ?? 'normal'),
-                'note' => (string) ($circle['note'] ?? ''),
-            ],
+            'circle' => $this->localCircleJson($circle),
+            'csrf' => csrf_hash(),
+        ]);
+    }
+
+    public function toggleLocalCircleTracking(int $id): ResponseInterface
+    {
+        $circle = $this->localCircleForC108($id);
+        if (! $circle) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '這個 C108 攤位尚未連動本地社團。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $isTracked = empty($circle['is_tracked']) ? 1 : 0;
+        $circleModel = new CircleModel();
+        $circleModel->update((int) $circle['id'], ['is_tracked' => $isTracked]);
+        $circle = $circleModel->find((int) $circle['id']) ?: $circle;
+
+        return $this->response->setJSON([
+            'circle' => $this->localCircleJson($circle),
+            'csrf' => csrf_hash(),
+        ]);
+    }
+
+    public function updateLocalCircleNote(int $id): ResponseInterface
+    {
+        $circle = $this->localCircleForC108($id);
+        if (! $circle) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '這個 C108 攤位尚未連動本地社團。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $note = trim((string) $this->request->getPost('note'));
+        $circleModel = new CircleModel();
+        $circleModel->update((int) $circle['id'], ['note' => $note === '' ? null : $note]);
+        $circle = $circleModel->find((int) $circle['id']) ?: $circle;
+
+        return $this->response->setJSON([
+            'circle' => $this->localCircleJson($circle),
             'csrf' => csrf_hash(),
         ]);
     }
@@ -745,6 +781,29 @@ class C108 extends BaseController
     private function circleJoinCondition(): string
     {
         return 'c.id = c108.circle_id';
+    }
+
+    private function localCircleForC108(int $id): ?array
+    {
+        $row = db_connect()->table('c108_circles c108')
+            ->select('c.*')
+            ->join('circles c', 'c.id = c108.circle_id', 'inner')
+            ->where('c108.id', $id)
+            ->get()
+            ->getRowArray();
+
+        return $row ?: null;
+    }
+
+    private function localCircleJson(array $circle): array
+    {
+        return [
+            'id' => (int) ($circle['id'] ?? 0),
+            'name' => (string) ($circle['name'] ?? ''),
+            'is_tracked' => (int) ($circle['is_tracked'] ?? 0) === 1,
+            'priority' => (string) ($circle['priority'] ?? 'normal'),
+            'note' => (string) ($circle['note'] ?? ''),
+        ];
     }
 
     private function selectedMap(array $maps, string $day, string $map): array

@@ -45,6 +45,8 @@ $routes->get('c108/export-map', 'C108::exportMap');
 $routes->get('c108/circle/(:num)', 'C108::circle/$1');
 $routes->get('c108/works/(:num)', 'C108::works/$1');
 $routes->post('c108/circles/(:num)/link-local', 'C108::linkLocalCircle/$1');
+$routes->post('c108/circles/(:num)/track', 'C108::toggleLocalCircleTracking/$1');
+$routes->post('c108/circles/(:num)/note', 'C108::updateLocalCircleNote/$1');
 $routes->post('c108/notices/(:num)/read', 'C108::readNotice/$1');
 $routes->post('c108/notices/read-all', 'C108::readAllNotices');
 

@@ -149,6 +149,8 @@
                     style="left: <?= $left ?>px; top: <?= $top ?>px;"
                     title="<?= esc($label) ?>"
                     data-id="<?= esc((string) ($row['id'] ?? '')) ?>"
+                    data-local-circle-id="<?= esc((string) ($row['local_circle_id'] ?? '')) ?>"
+                    data-is-tracked="<?= ! empty($row['is_tracked']) ? '1' : '0' ?>"
                     data-name="<?= esc($row['circle_name'] ?? '') ?>"
                     data-kana="<?= esc($row['circle_kana'] ?? '') ?>"
                     data-pen-name="<?= esc($row['pen_name'] ?? '') ?>"
@@ -202,9 +204,18 @@
                     </dl>
                     <div class="c108-map-owned js-c108-map-owned" hidden></div>
                     <div class="c108-map-modal-note js-c108-map-modal-note"></div>
+                    <div class="c108-map-note-editor js-c108-map-note-editor" hidden>
+                        <label for="c108-map-note-input">備註</label>
+                        <textarea id="c108-map-note-input" class="js-c108-map-note-input" rows="3"></textarea>
+                        <div class="c108-map-note-actions">
+                            <button class="button small ghost js-c108-map-save-note" type="button">儲存備註</button>
+                            <span class="muted js-c108-map-note-state"></span>
+                        </div>
+                    </div>
                     <div class="c108-map-modal-actions">
                         <a class="button small ghost js-c108-map-webcatalog" href="#" target="_blank" rel="noopener" hidden>Web Catalog</a>
                         <button class="button small ghost js-c108-map-link-local" type="button">加入社團</button>
+                        <button class="button small ghost js-c108-map-toggle-track" type="button" hidden>追蹤</button>
                         <button class="button small js-c108-map-load-works" type="button">顯示頒布物</button>
                     </div>
                     <div class="c108-map-works js-c108-map-works" hidden></div>
@@ -265,6 +276,8 @@ $(function () {
     var $works = $('.js-c108-map-works');
     var currentWcid = '';
     var currentC108Id = '';
+    var currentLocalCircleId = '';
+    var currentIsTracked = false;
     var $currentMarker = $();
     var circleImageCache = {};
     var csrfName = <?= json_encode(csrf_token()) ?>;
@@ -288,7 +301,43 @@ $(function () {
         $works.prop('hidden', true).empty();
         currentWcid = '';
         currentC108Id = '';
+        currentLocalCircleId = '';
+        currentIsTracked = false;
         $currentMarker = $();
+    }
+
+    function statusLabel(isLinked, isTracked) {
+        if (isTracked) return '追蹤中';
+        if (isLinked) return '買過的社團';
+        return '一般社團';
+    }
+
+    function applyLocalCircleState(circle) {
+        currentLocalCircleId = circle && circle.id ? String(circle.id) : currentLocalCircleId;
+        currentIsTracked = !!(circle && circle.is_tracked);
+        var note = circle && circle.note ? circle.note : '';
+        var isLinked = !!currentLocalCircleId;
+        var label = statusLabel(isLinked, currentIsTracked);
+
+        $('.js-c108-map-modal-status').text(label);
+        $('.js-c108-map-modal-note').text(note || '未設定');
+        $('.js-c108-map-note-input').val(note);
+        $('.js-c108-map-note-editor').prop('hidden', !isLinked);
+        $('.js-c108-map-link-local').prop('hidden', isLinked).prop('disabled', !currentC108Id);
+        $('.js-c108-map-toggle-track')
+            .prop('hidden', !isLinked)
+            .prop('disabled', !currentC108Id)
+            .text(currentIsTracked ? '解除追蹤' : '追蹤');
+
+        if ($currentMarker.length) {
+            $currentMarker
+                .removeClass('c108-map-marker-unknown c108-map-marker-known c108-map-marker-tracked')
+                .addClass(currentIsTracked ? 'c108-map-marker-tracked' : (isLinked ? 'c108-map-marker-known' : 'c108-map-marker-unknown'))
+                .data('local-circle-id', currentLocalCircleId)
+                .data('is-tracked', currentIsTracked ? 1 : 0)
+                .data('status', label)
+                .data('note', note);
+        }
     }
 
     $('.js-c108-map-marker').on('click', function () {
@@ -302,6 +351,8 @@ $(function () {
         var ownedBooks = $marker.data('owned-books') || [];
         currentWcid = String($marker.data('wcid') || '');
         currentC108Id = String($marker.data('id') || '');
+        currentLocalCircleId = String($marker.data('local-circle-id') || '');
+        currentIsTracked = String($marker.data('is-tracked') || '') === '1';
         $currentMarker = $marker;
 
         $('.js-c108-map-modal-title').text($marker.data('name') || '');
@@ -316,7 +367,9 @@ $(function () {
         var $webcatalog = $('.js-c108-map-webcatalog');
         $webcatalog.prop('hidden', !webcatalogUrl).attr('href', webcatalogUrl || '#');
         $('.js-c108-map-load-works').prop('disabled', !currentWcid).text('顯示頒布物');
-        $('.js-c108-map-link-local').prop('disabled', !currentC108Id).text('加入社團');
+        $('.js-c108-map-note-state').text('');
+        applyLocalCircleState({ id: currentLocalCircleId, is_tracked: currentIsTracked, note: note === '未設定' ? '' : note });
+        $('.js-c108-map-link-local').text('加入社團');
         renderOwnedBooks(Array.isArray(ownedBooks) ? ownedBooks : []);
 
         if (image) {
@@ -405,21 +458,64 @@ $(function () {
             data: csrfData({})
         }).done(function (response) {
             updateCsrf(response);
-            $('.js-c108-map-modal-status').text('買過的社團');
-            $('.js-c108-map-modal-note').text(response.circle && response.circle.note ? response.circle.note : '未設定');
-            if ($currentMarker.length) {
-                $currentMarker
-                    .removeClass('c108-map-marker-unknown c108-map-marker-tracked')
-                    .addClass('c108-map-marker-known')
-                    .data('status', '買過的社團')
-                    .data('note', response.circle && response.circle.note ? response.circle.note : '');
-            }
+            applyLocalCircleState(response.circle || {});
             $button.text(response.created ? '已新增社團' : '已連動社團');
         }).fail(function (xhr) {
             var response = xhr.responseJSON || {};
             updateCsrf(response);
             window.alert(response.message || '加入社團失敗。');
             $button.prop('disabled', false).text('加入社團');
+        });
+    });
+
+    $('.js-c108-map-toggle-track').on('click', function () {
+        if (!currentC108Id || !currentLocalCircleId) return;
+
+        var $button = $(this);
+        $button.prop('disabled', true).text('處理中...');
+
+        $.ajax({
+            url: '/c108/circles/' + encodeURIComponent(currentC108Id) + '/track',
+            method: 'POST',
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            data: csrfData({})
+        }).done(function (response) {
+            updateCsrf(response);
+            applyLocalCircleState(response.circle || {});
+        }).fail(function (xhr) {
+            var response = xhr.responseJSON || {};
+            updateCsrf(response);
+            window.alert(response.message || '更新追蹤狀態失敗。');
+            applyLocalCircleState({ id: currentLocalCircleId, is_tracked: currentIsTracked, note: $('.js-c108-map-note-input').val() });
+        });
+    });
+
+    $('.js-c108-map-save-note').on('click', function () {
+        if (!currentC108Id || !currentLocalCircleId) return;
+
+        var $button = $(this);
+        var note = $('.js-c108-map-note-input').val() || '';
+        $('.js-c108-map-note-state').text('儲存中...');
+        $button.prop('disabled', true);
+
+        $.ajax({
+            url: '/c108/circles/' + encodeURIComponent(currentC108Id) + '/note',
+            method: 'POST',
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            data: csrfData({ note: note })
+        }).done(function (response) {
+            updateCsrf(response);
+            applyLocalCircleState(response.circle || {});
+            $('.js-c108-map-note-state').text('已儲存');
+        }).fail(function (xhr) {
+            var response = xhr.responseJSON || {};
+            updateCsrf(response);
+            window.alert(response.message || '儲存備註失敗。');
+            $('.js-c108-map-note-state').text('');
+        }).always(function () {
+            $button.prop('disabled', false);
         });
     });
 

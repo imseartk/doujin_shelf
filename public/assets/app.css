@@ -1147,6 +1147,27 @@ label input, label select, label textarea { font-weight: 400; }
     white-space: pre-wrap;
     overflow-wrap: break-word;
 }
+.c108-map-note-editor {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+}
+.c108-map-note-editor[hidden] {
+    display: none;
+}
+.c108-map-note-editor label {
+    color: var(--muted);
+    font-size: 13px;
+}
+.c108-map-note-editor textarea {
+    min-height: 72px;
+    resize: vertical;
+}
+.c108-map-note-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
 .c108-map-modal-actions {
     display: flex;
     flex-wrap: wrap;
