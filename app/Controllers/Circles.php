@@ -241,7 +241,7 @@ class Circles extends BaseController
         $limit = 50;
 
         $builder = $db->table('c108_circles c108')
-            ->select('c108.id, c108.wcid, c108.circlems_id, c108.circle_name, c108.circle_kana, c108.pen_name, c108.day, c108.map_name, c108.block_name, c108.space_no, c108.space_no_sub, c108.position_label, c108.book_name, c108.description, c108.webcatalog_cut_url, c108.circle_id')
+            ->select('c108.id, c108.wcid, c108.circlems_id, c108.circle_name, c108.circle_kana, c108.pen_name, c108.day, c108.map_name, c108.block_name, c108.space_no, c108.space_no_sub, c108.position_label, c108.book_name, c108.description, c108.cut_url, c108.cut_web_url, c108.cut_base_url, c108.circle_id')
             ->select('c.name AS local_circle_name, c.note AS local_note', false)
             ->join('circles c', 'c.id = c108.circle_id', 'left');
 
@@ -424,7 +424,7 @@ class Circles extends BaseController
             'position' => $position,
             'book_name' => (string) ($row['book_name'] ?? ''),
             'description' => (string) ($row['description'] ?? ''),
-            'cut_url' => (string) ($row['webcatalog_cut_url'] ?? ''),
+            'cut_url' => (string) ($row['cut_url'] ?? $row['cut_web_url'] ?? $row['cut_base_url'] ?? ''),
             'local_circle_id' => (int) ($row['circle_id'] ?? 0),
             'local_circle_name' => (string) ($row['local_circle_name'] ?? ''),
         ];
