@@ -638,6 +638,40 @@ class Circlems extends BaseController
         ];
     }
 
+    public function importC108ImageCatalog(int $eventId = 230, int $imageNo = 1, bool $download = true, bool $force = false): array
+    {
+        if ($eventId <= 0) {
+            throw new RuntimeException('缺少活動 ID，無法匯入 C108 圖片。');
+        }
+        if ($imageNo < 1 || $imageNo > 2) {
+            $imageNo = 1;
+        }
+
+        $downloadSummary = null;
+        if ($download) {
+            $token = $this->currentToken();
+            if (! $token) {
+                throw new RuntimeException('尚未連線 Circle.ms。');
+            }
+
+            $client = new CirclemsClient();
+            $token = $this->refreshIfNeeded($token, $client);
+            $catalog = $client->catalogBase((string) $token['access_token'], $eventId);
+            $downloadSummary = $this->downloadImageCatalog($eventId, $catalog, $imageNo);
+
+            (new CirclemsTokenModel())->update((int) $token['id'], [
+                'last_tested_at' => date('Y-m-d H:i:s'),
+                'last_error' => null,
+            ]);
+        }
+
+        $summary = $this->syncC108ImagesFromImageDb($eventId, $imageNo, $force);
+        $summary['downloaded'] = $download;
+        $summary['download'] = $downloadSummary;
+
+        return $summary;
+    }
+
     public function checkC108FavoriteUpdates(int $eventId = 230): array
     {
         if ($eventId <= 0) {
@@ -1136,6 +1170,286 @@ class Circlems extends BaseController
             'count' => count($files),
             'files' => $files,
         ];
+    }
+
+    private function syncC108ImagesFromImageDb(int $eventId, int $imageNo, bool $force): array
+    {
+        if (! class_exists('SQLite3')) {
+            throw new RuntimeException('PHP SQLite3 extension is not installed.');
+        }
+
+        $mysql = db_connect();
+        if (! $mysql->tableExists('c108_circles')) {
+            throw new RuntimeException('找不到 c108_circles，請先執行 migration。');
+        }
+        if (! $mysql->fieldExists('cut_image_url', 'c108_circles')) {
+            throw new RuntimeException('c108_circles 缺少 cut_image_url 欄位，請先執行 migration。');
+        }
+
+        $dbPath = $this->imageCatalogDbPath($eventId, $imageNo);
+        if (! is_file($dbPath)) {
+            throw new RuntimeException('尚未下載這個活動的 image DB，請先執行下載或移除 --no-download。');
+        }
+
+        $exportDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'circlems' . DIRECTORY_SEPARATOR . 'event_' . $eventId . DIRECTORY_SEPARATOR . 'image' . $imageNo . DIRECTORY_SEPARATOR . 'cuts';
+        if (! is_dir($exportDir) && ! mkdir($exportDir, 0775, true) && ! is_dir($exportDir)) {
+            throw new RuntimeException('Unable to create C108 cut image export directory.');
+        }
+
+        $matchIndex = $this->c108ImageMatchIndex($mysql, $eventId, $force);
+        $sqlite = new \SQLite3($dbPath, SQLITE3_OPEN_READONLY);
+        $tables = $this->sqliteTableNames($sqlite);
+
+        $tablesScanned = 0;
+        $imageRowsScanned = 0;
+        $imagesExported = 0;
+        $rowsUpdated = 0;
+        $skippedWithoutMatch = 0;
+        $skippedExisting = 0;
+        $matchedIds = [];
+
+        foreach ($tables as $table) {
+            $columns = $this->sqliteColumns($sqlite, $table);
+            $imageColumn = $this->sqliteImageColumn($columns);
+            if ($imageColumn === null) {
+                continue;
+            }
+
+            $tablesScanned++;
+            $result = $sqlite->query('SELECT * FROM "' . str_replace('"', '""', $table) . '"');
+            if ($result === false) {
+                continue;
+            }
+
+            while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+                $image = $row[$imageColumn] ?? null;
+                if (! is_string($image) || $image === '') {
+                    continue;
+                }
+
+                $imageRowsScanned++;
+                $match = $this->matchC108ImageRow($row, $matchIndex);
+                if ($match === null) {
+                    $skippedWithoutMatch++;
+                    continue;
+                }
+                if (! $force && (string) ($match['cut_image_url'] ?? '') !== '') {
+                    $skippedExisting++;
+                    continue;
+                }
+                if (isset($matchedIds[(int) $match['id']]) && ! $force) {
+                    $skippedExisting++;
+                    continue;
+                }
+
+                $extension = $this->sqliteImageExtension($row, $image);
+                $fileName = 'wcid_' . (int) $match['wcid'] . '_image' . $imageNo . '.' . $extension;
+                $path = $exportDir . DIRECTORY_SEPARATOR . $fileName;
+                file_put_contents($path, $image);
+
+                $url = '/uploads/circlems/event_' . $eventId . '/image' . $imageNo . '/cuts/' . $fileName;
+                $mysql->table('c108_circles')
+                    ->where('id', (int) $match['id'])
+                    ->update(['cut_image_url' => $url]);
+
+                $matchedIds[(int) $match['id']] = true;
+                $imagesExported++;
+                $rowsUpdated++;
+            }
+
+            $result->finalize();
+        }
+
+        $sqlite->close();
+
+        return [
+            'event_id' => $eventId,
+            'image_no' => $imageNo,
+            'force' => $force,
+            'export_dir' => $exportDir,
+            'tables_scanned' => $tablesScanned,
+            'image_rows_scanned' => $imageRowsScanned,
+            'images_exported' => $imagesExported,
+            'rows_updated' => $rowsUpdated,
+            'skipped_without_match' => $skippedWithoutMatch,
+            'skipped_existing' => $skippedExisting,
+        ];
+    }
+
+    private function c108ImageMatchIndex($db, int $eventId, bool $force): array
+    {
+        $builder = $db->table('c108_circles')
+            ->select('id, event_id, comiket_no, catalog_circle_id, wcid, circlems_id, source_update_id, cut_image_url')
+            ->where('event_id', $eventId);
+
+        if (! $force) {
+            $builder->groupStart()
+                ->where('cut_image_url IS NULL', null, false)
+                ->orWhere('cut_image_url', '')
+                ->groupEnd();
+        }
+
+        $rows = $builder->get()->getResultArray();
+        $index = [
+            'wcid' => [],
+            'circlems' => [],
+            'source' => [],
+            'comiket_id' => [],
+            'catalog' => [],
+        ];
+
+        foreach ($rows as $row) {
+            $wcid = (int) ($row['wcid'] ?? 0);
+            if ($wcid > 0) {
+                $index['wcid'][(string) $wcid] = $row;
+            }
+
+            $circlemsId = trim((string) ($row['circlems_id'] ?? ''));
+            if ($circlemsId !== '') {
+                $index['circlems'][$circlemsId] = $row;
+            }
+
+            $sourceUpdateId = trim((string) ($row['source_update_id'] ?? ''));
+            if ($sourceUpdateId !== '') {
+                $index['source'][$sourceUpdateId] = $row;
+            }
+
+            $comiketNo = (int) ($row['comiket_no'] ?? 0);
+            $catalogCircleId = (int) ($row['catalog_circle_id'] ?? 0);
+            if ($catalogCircleId > 0) {
+                $index['catalog'][(string) $catalogCircleId] = $row;
+            }
+            if ($comiketNo > 0 && $catalogCircleId > 0) {
+                $index['comiket_id'][$comiketNo . ':' . $catalogCircleId] = $row;
+            }
+        }
+
+        return $index;
+    }
+
+    private function sqliteTableNames(\SQLite3 $db): array
+    {
+        $tables = [];
+        $result = $db->query("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name");
+        while ($result !== false && ($row = $result->fetchArray(SQLITE3_ASSOC))) {
+            $tables[] = (string) $row['name'];
+        }
+        if ($result !== false) {
+            $result->finalize();
+        }
+
+        return $tables;
+    }
+
+    private function sqliteImageColumn(array $columns): ?string
+    {
+        foreach ($columns as $column) {
+            $name = strtolower((string) ($column['name'] ?? ''));
+            $type = strtoupper((string) ($column['type'] ?? ''));
+            if ($name === 'image' || $name === 'cut' || str_contains($name, 'image') || str_contains($type, 'BLOB')) {
+                return (string) $column['name'];
+            }
+        }
+
+        return null;
+    }
+
+    private function matchC108ImageRow(array $row, array $index): ?array
+    {
+        $lower = [];
+        foreach ($row as $key => $value) {
+            $lower[strtolower((string) $key)] = $value;
+        }
+
+        foreach (['wcid', 'wc_id', 'webcatalogid', 'webcatalog_id'] as $key) {
+            $value = $this->numericString($lower[$key] ?? null);
+            if ($value !== null && isset($index['wcid'][$value])) {
+                return $index['wcid'][$value];
+            }
+        }
+
+        foreach (['circlems', 'circlemsid', 'circlems_id'] as $key) {
+            $value = trim((string) ($lower[$key] ?? ''));
+            if ($value !== '' && isset($index['circlems'][$value])) {
+                return $index['circlems'][$value];
+            }
+        }
+
+        foreach (['updateid', 'update_id'] as $key) {
+            $value = trim((string) ($lower[$key] ?? ''));
+            if ($value !== '' && isset($index['source'][$value])) {
+                return $index['source'][$value];
+            }
+        }
+
+        $comiketNo = $this->numericString($lower['comiketno'] ?? $lower['comiket_no'] ?? null);
+        $circleId = $this->numericString($lower['circleid'] ?? $lower['circle_id'] ?? $lower['id'] ?? null);
+        if ($comiketNo !== null && $circleId !== null && isset($index['comiket_id'][$comiketNo . ':' . $circleId])) {
+            return $index['comiket_id'][$comiketNo . ':' . $circleId];
+        }
+
+        foreach (['name', 'filename', 'file_name', 'path'] as $key) {
+            $text = trim((string) ($lower[$key] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+            if (isset($index['wcid'][$text])) {
+                return $index['wcid'][$text];
+            }
+            if (isset($index['source'][$text])) {
+                return $index['source'][$text];
+            }
+            if (preg_match_all('/[0-9]{4,}/', $text, $matches)) {
+                foreach ($matches[0] as $number) {
+                    $number = ltrim($number, '0') ?: '0';
+                    if (isset($index['wcid'][$number])) {
+                        return $index['wcid'][$number];
+                    }
+                    if (isset($index['source'][$number])) {
+                        return $index['source'][$number];
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function numericString(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_int($value)) {
+            return $value > 0 ? (string) $value : null;
+        }
+
+        $text = trim((string) $value);
+        if (! ctype_digit($text)) {
+            return null;
+        }
+
+        $text = ltrim($text, '0') ?: '0';
+        return $text !== '0' ? $text : null;
+    }
+
+    private function sqliteImageExtension(array $row, string $image): string
+    {
+        $type = strtolower(trim((string) ($row['type'] ?? $row['mime'] ?? '')));
+        $type = str_replace('image/', '', $type);
+        if (in_array($type, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
+            return $type === 'jpeg' ? 'jpg' : $type;
+        }
+
+        $info = @getimagesizefromstring($image);
+        $mime = strtolower((string) ($info['mime'] ?? ''));
+        return match ($mime) {
+            'image/jpeg' => 'jpg',
+            'image/webp' => 'webp',
+            'image/gif' => 'gif',
+            default => 'png',
+        };
     }
 
     private function textCatalogUrl(array $catalog): ?array

@@ -132,7 +132,10 @@
                     $left = (int) $row['_marker_left'];
                     $top = (int) $row['_marker_top'];
                     $label = trim((string) ($row['position_label'] ?? '') . ' ' . (string) ($row['circle_name'] ?? ''));
-                    $imageUrl = (string) ($row['webcatalog_cut_url'] ?? '');
+                    $imageUrl = (string) ($row['cut_image_url'] ?? '');
+                    if ($imageUrl === '') {
+                        $imageUrl = (string) ($row['webcatalog_cut_url'] ?? '');
+                    }
                     if ($imageUrl === '') {
                         $imageUrl = (string) ($row['cut_url'] ?? ($row['cut_web_url'] ?? ''));
                     }

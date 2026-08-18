@@ -65,8 +65,9 @@
         <div class="c108-notice-list">
             <?php foreach ($unreadNotices as $notice): ?>
                 <article class="c108-notice-card <?= ! empty($notice['is_tracked']) ? 'tracked' : 'known' ?>">
-                    <?php if (! empty($notice['webcatalog_cut_url'])): ?>
-                        <img class="c108-notice-cut" src="<?= esc($notice['webcatalog_cut_url']) ?>" alt="">
+                    <?php $noticeCutUrl = (string) ($notice['cut_image_url'] ?? ($notice['webcatalog_cut_url'] ?? '')); ?>
+                    <?php if ($noticeCutUrl !== ''): ?>
+                        <img class="c108-notice-cut" src="<?= esc($noticeCutUrl) ?>" alt="">
                     <?php else: ?>
                         <div class="c108-notice-cut c108-notice-cut-empty">no image</div>
                     <?php endif; ?>
@@ -153,8 +154,9 @@
             <?php foreach ($rows as $row): ?>
                 <tr class="<?= esc($rowClass($row)) ?>">
                     <td>
-                        <?php if (! empty($row['webcatalog_cut_url'])): ?>
-                            <img class="c108-cut" src="<?= esc($row['webcatalog_cut_url']) ?>" alt="">
+                        <?php $cutUrl = (string) ($row['cut_image_url'] ?? ($row['webcatalog_cut_url'] ?? '')); ?>
+                        <?php if ($cutUrl !== ''): ?>
+                            <img class="c108-cut" src="<?= esc($cutUrl) ?>" alt="">
                         <?php else: ?>
                             <div class="c108-cut-empty">no image</div>
                         <?php endif; ?>

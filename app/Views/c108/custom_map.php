@@ -33,7 +33,10 @@
             $axis = (string) ($position['axis'] ?? 'x');
             $space = str_pad((string) (int) ($row['space_no'] ?? 0), 2, '0', STR_PAD_LEFT) . (string) ($row['space_no_sub'] ?? '');
             $blockName = (string) ($row['block_name'] ?? '');
-            $detailImage = (string) ($row['webcatalog_cut_url'] ?? '');
+            $detailImage = (string) ($row['cut_image_url'] ?? '');
+            if ($detailImage === '') {
+                $detailImage = (string) ($row['webcatalog_cut_url'] ?? '');
+            }
             if ($detailImage === '') {
                 $detailImage = (string) ($row['owned_book_1_cover'] ?? '');
             }

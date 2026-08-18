@@ -680,7 +680,7 @@ class C108 extends BaseController
             'is_tracked' => (int) ($row['is_tracked'] ?? 0) === 1,
             'priority' => (string) ($row['priority'] ?? ''),
             'note' => (string) ($row['note'] ?? ''),
-            'cut_url' => $this->absoluteUrl((string) ($row['webcatalog_cut_url'] ?? '')),
+            'cut_url' => $this->absoluteUrl((string) ($row['cut_image_url'] ?? $row['webcatalog_cut_url'] ?? '')),
             'webcatalog_url' => $wcid > 0 ? 'https://webcatalog.circle.ms/circle/' . $wcid : '',
             'marker' => [
                 'left' => (int) ($row['_marker']['left'] ?? 0),
