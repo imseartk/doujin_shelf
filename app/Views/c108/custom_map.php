@@ -20,7 +20,8 @@
     $blockLabels = [];
     $world = ['width' => 1600, 'height' => 1200, 'offsetX' => 80, 'offsetY' => 80];
     $isE123 = strtoupper($currentMap) === 'E123';
-    $positionScale = $isE123 ? 2.25 : 1.15;
+    $positionScaleX = $isE123 ? 3.75 : 1.15;
+    $positionScaleY = $isE123 ? 6.35 : 1.15;
     if ($image !== null) {
         $image['position_rows'] = $positionRows ?? [];
         $positions = \App\Controllers\C108::markerPositions($rows, $image);
@@ -28,8 +29,8 @@
         $maxTop = 0;
         foreach ($rows as $index => $row) {
             $position = $positions[$index] ?? \App\Controllers\C108::markerPosition($row, $image);
-            $left = max(0, (int) round(((int) ($position['left'] ?? 0)) * $positionScale));
-            $top = max(0, (int) round(((int) ($position['top'] ?? 0)) * $positionScale));
+            $left = max(0, (int) round(((int) ($position['left'] ?? 0)) * $positionScaleX));
+            $top = max(0, (int) round(((int) ($position['top'] ?? 0)) * $positionScaleY));
             $axis = (string) ($position['axis'] ?? 'x');
             $space = str_pad((string) (int) ($row['space_no'] ?? 0), 2, '0', STR_PAD_LEFT) . (string) ($row['space_no_sub'] ?? '');
             $blockName = (string) ($row['block_name'] ?? '');
@@ -60,190 +61,6 @@
             ];
             $maxLeft = max($maxLeft, $left);
             $maxTop = max($maxTop, $top);
-        }
-
-        if ($isE123) {
-            $componentIds = [];
-            $componentCount = 0;
-            foreach ($boothRows as $index => $row) {
-                if (isset($componentIds[$index])) {
-                    continue;
-                }
-
-                $componentCount++;
-                $componentIds[$index] = $componentCount;
-                $queue = [$index];
-                while ($queue !== []) {
-                    $currentIndex = array_pop($queue);
-                    $current = $boothRows[$currentIndex];
-                    foreach ($boothRows as $nextIndex => $next) {
-                        if (isset($componentIds[$nextIndex])) {
-                            continue;
-                        }
-
-                        $distance = abs((int) $current['_booth_left'] - (int) $next['_booth_left'])
-                            + abs((int) $current['_booth_top'] - (int) $next['_booth_top']);
-                        if ($distance > 84) {
-                            continue;
-                        }
-
-                        $componentIds[$nextIndex] = $componentCount;
-                        $queue[] = $nextIndex;
-                    }
-                }
-            }
-
-            $components = [];
-            foreach ($componentIds as $index => $componentId) {
-                $components[$componentId][] = $index;
-            }
-
-            foreach ($components as $indexes) {
-                if (count($indexes) < 8) {
-                    continue;
-                }
-
-                $sample = $boothRows[$indexes[0]];
-                $blockName = (string) ($sample['block_name'] ?? '');
-                if ($blockName === 'ア') {
-                    continue;
-                }
-
-                $lefts = [];
-                $tops = [];
-                foreach ($indexes as $index) {
-                    $lefts[] = (int) $boothRows[$index]['_booth_left'];
-                    $tops[] = (int) $boothRows[$index]['_booth_top'];
-                }
-
-                $baseLeft = max(90, (int) min($lefts));
-                $baseTop = max(90, (int) min($tops));
-                $centerLeft = (min($lefts) + max($lefts)) / 2;
-                $topLimit = min($tops) + 60;
-                $bottomLimit = max($tops) - 60;
-                $xPitch = 62;
-                $yPitch = 90;
-
-                $topEdge = [];
-                $bottomEdge = [];
-                $leftSide = [];
-                $rightSide = [];
-                foreach ($indexes as $index) {
-                    $row = $boothRows[$index];
-                    $axis = (string) ($row['_booth_axis'] ?? 'x');
-                    $top = (int) $row['_booth_top'];
-                    $left = (int) $row['_booth_left'];
-
-                    if ($axis === 'x' && $top <= $topLimit) {
-                        $topEdge[] = $index;
-                    } elseif ($axis === 'x' && $top >= $bottomLimit) {
-                        $bottomEdge[] = $index;
-                    } elseif ($left <= $centerLeft) {
-                        $leftSide[] = $index;
-                    } else {
-                        $rightSide[] = $index;
-                    }
-                }
-
-                $sortHorizontal = static function (int $a, int $b) use ($boothRows): int {
-                    return [(int) $boothRows[$a]['_booth_left'], (string) $boothRows[$a]['space_no_sub']]
-                        <=> [(int) $boothRows[$b]['_booth_left'], (string) $boothRows[$b]['space_no_sub']];
-                };
-                $sortVertical = static function (int $a, int $b) use ($boothRows): int {
-                    return [(int) $boothRows[$a]['_booth_top'], (int) $boothRows[$a]['space_no'], (string) $boothRows[$a]['space_no_sub']]
-                        <=> [(int) $boothRows[$b]['_booth_top'], (int) $boothRows[$b]['space_no'], (string) $boothRows[$b]['space_no_sub']];
-                };
-
-                usort($topEdge, $sortHorizontal);
-                usort($bottomEdge, $sortHorizontal);
-                usort($leftSide, $sortVertical);
-                usort($rightSide, $sortVertical);
-
-                $topCount = max(2, count($topEdge));
-                foreach ($topEdge as $rank => $index) {
-                    $boothRows[$index]['_booth_left'] = $baseLeft + ($rank * $xPitch);
-                    $boothRows[$index]['_booth_top'] = $baseTop;
-                    $boothRows[$index]['_booth_island_layout'] = true;
-                }
-
-                foreach ($leftSide as $rank => $index) {
-                    $boothRows[$index]['_booth_left'] = $baseLeft;
-                    $boothRows[$index]['_booth_top'] = $baseTop + (($rank + 1) * $yPitch);
-                    $boothRows[$index]['_booth_island_layout'] = true;
-                }
-
-                foreach ($rightSide as $rank => $index) {
-                    $boothRows[$index]['_booth_left'] = $baseLeft + (($topCount - 1) * $xPitch);
-                    $boothRows[$index]['_booth_top'] = $baseTop + (($rank + 1) * $yPitch);
-                    $boothRows[$index]['_booth_island_layout'] = true;
-                }
-
-                $bottomTop = $baseTop + ((max(count($leftSide), count($rightSide)) + 1) * $yPitch);
-                foreach ($bottomEdge as $rank => $index) {
-                    $boothRows[$index]['_booth_left'] = $baseLeft + ($rank * $xPitch);
-                    $boothRows[$index]['_booth_top'] = $bottomTop;
-                    $boothRows[$index]['_booth_island_layout'] = true;
-                }
-            }
-
-            $componentBox = static function (array $indexes) use (&$boothRows): array {
-                $lefts = [];
-                $tops = [];
-                foreach ($indexes as $index) {
-                    $lefts[] = (int) $boothRows[$index]['_booth_left'];
-                    $tops[] = (int) $boothRows[$index]['_booth_top'];
-                }
-
-                return [
-                    'left' => min($lefts) - 36,
-                    'right' => max($lefts) + 36,
-                    'top' => min($tops) - 50,
-                    'bottom' => max($tops) + 50,
-                ];
-            };
-
-            $boxesOverlap = static function (array $a, array $b): bool {
-                return $a['left'] < $b['right']
-                    && $a['right'] > $b['left']
-                    && $a['top'] < $b['bottom']
-                    && $a['bottom'] > $b['top'];
-            };
-
-            uasort($components, static function (array $a, array $b) use ($componentBox): int {
-                $boxA = $componentBox($a);
-                $boxB = $componentBox($b);
-
-                return [$boxA['top'], $boxA['left']] <=> [$boxB['top'], $boxB['left']];
-            });
-
-            $placedBoxes = [];
-            foreach ($components as $indexes) {
-                $box = $componentBox($indexes);
-                $guard = 0;
-                do {
-                    $shift = 0;
-                    foreach ($placedBoxes as $placedBox) {
-                        if (! $boxesOverlap($box, $placedBox)) {
-                            continue;
-                        }
-
-                        $shift = max($shift, (int) ($placedBox['right'] - $box['left'] + 30));
-                    }
-
-                    if ($shift <= 0) {
-                        break;
-                    }
-
-                    foreach ($indexes as $index) {
-                        $boothRows[$index]['_booth_left'] = (int) $boothRows[$index]['_booth_left'] + $shift;
-                    }
-                    $box['left'] += $shift;
-                    $box['right'] += $shift;
-                    $guard++;
-                } while ($guard < 50);
-
-                $placedBoxes[] = $box;
-            }
         }
 
         $blockLabels = [];
@@ -446,7 +263,7 @@ $(function () {
 
     var $viewport = $('.js-custom-map-viewport');
     var $world = $('.js-custom-map-world');
-    var initialScale = $world.hasClass('custom-map-world-e123') ? 0.48 : 0.75;
+    var initialScale = $world.hasClass('custom-map-world-e123') ? 0.24 : 0.75;
     var state = { x: 40, y: 40, scale: initialScale, rotation: 0 };
     var pointerCache = new Map();
     var dragStart = null;
