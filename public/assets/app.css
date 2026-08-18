@@ -1545,6 +1545,162 @@ label input, label select, label textarea { font-weight: 400; }
 .checkline input { width: auto; }
 .subsection { margin-top: 22px; }
 
+.custom-map-shell {
+    position: relative;
+    display: grid;
+    gap: 10px;
+}
+.custom-map-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+}
+.custom-map-toolbar span {
+    color: var(--muted);
+    margin-right: auto;
+}
+.custom-map-viewport {
+    position: relative;
+    height: min(72vh, 760px);
+    min-height: 520px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background:
+        linear-gradient(rgba(210, 219, 214, .5) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(210, 219, 214, .5) 1px, transparent 1px),
+        #f8faf7;
+    background-size: 48px 48px;
+    touch-action: none;
+    user-select: none;
+}
+.custom-map-world {
+    position: absolute;
+    inset: 0 auto auto 0;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+.custom-map-hall-label {
+    position: absolute;
+    left: 70px;
+    top: 46px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .92);
+    color: var(--muted);
+    font-weight: 700;
+}
+.custom-map-booth {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    min-width: 38px;
+    min-height: 28px;
+    padding: 0;
+    border: 2px solid rgba(52, 69, 74, .75);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, .92);
+    color: var(--ink);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+}
+.custom-map-booth-x {
+    width: 46px;
+    height: 30px;
+}
+.custom-map-booth-y {
+    width: 30px;
+    height: 46px;
+}
+.custom-map-booth:hover,
+.custom-map-booth:focus-visible {
+    z-index: 4;
+    outline: 4px solid rgba(255, 0, 128, .24);
+}
+.custom-map-booth-known {
+    border-color: rgba(31, 111, 58, .9);
+    background: rgba(151, 222, 162, .92);
+}
+.custom-map-booth-tracked {
+    border-color: rgba(22, 78, 148, .95);
+    background: rgba(106, 165, 239, .92);
+}
+.custom-map-booth-unknown {
+    border-color: rgba(52, 69, 74, .28);
+    color: rgba(52, 69, 74, .62);
+}
+.custom-map-sheet[hidden] {
+    display: none;
+}
+.custom-map-sheet {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    z-index: 8;
+    width: min(390px, calc(100% - 28px));
+    max-height: min(420px, calc(100% - 28px));
+    overflow: auto;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .96);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, .18);
+}
+.custom-map-sheet-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+}
+.custom-map-sheet h2 {
+    margin: 4px 38px 8px 0;
+    font-size: 20px;
+}
+.custom-map-sheet-tags {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.custom-map-sheet-tags span {
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #eef7f3;
+    font-size: 12px;
+}
+.compact-detail-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+}
+.compact-detail-list div {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 10px;
+}
+.compact-detail-list dt {
+    color: var(--muted);
+}
+.compact-detail-list dd {
+    margin: 0;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+}
+
 @media (max-width: 900px) {
     .topbar, .page-head { flex-direction: column; align-items: stretch; }
     .topbar-tools, .topbar-search { width: 100%; }
@@ -1569,5 +1725,21 @@ label input, label select, label textarea { font-weight: 400; }
     }
     .c108-notice-actions {
         justify-content: flex-start;
+    }
+    .custom-map-toolbar {
+        align-items: stretch;
+    }
+    .custom-map-toolbar .button {
+        flex: 1 1 auto;
+    }
+    .custom-map-viewport {
+        height: 70vh;
+        min-height: 460px;
+    }
+    .custom-map-sheet {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        width: auto;
     }
 }

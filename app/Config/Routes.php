@@ -41,6 +41,7 @@ $routes->post('circles/(:num)/c108/bind', 'Circles::bindC108/$1');
 
 $routes->get('c108', 'C108::index');
 $routes->get('c108/map', 'C108::map');
+$routes->get('c108/custom-map', 'C108::customMap');
 $routes->get('c108/export-map', 'C108::exportMap');
 $routes->get('c108/circle/(:num)', 'C108::circle/$1');
 $routes->get('c108/works/(:num)', 'C108::works/$1');

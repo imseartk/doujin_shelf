@@ -74,6 +74,7 @@
         <p>把追蹤社團與買過的社團疊到官方館區底圖上。</p>
     </div>
     <div class="page-actions">
+        <a class="button ghost" href="/c108/custom-map?day=<?= esc($day) ?>&map=<?= esc($map) ?>&relation=<?= esc($relation) ?>&priority=<?= esc($priority) ?>">自製地圖實驗</a>
         <a class="button primary" href="/c108/export-map?day=<?= esc($day) ?>&map=<?= esc($map) ?>&relation=<?= esc($relation) ?>&priority=<?= esc($priority) ?>">輸出地圖</a>
         <a class="button ghost" href="/c108">回 C108 清單</a>
     </div>

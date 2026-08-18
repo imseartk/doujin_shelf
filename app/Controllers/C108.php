@@ -372,6 +372,82 @@ class C108 extends BaseController
         ]);
     }
 
+    public function customMap(): string
+    {
+        $db = db_connect();
+        $q = trim((string) $this->request->getGet('q'));
+        $day = trim((string) $this->request->getGet('day'));
+        $map = trim((string) $this->request->getGet('map'));
+        $relation = trim((string) $this->request->getGet('relation'));
+        $priority = trim((string) $this->request->getGet('priority'));
+
+        if ($day === '') {
+            $day = '1';
+        }
+        if ($map === '') {
+            $map = 'E123';
+        }
+        if ($relation === '') {
+            $relation = 'all';
+        }
+
+        $requestedDay = $day;
+        $maps = $this->mapOptions($db);
+        if ($q !== '') {
+            $targetMap = $this->firstMatchingMap($db, $q, $day, $relation, $priority);
+            if ($targetMap === null && $day !== '') {
+                $targetMap = $this->firstMatchingMap($db, $q, '', $relation, $priority);
+            }
+            if ($targetMap !== null) {
+                $day = (string) $targetMap['day'];
+                $map = (string) $targetMap['map_filename'];
+                $requestedDay = $day;
+            }
+        }
+
+        if ($maps !== []) {
+            $selected = $this->selectedMap($maps, $requestedDay, $map);
+            $day = (string) $selected['day'];
+            $map = (string) $selected['map_filename'];
+        }
+
+        $rows = [];
+        $image = null;
+        $positionRows = [];
+        if ($day !== '' && $map !== '') {
+            $builder = $this->baseBuilder($db)
+                ->where('c108.day', (int) $day)
+                ->where('c108.map_filename', $map)
+                ->where('c108.xpos2 IS NOT NULL', null, false)
+                ->where('c108.ypos2 IS NOT NULL', null, false);
+            $this->applyFilters($builder, $q, '', $relation, $priority);
+
+            $rows = $builder
+                ->orderBy('c.is_tracked', 'DESC')
+                ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+                ->orderBy('c108.block_id', 'ASC')
+                ->orderBy('c108.space_no', 'ASC')
+                ->orderBy('c108.space_no_sub', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            $image = $this->mapImage($day, $map);
+            $positionRows = $this->mapPositionRows($db, $day, $map);
+        }
+
+        return view('c108/custom_map', [
+            'rows' => $rows,
+            'positionRows' => $positionRows,
+            'maps' => $maps,
+            'image' => $image,
+            'q' => $q,
+            'day' => $day,
+            'map' => $map,
+            'relation' => $relation,
+            'priority' => $priority,
+        ]);
+    }
+
     public function exportMap(): string
     {
         $db = db_connect();
