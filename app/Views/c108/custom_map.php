@@ -208,18 +208,53 @@ $(function () {
         $world.css('transform', 'translate(' + state.x + 'px, ' + state.y + 'px) rotate(' + state.rotation + 'deg) scale(' + state.scale + ')');
     }
 
-    function zoomBy(factor, centerX, centerY) {
-        var oldScale = state.scale;
-        var nextScale = clampScale(oldScale * factor);
-        if (nextScale === oldScale) return;
-
+    function viewportPoint(clientX, clientY) {
         var rect = $viewport[0].getBoundingClientRect();
-        var cx = centerX === undefined ? rect.width / 2 : centerX - rect.left;
-        var cy = centerY === undefined ? rect.height / 2 : centerY - rect.top;
-        state.x = cx - (cx - state.x) * (nextScale / oldScale);
-        state.y = cy - (cy - state.y) * (nextScale / oldScale);
+        return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    function viewportCenter() {
+        var rect = $viewport[0].getBoundingClientRect();
+        return { x: rect.width / 2, y: rect.height / 2 };
+    }
+
+    function viewportToWorld(point, sourceState) {
+        sourceState = sourceState || state;
+        var angle = -sourceState.rotation * Math.PI / 180;
+        var cos = Math.cos(angle);
+        var sin = Math.sin(angle);
+        var dx = point.x - sourceState.x;
+        var dy = point.y - sourceState.y;
+
+        return {
+            x: (dx * cos - dy * sin) / sourceState.scale,
+            y: (dx * sin + dy * cos) / sourceState.scale
+        };
+    }
+
+    function anchorTransform(anchorWorld, anchorViewport, nextScale, nextRotation) {
+        nextScale = clampScale(nextScale);
+        var angle = nextRotation * Math.PI / 180;
+        var cos = Math.cos(angle);
+        var sin = Math.sin(angle);
+
         state.scale = nextScale;
+        state.rotation = nextRotation;
+        state.x = anchorViewport.x - nextScale * (anchorWorld.x * cos - anchorWorld.y * sin);
+        state.y = anchorViewport.y - nextScale * (anchorWorld.x * sin + anchorWorld.y * cos);
         renderTransform();
+    }
+
+    function zoomBy(factor, centerX, centerY) {
+        var center = centerX === undefined ? viewportCenter() : viewportPoint(centerX, centerY);
+        var anchorWorld = viewportToWorld(center);
+        anchorTransform(anchorWorld, center, state.scale * factor, state.rotation);
+    }
+
+    function rotateBy(degrees) {
+        var center = viewportCenter();
+        var anchorWorld = viewportToWorld(center);
+        anchorTransform(anchorWorld, center, state.scale, state.rotation + degrees);
     }
 
     function pointerDistance(a, b) {
@@ -228,6 +263,10 @@ $(function () {
 
     function pointerAngle(a, b) {
         return Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX) * 180 / Math.PI;
+    }
+
+    function pointerCenter(a, b) {
+        return viewportPoint((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
     }
 
     $viewport.on('wheel', function (event) {
@@ -242,11 +281,13 @@ $(function () {
             dragStart = { x: event.originalEvent.clientX, y: event.originalEvent.clientY, stateX: state.x, stateY: state.y };
         } else if (pointerCache.size === 2) {
             var points = Array.from(pointerCache.values());
+            var center = pointerCenter(points[0], points[1]);
             gestureStart = {
                 distance: pointerDistance(points[0], points[1]),
                 angle: pointerAngle(points[0], points[1]),
                 scale: state.scale,
                 rotation: state.rotation,
+                anchorWorld: viewportToWorld(center),
             };
         }
     });
@@ -261,9 +302,10 @@ $(function () {
             renderTransform();
         } else if (pointerCache.size === 2 && gestureStart) {
             var points = Array.from(pointerCache.values());
-            state.scale = clampScale(gestureStart.scale * (pointerDistance(points[0], points[1]) / gestureStart.distance));
-            state.rotation = gestureStart.rotation + pointerAngle(points[0], points[1]) - gestureStart.angle;
-            renderTransform();
+            var center = pointerCenter(points[0], points[1]);
+            var nextScale = gestureStart.scale * (pointerDistance(points[0], points[1]) / gestureStart.distance);
+            var nextRotation = gestureStart.rotation + pointerAngle(points[0], points[1]) - gestureStart.angle;
+            anchorTransform(gestureStart.anchorWorld, center, nextScale, nextRotation);
         }
     });
 
@@ -272,13 +314,17 @@ $(function () {
         if (pointerCache.size === 0) {
             dragStart = null;
             gestureStart = null;
+        } else if (pointerCache.size === 1) {
+            var point = Array.from(pointerCache.values())[0];
+            dragStart = { x: point.clientX, y: point.clientY, stateX: state.x, stateY: state.y };
+            gestureStart = null;
         }
     });
 
     $('.js-custom-map-zoom-in').on('click', function () { zoomBy(1.2); });
     $('.js-custom-map-zoom-out').on('click', function () { zoomBy(0.8); });
-    $('.js-custom-map-rotate-left').on('click', function () { state.rotation -= 90; renderTransform(); });
-    $('.js-custom-map-rotate-right').on('click', function () { state.rotation += 90; renderTransform(); });
+    $('.js-custom-map-rotate-left').on('click', function () { rotateBy(-90); });
+    $('.js-custom-map-rotate-right').on('click', function () { rotateBy(90); });
     $('.js-custom-map-reset').on('click', function () {
         state = { x: 40, y: 40, scale: 0.75, rotation: 0 };
         renderTransform();
