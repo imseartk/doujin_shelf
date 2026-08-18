@@ -186,44 +186,63 @@
                 }
             }
 
-            $lanes = [];
-            foreach ($boothRows as $index => $row) {
-                $axis = (string) ($row['_booth_axis'] ?? 'x');
-                if ($axis === 'y') {
-                    $laneKey = 'y:' . (int) round(((int) $row['_booth_left']) / 20);
-                } else {
-                    $laneKey = 'x:' . (int) round(((int) $row['_booth_top']) / 20);
-                }
-                $lanes[$laneKey][] = $index;
-            }
-
-            foreach ($lanes as $laneKey => $indexes) {
-                if (count($indexes) < 3) {
-                    continue;
-                }
-
-                $axis = str_starts_with((string) $laneKey, 'y:') ? 'y' : 'x';
-                usort($indexes, static function (int $a, int $b) use ($boothRows, $axis): int {
-                    if ($axis === 'y') {
-                        return [(int) $boothRows[$a]['_booth_top'], (int) $boothRows[$a]['space_no'], (string) $boothRows[$a]['space_no_sub']]
-                            <=> [(int) $boothRows[$b]['_booth_top'], (int) $boothRows[$b]['space_no'], (string) $boothRows[$b]['space_no_sub']];
-                    }
-
-                    return [(int) $boothRows[$a]['_booth_left'], (int) $boothRows[$a]['space_no'], (string) $boothRows[$a]['space_no_sub']]
-                        <=> [(int) $boothRows[$b]['_booth_left'], (int) $boothRows[$b]['space_no'], (string) $boothRows[$b]['space_no_sub']];
-                });
-
-                $minGap = $axis === 'y' ? 90 : 62;
-                $last = null;
+            $componentBox = static function (array $indexes) use (&$boothRows): array {
+                $lefts = [];
+                $tops = [];
                 foreach ($indexes as $index) {
-                    $key = $axis === 'y' ? '_booth_top' : '_booth_left';
-                    $current = (int) $boothRows[$index][$key];
-                    if ($last !== null && $current < $last + $minGap) {
-                        $current = $last + $minGap;
-                        $boothRows[$index][$key] = $current;
-                    }
-                    $last = $current;
+                    $lefts[] = (int) $boothRows[$index]['_booth_left'];
+                    $tops[] = (int) $boothRows[$index]['_booth_top'];
                 }
+
+                return [
+                    'left' => min($lefts) - 36,
+                    'right' => max($lefts) + 36,
+                    'top' => min($tops) - 50,
+                    'bottom' => max($tops) + 50,
+                ];
+            };
+
+            $boxesOverlap = static function (array $a, array $b): bool {
+                return $a['left'] < $b['right']
+                    && $a['right'] > $b['left']
+                    && $a['top'] < $b['bottom']
+                    && $a['bottom'] > $b['top'];
+            };
+
+            uasort($components, static function (array $a, array $b) use ($componentBox): int {
+                $boxA = $componentBox($a);
+                $boxB = $componentBox($b);
+
+                return [$boxA['top'], $boxA['left']] <=> [$boxB['top'], $boxB['left']];
+            });
+
+            $placedBoxes = [];
+            foreach ($components as $indexes) {
+                $box = $componentBox($indexes);
+                $guard = 0;
+                do {
+                    $shift = 0;
+                    foreach ($placedBoxes as $placedBox) {
+                        if (! $boxesOverlap($box, $placedBox)) {
+                            continue;
+                        }
+
+                        $shift = max($shift, (int) ($placedBox['right'] - $box['left'] + 30));
+                    }
+
+                    if ($shift <= 0) {
+                        break;
+                    }
+
+                    foreach ($indexes as $index) {
+                        $boothRows[$index]['_booth_left'] = (int) $boothRows[$index]['_booth_left'] + $shift;
+                    }
+                    $box['left'] += $shift;
+                    $box['right'] += $shift;
+                    $guard++;
+                } while ($guard < 50);
+
+                $placedBoxes[] = $box;
             }
         }
 
