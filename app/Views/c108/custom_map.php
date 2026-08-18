@@ -17,7 +17,10 @@
     $currentDay = (string) $day;
     $currentMap = (string) $map;
     $boothRows = [];
+    $blockLabels = [];
     $world = ['width' => 1600, 'height' => 1200, 'offsetX' => 80, 'offsetY' => 80];
+    $isE123 = strtoupper($currentMap) === 'E123';
+    $positionScale = $isE123 ? 2.25 : 1.15;
     if ($image !== null) {
         $image['position_rows'] = $positionRows ?? [];
         $positions = \App\Controllers\C108::markerPositions($rows, $image);
@@ -25,10 +28,18 @@
         $maxTop = 0;
         foreach ($rows as $index => $row) {
             $position = $positions[$index] ?? \App\Controllers\C108::markerPosition($row, $image);
-            $left = max(0, (int) round(((int) ($position['left'] ?? 0)) * 1.15));
-            $top = max(0, (int) round(((int) ($position['top'] ?? 0)) * 1.15));
+            $left = max(0, (int) round(((int) ($position['left'] ?? 0)) * $positionScale));
+            $top = max(0, (int) round(((int) ($position['top'] ?? 0)) * $positionScale));
             $axis = (string) ($position['axis'] ?? 'x');
             $space = str_pad((string) (int) ($row['space_no'] ?? 0), 2, '0', STR_PAD_LEFT) . (string) ($row['space_no_sub'] ?? '');
+            $blockName = (string) ($row['block_name'] ?? '');
+            $detailImage = (string) ($row['webcatalog_cut_url'] ?? '');
+            if ($detailImage === '') {
+                $detailImage = (string) ($row['owned_book_1_cover'] ?? '');
+            }
+            if ($detailImage === '') {
+                $detailImage = (string) ($row['owned_book_2_cover'] ?? '');
+            }
             $status = 'unknown';
             if (! empty($row['is_tracked'])) {
                 $status = 'tracked';
@@ -40,15 +51,38 @@
                 '_booth_left' => $left,
                 '_booth_top' => $top,
                 '_booth_axis' => $axis,
-                '_booth_space' => (string) ($row['block_name'] ?? '') . $space,
+                '_booth_space' => $blockName . $space,
                 '_booth_status' => $status,
+                '_booth_image' => $detailImage,
             ];
+            if ($isE123 && $blockName !== '') {
+                if (! isset($blockLabels[$blockName])) {
+                    $blockLabels[$blockName] = [
+                        'name' => $blockName,
+                        'minLeft' => $left,
+                        'maxLeft' => $left,
+                        'minTop' => $top,
+                        'maxTop' => $top,
+                        'count' => 0,
+                    ];
+                }
+                $blockLabels[$blockName]['minLeft'] = min($blockLabels[$blockName]['minLeft'], $left);
+                $blockLabels[$blockName]['maxLeft'] = max($blockLabels[$blockName]['maxLeft'], $left);
+                $blockLabels[$blockName]['minTop'] = min($blockLabels[$blockName]['minTop'], $top);
+                $blockLabels[$blockName]['maxTop'] = max($blockLabels[$blockName]['maxTop'], $top);
+                $blockLabels[$blockName]['count']++;
+            }
             $maxLeft = max($maxLeft, $left);
             $maxTop = max($maxTop, $top);
         }
 
-        $world['width'] = max(1200, $maxLeft + 260);
-        $world['height'] = max(900, $maxTop + 260);
+        foreach ($blockLabels as $labelKey => $label) {
+            $blockLabels[$labelKey]['left'] = (int) round(($label['minLeft'] + $label['maxLeft']) / 2);
+            $blockLabels[$labelKey]['top'] = (int) round(($label['minTop'] + $label['maxTop']) / 2);
+        }
+
+        $world['width'] = max(1200, $maxLeft + ($isE123 ? 520 : 260));
+        $world['height'] = max(900, $maxTop + ($isE123 ? 520 : 260));
     }
 ?>
 <section class="page-head">
@@ -107,10 +141,20 @@
     </div>
     <div class="custom-map-viewport js-custom-map-viewport">
         <div
-            class="custom-map-world js-custom-map-world"
+            class="custom-map-world <?= $isE123 ? 'custom-map-world-e123' : '' ?> js-custom-map-world"
             style="width: <?= (int) $world['width'] ?>px; height: <?= (int) $world['height'] ?>px;"
         >
             <div class="custom-map-hall-label"><?= esc($day) ?>日目 / <?= esc($map) ?></div>
+            <?php foreach ($blockLabels as $label): ?>
+                <?php if ((int) ($label['count'] ?? 0) < 8) { continue; } ?>
+                <div
+                    class="custom-map-block-label"
+                    style="left: <?= (int) $label['left'] ?>px; top: <?= (int) $label['top'] ?>px;"
+                    aria-hidden="true"
+                >
+                    <?= esc((string) $label['name']) ?>
+                </div>
+            <?php endforeach; ?>
             <?php foreach ($boothRows as $row): ?>
                 <?php
                     $class = 'custom-map-booth-' . (string) $row['_booth_status'];
@@ -120,6 +164,8 @@
                     if ($position === '') {
                         $position = (string) $row['_booth_space'];
                     }
+                    $detailImage = (string) ($row['_booth_image'] ?? '');
+                    $shortTitle = mb_strlen($title) > 18 ? mb_substr($title, 0, 17) . '…' : $title;
                 ?>
                 <button
                     type="button"
@@ -132,7 +178,12 @@
                     data-book-name="<?= esc($row['book_name'] ?? '') ?>"
                     data-description="<?= esc($row['description'] ?? '') ?>"
                 >
-                    <span><?= esc((string) $row['_booth_space']) ?></span>
+                    <span class="custom-map-booth-code"><?= esc((string) $row['_booth_space']) ?></span>
+                    <?php if ($detailImage !== ''): ?>
+                        <img class="custom-map-booth-image" src="<?= esc($detailImage) ?>" alt="" loading="lazy">
+                    <?php else: ?>
+                        <span class="custom-map-booth-placeholder"><?= esc($shortTitle !== '' ? $shortTitle : (string) $row['_booth_space']) ?></span>
+                    <?php endif; ?>
                 </button>
             <?php endforeach; ?>
         </div>
@@ -206,6 +257,9 @@ $(function () {
 
     function renderTransform() {
         $world.css('transform', 'translate(' + state.x + 'px, ' + state.y + 'px) rotate(' + state.rotation + 'deg) scale(' + state.scale + ')');
+        $world
+            .toggleClass('custom-map-world-overview', state.scale < 0.62)
+            .toggleClass('custom-map-world-detail', state.scale >= 1.12);
     }
 
     function viewportPoint(clientX, clientY) {
