@@ -58,6 +58,52 @@
                 '_booth_status' => $status,
                 '_booth_image' => $detailImage,
             ];
+            $maxLeft = max($maxLeft, $left);
+            $maxTop = max($maxTop, $top);
+        }
+
+        if ($isE123) {
+            $expandAxis = static function (array $values, int $minimumGap, int $padding): array {
+                $values = array_values(array_unique(array_map('intval', $values)));
+                sort($values, SORT_NUMERIC);
+
+                $map = [];
+                $lastSource = null;
+                $lastTarget = $padding;
+                foreach ($values as $value) {
+                    if ($lastSource === null) {
+                        $map[$value] = $lastTarget;
+                        $lastSource = $value;
+                        continue;
+                    }
+
+                    $sourceGap = max(1, $value - $lastSource);
+                    $targetGap = max($minimumGap, (int) round($sourceGap * 1.08));
+                    $lastTarget += $targetGap;
+                    $map[$value] = $lastTarget;
+                    $lastSource = $value;
+                }
+
+                return $map;
+            };
+
+            $leftMap = $expandAxis(array_column($boothRows, '_booth_left'), 96, 130);
+            $topMap = $expandAxis(array_column($boothRows, '_booth_top'), 112, 130);
+            foreach ($boothRows as &$boothRow) {
+                $boothRow['_booth_left'] = $leftMap[(int) $boothRow['_booth_left']] ?? (int) $boothRow['_booth_left'];
+                $boothRow['_booth_top'] = $topMap[(int) $boothRow['_booth_top']] ?? (int) $boothRow['_booth_top'];
+            }
+            unset($boothRow);
+        }
+
+        $blockLabels = [];
+        $maxLeft = 0;
+        $maxTop = 0;
+        foreach ($boothRows as $row) {
+            $left = (int) $row['_booth_left'];
+            $top = (int) $row['_booth_top'];
+            $blockName = (string) ($row['block_name'] ?? '');
+
             if ($isE123 && $blockName !== '') {
                 if (! isset($blockLabels[$blockName])) {
                     $blockLabels[$blockName] = [
@@ -75,6 +121,7 @@
                 $blockLabels[$blockName]['maxTop'] = max($blockLabels[$blockName]['maxTop'], $top);
                 $blockLabels[$blockName]['count']++;
             }
+
             $maxLeft = max($maxLeft, $left);
             $maxTop = max($maxTop, $top);
         }
@@ -84,8 +131,8 @@
             $blockLabels[$labelKey]['top'] = (int) round(($label['minTop'] + $label['maxTop']) / 2);
         }
 
-        $world['width'] = max(1200, $maxLeft + ($isE123 ? 520 : 260));
-        $world['height'] = max(900, $maxTop + ($isE123 ? 520 : 260));
+        $world['width'] = max(1200, $maxLeft + ($isE123 ? 720 : 260));
+        $world['height'] = max(900, $maxTop + ($isE123 ? 720 : 260));
     }
 ?>
 <section class="page-head">
@@ -249,7 +296,8 @@ $(function () {
 
     var $viewport = $('.js-custom-map-viewport');
     var $world = $('.js-custom-map-world');
-    var state = { x: 40, y: 40, scale: 0.75, rotation: 0 };
+    var initialScale = $world.hasClass('custom-map-world-e123') ? 0.32 : 0.75;
+    var state = { x: 40, y: 40, scale: initialScale, rotation: 0 };
     var pointerCache = new Map();
     var dragStart = null;
     var gestureStart = null;
@@ -383,7 +431,7 @@ $(function () {
     $('.js-custom-map-rotate-left').on('click', function () { rotateBy(-90); });
     $('.js-custom-map-rotate-right').on('click', function () { rotateBy(90); });
     $('.js-custom-map-reset').on('click', function () {
-        state = { x: 40, y: 40, scale: 0.75, rotation: 0 };
+        state = { x: 40, y: 40, scale: initialScale, rotation: 0 };
         renderTransform();
     });
 
