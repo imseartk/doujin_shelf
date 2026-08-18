@@ -1651,17 +1651,18 @@ label input, label select, label textarea { font-weight: 400; }
     background: rgba(106, 165, 239, .92);
 }
 .custom-map-booth-unknown {
-    border-color: rgba(52, 69, 74, .28);
-    color: rgba(52, 69, 74, .62);
+    border-color: rgba(52, 69, 74, .54);
+    color: rgba(29, 43, 48, .86);
+    background: rgba(255, 255, 255, .98);
 }
 .custom-map-booth-code {
     display: grid;
     place-items: center;
     min-height: 16px;
     padding: 1px 2px;
-    background: rgba(255, 255, 255, .72);
+    background: rgba(255, 255, 255, .88);
     color: inherit;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1;
     white-space: nowrap;
 }
@@ -1681,21 +1682,21 @@ label input, label select, label textarea { font-weight: 400; }
     height: 58px;
 }
 .custom-map-world-e123.custom-map-world-overview .custom-map-booth {
-    opacity: .82;
+    opacity: 1;
 }
 .custom-map-world-e123.custom-map-world-detail .custom-map-booth {
     z-index: 2;
-    width: 68px;
-    height: 92px;
+    width: 58px;
+    height: 86px;
     border-width: 2px;
     background: #fff;
 }
 .custom-map-world-e123.custom-map-world-detail .custom-map-booth-y {
-    width: 92px;
-    height: 68px;
+    width: 58px;
+    height: 86px;
 }
 .custom-map-world-e123.custom-map-world-detail .custom-map-booth-code {
-    flex: 0 0 18px;
+    flex: 0 0 20px;
     background: #10b981;
     color: #fff;
     font-size: 11px;
@@ -1710,9 +1711,10 @@ label input, label select, label textarea { font-weight: 400; }
     display: block;
     flex: 1 1 auto;
     min-height: 0;
+    height: 100%;
     width: 100%;
-    object-fit: cover;
-    background: #eef2ef;
+    object-fit: contain;
+    background: #f7faf8;
 }
 .custom-map-world-e123.custom-map-world-detail .custom-map-booth-placeholder {
     display: grid;
@@ -1728,15 +1730,15 @@ label input, label select, label textarea { font-weight: 400; }
     word-break: break-all;
 }
 .custom-map-world-e123.custom-map-world-detail .custom-map-booth-y .custom-map-booth-code {
-    writing-mode: vertical-rl;
-    flex: 0 0 22px;
+    writing-mode: horizontal-tb;
+    flex: 0 0 20px;
 }
 .custom-map-world-e123.custom-map-world-detail .custom-map-booth-y {
-    flex-direction: row;
+    flex-direction: column;
 }
 .custom-map-world-e123.custom-map-world-detail .custom-map-booth-y .custom-map-booth-image,
 .custom-map-world-e123.custom-map-world-detail .custom-map-booth-y .custom-map-booth-placeholder {
-    height: 100%;
+    height: auto;
 }
 .custom-map-sheet[hidden] {
     display: none;

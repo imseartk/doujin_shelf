@@ -78,7 +78,7 @@
                     }
 
                     $sourceGap = max(1, $value - $lastSource);
-                    $targetGap = max($minimumGap, (int) round($sourceGap * 1.08));
+                    $targetGap = max($minimumGap, (int) round($sourceGap * 0.92));
                     $lastTarget += $targetGap;
                     $map[$value] = $lastTarget;
                     $lastSource = $value;
@@ -87,8 +87,8 @@
                 return $map;
             };
 
-            $leftMap = $expandAxis(array_column($boothRows, '_booth_left'), 96, 130);
-            $topMap = $expandAxis(array_column($boothRows, '_booth_top'), 112, 130);
+            $leftMap = $expandAxis(array_column($boothRows, '_booth_left'), 62, 110);
+            $topMap = $expandAxis(array_column($boothRows, '_booth_top'), 90, 110);
             foreach ($boothRows as &$boothRow) {
                 $boothRow['_booth_left'] = $leftMap[(int) $boothRow['_booth_left']] ?? (int) $boothRow['_booth_left'];
                 $boothRow['_booth_top'] = $topMap[(int) $boothRow['_booth_top']] ?? (int) $boothRow['_booth_top'];
@@ -131,8 +131,8 @@
             $blockLabels[$labelKey]['top'] = (int) round(($label['minTop'] + $label['maxTop']) / 2);
         }
 
-        $world['width'] = max(1200, $maxLeft + ($isE123 ? 720 : 260));
-        $world['height'] = max(900, $maxTop + ($isE123 ? 720 : 260));
+        $world['width'] = max(1200, $maxLeft + ($isE123 ? 420 : 260));
+        $world['height'] = max(900, $maxTop + ($isE123 ? 420 : 260));
     }
 ?>
 <section class="page-head">
@@ -296,7 +296,7 @@ $(function () {
 
     var $viewport = $('.js-custom-map-viewport');
     var $world = $('.js-custom-map-world');
-    var initialScale = $world.hasClass('custom-map-world-e123') ? 0.32 : 0.75;
+    var initialScale = $world.hasClass('custom-map-world-e123') ? 0.48 : 0.75;
     var state = { x: 40, y: 40, scale: initialScale, rotation: 0 };
     var pointerCache = new Map();
     var dragStart = null;
