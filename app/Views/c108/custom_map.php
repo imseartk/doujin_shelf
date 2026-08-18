@@ -188,15 +188,11 @@
 
             $lanes = [];
             foreach ($boothRows as $index => $row) {
-                if (! empty($row['_booth_island_layout'])) {
-                    continue;
-                }
-
                 $axis = (string) ($row['_booth_axis'] ?? 'x');
                 if ($axis === 'y') {
-                    $laneKey = 'y:' . (string) ($row['block_name'] ?? '') . ':' . (int) round(((int) $row['_booth_left']) / 18);
+                    $laneKey = 'y:' . (int) round(((int) $row['_booth_left']) / 20);
                 } else {
-                    $laneKey = 'x:' . (string) ($row['block_name'] ?? '') . ':' . (int) round(((int) $row['_booth_top']) / 18);
+                    $laneKey = 'x:' . (int) round(((int) $row['_booth_top']) / 20);
                 }
                 $lanes[$laneKey][] = $index;
             }
