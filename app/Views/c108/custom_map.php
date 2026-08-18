@@ -83,7 +83,7 @@
 
                         $distance = abs((int) $current['_booth_left'] - (int) $next['_booth_left'])
                             + abs((int) $current['_booth_top'] - (int) $next['_booth_top']);
-                        if ($distance > 118) {
+                        if ($distance > 84) {
                             continue;
                         }
 
@@ -116,8 +116,8 @@
                     $tops[] = (int) $boothRows[$index]['_booth_top'];
                 }
 
-                $baseLeft = max(90, (int) round(min($lefts) * 0.86));
-                $baseTop = max(90, (int) round(min($tops) * 0.78));
+                $baseLeft = max(90, (int) min($lefts));
+                $baseTop = max(90, (int) min($tops));
                 $centerLeft = (min($lefts) + max($lefts)) / 2;
                 $topLimit = min($tops) + 60;
                 $bottomLimit = max($tops) - 60;
@@ -163,22 +163,70 @@
                 foreach ($topEdge as $rank => $index) {
                     $boothRows[$index]['_booth_left'] = $baseLeft + ($rank * $xPitch);
                     $boothRows[$index]['_booth_top'] = $baseTop;
+                    $boothRows[$index]['_booth_island_layout'] = true;
                 }
 
                 foreach ($leftSide as $rank => $index) {
                     $boothRows[$index]['_booth_left'] = $baseLeft;
                     $boothRows[$index]['_booth_top'] = $baseTop + (($rank + 1) * $yPitch);
+                    $boothRows[$index]['_booth_island_layout'] = true;
                 }
 
                 foreach ($rightSide as $rank => $index) {
                     $boothRows[$index]['_booth_left'] = $baseLeft + (($topCount - 1) * $xPitch);
                     $boothRows[$index]['_booth_top'] = $baseTop + (($rank + 1) * $yPitch);
+                    $boothRows[$index]['_booth_island_layout'] = true;
                 }
 
                 $bottomTop = $baseTop + ((max(count($leftSide), count($rightSide)) + 1) * $yPitch);
                 foreach ($bottomEdge as $rank => $index) {
                     $boothRows[$index]['_booth_left'] = $baseLeft + ($rank * $xPitch);
                     $boothRows[$index]['_booth_top'] = $bottomTop;
+                    $boothRows[$index]['_booth_island_layout'] = true;
+                }
+            }
+
+            $lanes = [];
+            foreach ($boothRows as $index => $row) {
+                if (! empty($row['_booth_island_layout'])) {
+                    continue;
+                }
+
+                $axis = (string) ($row['_booth_axis'] ?? 'x');
+                if ($axis === 'y') {
+                    $laneKey = 'y:' . (string) ($row['block_name'] ?? '') . ':' . (int) round(((int) $row['_booth_left']) / 18);
+                } else {
+                    $laneKey = 'x:' . (string) ($row['block_name'] ?? '') . ':' . (int) round(((int) $row['_booth_top']) / 18);
+                }
+                $lanes[$laneKey][] = $index;
+            }
+
+            foreach ($lanes as $laneKey => $indexes) {
+                if (count($indexes) < 3) {
+                    continue;
+                }
+
+                $axis = str_starts_with((string) $laneKey, 'y:') ? 'y' : 'x';
+                usort($indexes, static function (int $a, int $b) use ($boothRows, $axis): int {
+                    if ($axis === 'y') {
+                        return [(int) $boothRows[$a]['_booth_top'], (int) $boothRows[$a]['space_no'], (string) $boothRows[$a]['space_no_sub']]
+                            <=> [(int) $boothRows[$b]['_booth_top'], (int) $boothRows[$b]['space_no'], (string) $boothRows[$b]['space_no_sub']];
+                    }
+
+                    return [(int) $boothRows[$a]['_booth_left'], (int) $boothRows[$a]['space_no'], (string) $boothRows[$a]['space_no_sub']]
+                        <=> [(int) $boothRows[$b]['_booth_left'], (int) $boothRows[$b]['space_no'], (string) $boothRows[$b]['space_no_sub']];
+                });
+
+                $minGap = $axis === 'y' ? 90 : 62;
+                $last = null;
+                foreach ($indexes as $index) {
+                    $key = $axis === 'y' ? '_booth_top' : '_booth_left';
+                    $current = (int) $boothRows[$index][$key];
+                    if ($last !== null && $current < $last + $minGap) {
+                        $current = $last + $minGap;
+                        $boothRows[$index][$key] = $current;
+                    }
+                    $last = $current;
                 }
             }
         }
