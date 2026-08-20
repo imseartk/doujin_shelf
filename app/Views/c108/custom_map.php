@@ -136,18 +136,22 @@
                 $laneLeft = (int) $boothRows[$segment[0]]['_booth_left'];
                 $firstTop = (int) $boothRows[$segment[0]]['_booth_top'];
                 $lastTop = (int) $boothRows[$segment[count($segment) - 1]]['_booth_top'];
+                $segmentBlock = (string) ($boothRows[$segment[0]]['block_name'] ?? '');
 
                 $topAnchor = null;
                 foreach ($boothRows as $row) {
                     if ((string) ($row['_booth_axis'] ?? 'x') !== 'x') {
                         continue;
                     }
-
-                    $rowTop = (int) $row['_booth_top'];
-                    if ($rowTop >= $firstTop || $firstTop - $rowTop > 220) {
+                    if ((string) ($row['block_name'] ?? '') !== $segmentBlock) {
                         continue;
                     }
-                    if (abs((int) $row['_booth_left'] - $laneLeft) > 210) {
+
+                    $rowTop = (int) $row['_booth_top'];
+                    if ($rowTop >= $firstTop || $firstTop - $rowTop > 420) {
+                        continue;
+                    }
+                    if (abs((int) $row['_booth_left'] - $laneLeft) > 280) {
                         continue;
                     }
 
@@ -169,12 +173,15 @@
                     if ((string) ($row['_booth_axis'] ?? 'x') !== 'x') {
                         continue;
                     }
-
-                    $rowTop = (int) $row['_booth_top'];
-                    if ($rowTop <= $lastTop || $rowTop - $lastTop > 240) {
+                    if ((string) ($row['block_name'] ?? '') !== $segmentBlock) {
                         continue;
                     }
-                    if (abs((int) $row['_booth_left'] - $laneLeft) > 230) {
+
+                    $rowTop = (int) $row['_booth_top'];
+                    if ($rowTop <= $lastTop || $rowTop - $lastTop > 420) {
+                        continue;
+                    }
+                    if (abs((int) $row['_booth_left'] - $laneLeft) > 300) {
                         continue;
                     }
 
@@ -187,10 +194,13 @@
                         if ((string) ($boothRow['_booth_axis'] ?? 'x') !== 'x') {
                             continue;
                         }
+                        if ((string) ($boothRow['block_name'] ?? '') !== $segmentBlock) {
+                            continue;
+                        }
                         if ((int) $boothRow['_booth_top'] !== $bottomAnchor) {
                             continue;
                         }
-                        if (abs((int) $boothRow['_booth_left'] - $laneLeft) > 260) {
+                        if (abs((int) $boothRow['_booth_left'] - $laneLeft) > 320) {
                             continue;
                         }
 
