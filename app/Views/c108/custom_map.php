@@ -91,6 +91,7 @@
             }
             unset($boothRow);
 
+            $verticalSegments = [];
             $verticalLanes = [];
             foreach ($boothRows as $index => $row) {
                 if ((string) ($row['_booth_axis'] ?? 'x') !== 'y') {
@@ -124,9 +125,78 @@
                         for ($j = $segmentStart; $j < $i; $j++) {
                             $boothRows[$indexes[$j]]['_booth_top'] = $baseTop + (($j - $segmentStart) * 86);
                         }
+                        $verticalSegments[] = array_slice($indexes, $segmentStart, $i - $segmentStart);
                     }
 
                     $segmentStart = $i;
+                }
+            }
+
+            foreach ($verticalSegments as $segment) {
+                $laneLeft = (int) $boothRows[$segment[0]]['_booth_left'];
+                $firstTop = (int) $boothRows[$segment[0]]['_booth_top'];
+                $lastTop = (int) $boothRows[$segment[count($segment) - 1]]['_booth_top'];
+
+                $topAnchor = null;
+                foreach ($boothRows as $row) {
+                    if ((string) ($row['_booth_axis'] ?? 'x') !== 'x') {
+                        continue;
+                    }
+
+                    $rowTop = (int) $row['_booth_top'];
+                    if ($rowTop >= $firstTop || $firstTop - $rowTop > 220) {
+                        continue;
+                    }
+                    if (abs((int) $row['_booth_left'] - $laneLeft) > 210) {
+                        continue;
+                    }
+
+                    $topAnchor = max($topAnchor ?? $rowTop, $rowTop);
+                }
+
+                if ($topAnchor !== null) {
+                    $targetFirstTop = $topAnchor + 86;
+                    $delta = $targetFirstTop - $firstTop;
+                    foreach ($segment as $rank => $index) {
+                        $boothRows[$index]['_booth_top'] = $firstTop + $delta + ($rank * 86);
+                    }
+                    $firstTop = $targetFirstTop;
+                    $lastTop += $delta;
+                }
+
+                $bottomAnchor = null;
+                foreach ($boothRows as $row) {
+                    if ((string) ($row['_booth_axis'] ?? 'x') !== 'x') {
+                        continue;
+                    }
+
+                    $rowTop = (int) $row['_booth_top'];
+                    if ($rowTop <= $lastTop || $rowTop - $lastTop > 240) {
+                        continue;
+                    }
+                    if (abs((int) $row['_booth_left'] - $laneLeft) > 230) {
+                        continue;
+                    }
+
+                    $bottomAnchor = min($bottomAnchor ?? $rowTop, $rowTop);
+                }
+
+                if ($bottomAnchor !== null) {
+                    $targetBottomTop = $lastTop + 86;
+                    foreach ($boothRows as &$boothRow) {
+                        if ((string) ($boothRow['_booth_axis'] ?? 'x') !== 'x') {
+                            continue;
+                        }
+                        if ((int) $boothRow['_booth_top'] !== $bottomAnchor) {
+                            continue;
+                        }
+                        if (abs((int) $boothRow['_booth_left'] - $laneLeft) > 260) {
+                            continue;
+                        }
+
+                        $boothRow['_booth_top'] = $targetBottomTop;
+                    }
+                    unset($boothRow);
                 }
             }
         }
