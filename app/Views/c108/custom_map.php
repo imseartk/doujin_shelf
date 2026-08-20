@@ -90,6 +90,45 @@
                 $boothRow['_booth_top'] = $topMap[$sourceTop] ?? $sourceTop;
             }
             unset($boothRow);
+
+            $verticalLanes = [];
+            foreach ($boothRows as $index => $row) {
+                if ((string) ($row['_booth_axis'] ?? 'x') !== 'y') {
+                    continue;
+                }
+
+                $laneKey = (string) (int) round(((int) $row['_booth_left']) / 12);
+                $verticalLanes[$laneKey][] = $index;
+            }
+
+            foreach ($verticalLanes as $indexes) {
+                if (count($indexes) < 3) {
+                    continue;
+                }
+
+                usort($indexes, static function (int $a, int $b) use ($boothRows): int {
+                    return [(int) $boothRows[$a]['_booth_top'], (int) $boothRows[$a]['space_no'], (string) $boothRows[$a]['space_no_sub']]
+                        <=> [(int) $boothRows[$b]['_booth_top'], (int) $boothRows[$b]['space_no'], (string) $boothRows[$b]['space_no_sub']];
+                });
+
+                $segmentStart = 0;
+                for ($i = 1, $count = count($indexes); $i <= $count; $i++) {
+                    $isBreak = $i === $count
+                        || abs((int) $boothRows[$indexes[$i]]['_booth_top'] - (int) $boothRows[$indexes[$i - 1]]['_booth_top']) > 180;
+                    if (! $isBreak) {
+                        continue;
+                    }
+
+                    if ($i - $segmentStart >= 3) {
+                        $baseTop = (int) $boothRows[$indexes[$segmentStart]]['_booth_top'];
+                        for ($j = $segmentStart; $j < $i; $j++) {
+                            $boothRows[$indexes[$j]]['_booth_top'] = $baseTop + (($j - $segmentStart) * 86);
+                        }
+                    }
+
+                    $segmentStart = $i;
+                }
+            }
         }
 
         $blockLabels = [];
