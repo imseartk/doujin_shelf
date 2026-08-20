@@ -82,9 +82,9 @@
                 if ($sourceGap <= 140) {
                     $targetGap = 86;
                 } elseif ($sourceGap <= 260) {
-                    $targetGap = (int) round($sourceGap * 0.76);
+                    $targetGap = max(96, (int) round($sourceGap * 0.38));
                 } else {
-                    $targetGap = (int) round($sourceGap * 0.56);
+                    $targetGap = max(128, (int) round($sourceGap * 0.28));
                 }
                 $previousTarget += $targetGap;
                 $topMap[$sourceTop] = $previousTarget;
