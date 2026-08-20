@@ -1675,11 +1675,11 @@ label input, label select, label textarea { font-weight: 400; }
 }
 .custom-map-world-e123 .custom-map-booth-x {
     width: 58px;
-    height: 42px;
+    height: 86px;
 }
 .custom-map-world-e123 .custom-map-booth-y {
-    width: 42px;
-    height: 58px;
+    width: 58px;
+    height: 86px;
 }
 .custom-map-world-e123.custom-map-world-overview .custom-map-booth {
     opacity: 1;
