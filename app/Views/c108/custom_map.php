@@ -328,6 +328,67 @@
                         $boothRows[$index]['_booth_top'] = (int) $boothRows[$index]['_booth_top'] + $delta;
                     }
                 }
+
+                $lowerComponents = [];
+                foreach ($components as $component) {
+                    $minTop = null;
+                    $maxTop = null;
+                    foreach ($component['indexes'] as $index) {
+                        $rowTop = (int) $boothRows[$index]['_booth_top'];
+                        $minTop = min($minTop ?? $rowTop, $rowTop);
+                        $maxTop = max($maxTop ?? $rowTop, $rowTop);
+                    }
+                    if ($minTop === null || $maxTop === null) {
+                        continue;
+                    }
+
+                    $component['minTop'] = $minTop;
+                    $component['maxTop'] = $maxTop;
+                    $component['centerTop'] = (int) round(($minTop + $maxTop) / 2);
+                    if ((int) $component['centerTop'] > $splitTop) {
+                        $lowerComponents[] = $component;
+                    }
+                }
+
+                usort($lowerComponents, static fn (array $a, array $b): int => (int) $a['centerTop'] <=> (int) $b['centerTop']);
+                $bands = [];
+                foreach ($lowerComponents as $component) {
+                    $bandIndex = count($bands) - 1;
+                    if ($bandIndex < 0 || abs((int) $component['centerTop'] - (int) $bands[$bandIndex]['centerTop']) > 360) {
+                        $bands[] = [
+                            'centerTop' => (int) $component['centerTop'],
+                            'components' => [$component],
+                        ];
+                        continue;
+                    }
+
+                    $bands[$bandIndex]['components'][] = $component;
+                    $bands[$bandIndex]['centerTop'] = (int) round(
+                        array_sum(array_column($bands[$bandIndex]['components'], 'centerTop')) / count($bands[$bandIndex]['components'])
+                    );
+                }
+
+                foreach ($bands as $band) {
+                    if (count($band['components']) < 3) {
+                        continue;
+                    }
+
+                    $targetBottom = $median(array_column($band['components'], 'maxTop'));
+                    if ($targetBottom === null) {
+                        continue;
+                    }
+
+                    foreach ($band['components'] as $component) {
+                        $delta = $targetBottom - (int) $component['maxTop'];
+                        if ($delta === 0 || abs($delta) > 180) {
+                            continue;
+                        }
+
+                        foreach ($component['indexes'] as $index) {
+                            $boothRows[$index]['_booth_top'] = (int) $boothRows[$index]['_booth_top'] + $delta;
+                        }
+                    }
+                }
             }
         }
 
