@@ -178,10 +178,10 @@
                     }
 
                     $rowTop = (int) $row['_booth_top'];
-                    if ($rowTop <= $lastTop || $rowTop - $lastTop > 420) {
+                    if ($rowTop <= $lastTop || $rowTop - $lastTop > 1100) {
                         continue;
                     }
-                    if (abs((int) $row['_booth_left'] - $laneLeft) > 300) {
+                    if (abs((int) $row['_booth_left'] - $laneLeft) > 420) {
                         continue;
                     }
 
@@ -200,7 +200,7 @@
                         if ((int) $boothRow['_booth_top'] !== $bottomAnchor) {
                             continue;
                         }
-                        if (abs((int) $boothRow['_booth_left'] - $laneLeft) > 320) {
+                        if (abs((int) $boothRow['_booth_left'] - $laneLeft) > 460) {
                             continue;
                         }
 
