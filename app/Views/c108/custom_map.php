@@ -215,6 +215,120 @@
                     unset($boothRow);
                 }
             }
+
+            $components = [];
+            $assigned = [];
+            foreach ($boothRows as $startIndex => $row) {
+                if (isset($assigned[$startIndex])) {
+                    continue;
+                }
+
+                $blockName = (string) ($row['block_name'] ?? '');
+                if ($blockName === '' || $blockName === 'ア') {
+                    continue;
+                }
+
+                $queue = [$startIndex];
+                $assigned[$startIndex] = true;
+                $component = [];
+                while ($queue !== []) {
+                    $currentIndex = array_pop($queue);
+                    $component[] = $currentIndex;
+                    $current = $boothRows[$currentIndex];
+                    $currentLeft = (int) $current['_booth_left'];
+                    $currentTop = (int) $current['_booth_top'];
+
+                    foreach ($boothRows as $candidateIndex => $candidate) {
+                        if (isset($assigned[$candidateIndex])) {
+                            continue;
+                        }
+                        if ((string) ($candidate['block_name'] ?? '') !== $blockName) {
+                            continue;
+                        }
+
+                        $candidateLeft = (int) $candidate['_booth_left'];
+                        $candidateTop = (int) $candidate['_booth_top'];
+                        if (abs($candidateLeft - $currentLeft) > 180 || abs($candidateTop - $currentTop) > 120) {
+                            continue;
+                        }
+
+                        $assigned[$candidateIndex] = true;
+                        $queue[] = $candidateIndex;
+                    }
+                }
+
+                if (count($component) < 8) {
+                    continue;
+                }
+
+                $minTop = null;
+                $maxTop = null;
+                foreach ($component as $index) {
+                    $rowTop = (int) $boothRows[$index]['_booth_top'];
+                    $minTop = min($minTop ?? $rowTop, $rowTop);
+                    $maxTop = max($maxTop ?? $rowTop, $rowTop);
+                }
+
+                if ($minTop === null || $maxTop === null || $maxTop - $minTop < 300) {
+                    continue;
+                }
+
+                $components[] = [
+                    'indexes' => $component,
+                    'minTop' => $minTop,
+                    'maxTop' => $maxTop,
+                    'centerTop' => (int) round(($minTop + $maxTop) / 2),
+                ];
+            }
+
+            if (count($components) >= 4) {
+                $centers = array_column($components, 'centerTop');
+                sort($centers, SORT_NUMERIC);
+                $splitTop = (int) round(($centers[0] + $centers[count($centers) - 1]) / 2);
+
+                $upperBottoms = [];
+                $lowerTops = [];
+                foreach ($components as $component) {
+                    if ((int) $component['centerTop'] <= $splitTop) {
+                        $upperBottoms[] = (int) $component['maxTop'];
+                    } else {
+                        $lowerTops[] = (int) $component['minTop'];
+                    }
+                }
+
+                $median = static function (array $values): ?int {
+                    if ($values === []) {
+                        return null;
+                    }
+
+                    sort($values, SORT_NUMERIC);
+                    return (int) $values[(int) floor((count($values) - 1) / 2)];
+                };
+
+                $upperBottom = $median($upperBottoms);
+                $lowerTop = $median($lowerTops);
+                foreach ($components as $component) {
+                    if ((int) $component['centerTop'] <= $splitTop) {
+                        if ($upperBottom === null) {
+                            continue;
+                        }
+                        $delta = $upperBottom - (int) $component['maxTop'];
+                    } else {
+                        if ($lowerTop === null) {
+                            continue;
+                        }
+                        $delta = $lowerTop - (int) $component['minTop'];
+                    }
+
+                    if ($delta === 0 || abs($delta) > 260) {
+                        continue;
+                    }
+
+                    foreach ($component['indexes'] as $index) {
+                        $boothRows[$index]['_booth_top'] = (int) $boothRows[$index]['_booth_top'] + $delta;
+                    }
+                }
+            }
         }
 
         $blockLabels = [];
