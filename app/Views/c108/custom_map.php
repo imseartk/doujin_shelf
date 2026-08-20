@@ -63,6 +63,35 @@
             $maxTop = max($maxTop, $top);
         }
 
+        if ($isE123) {
+            $topValues = array_values(array_unique(array_map(static fn ($row): int => (int) $row['_booth_top'], $boothRows)));
+            sort($topValues, SORT_NUMERIC);
+
+            $topMap = [];
+            $previousSource = null;
+            $previousTarget = 0;
+            foreach ($topValues as $sourceTop) {
+                if ($previousSource === null) {
+                    $topMap[$sourceTop] = $sourceTop;
+                    $previousSource = $sourceTop;
+                    $previousTarget = $sourceTop;
+                    continue;
+                }
+
+                $sourceGap = $sourceTop - $previousSource;
+                $targetGap = $sourceGap <= 140 ? 86 : (int) round($sourceGap * 0.92);
+                $previousTarget += $targetGap;
+                $topMap[$sourceTop] = $previousTarget;
+                $previousSource = $sourceTop;
+            }
+
+            foreach ($boothRows as &$boothRow) {
+                $sourceTop = (int) $boothRow['_booth_top'];
+                $boothRow['_booth_top'] = $topMap[$sourceTop] ?? $sourceTop;
+            }
+            unset($boothRow);
+        }
+
         $blockLabels = [];
         $maxLeft = 0;
         $maxTop = 0;
