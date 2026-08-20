@@ -20,8 +20,8 @@
     $blockLabels = [];
     $world = ['width' => 1600, 'height' => 1200, 'offsetX' => 80, 'offsetY' => 80];
     $isE123 = strtoupper($currentMap) === 'E123';
-    $positionScaleX = $isE123 ? 3.75 : 1.15;
-    $positionScaleY = $isE123 ? 6.35 : 1.15;
+    $positionScaleX = $isE123 ? 3.20 : 1.15;
+    $positionScaleY = $isE123 ? 6.10 : 1.15;
     if ($image !== null) {
         $image['position_rows'] = $positionRows ?? [];
         $positions = \App\Controllers\C108::markerPositions($rows, $image);
