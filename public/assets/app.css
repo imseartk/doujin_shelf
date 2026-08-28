@@ -155,6 +155,7 @@ label input, label select, label textarea { font-weight: 400; }
 .button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .button.ghost { background: transparent; }
 .button.small { min-height: 30px; padding: 5px 9px; font-size: 13px; }
+.button.tiny { min-height: 26px; padding: 3px 7px; font-size: 12px; }
 .button.danger { border-color: #c88888; color: var(--danger); }
 .button:hover { filter: brightness(.97); }
 .button:disabled { cursor: wait; opacity: .65; }
@@ -1743,6 +1744,71 @@ label input, label select, label textarea { font-weight: 400; }
 .custom-map-sheet[hidden] {
     display: none;
 }
+.kana-keyboard[hidden] {
+    display: none;
+}
+.kana-keyboard {
+    position: fixed;
+    top: 62px;
+    right: 16px;
+    z-index: 40;
+    width: min(430px, calc(100vw - 24px));
+    max-height: calc(100vh - 86px);
+    overflow: auto;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .98);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, .18);
+}
+.kana-keyboard-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.kana-keyboard-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.kana-keyboard-close {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+}
+.kana-keyboard-grid {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 6px;
+}
+.kana-key {
+    min-width: 0;
+    min-height: 34px;
+    padding: 4px 2px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #f8fbf9;
+    color: var(--ink);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+}
+.kana-key:hover,
+.kana-key:focus-visible {
+    border-color: var(--accent);
+    background: #eef8f5;
+    outline: none;
+}
+.kana-key-empty {
+    visibility: hidden;
+}
 .custom-map-sheet {
     position: absolute;
     right: 14px;
@@ -1808,6 +1874,18 @@ label input, label select, label textarea { font-weight: 400; }
     .topbar-tools, .topbar-search { width: 100%; }
     .topbar-search { grid-template-columns: minmax(0, 1fr) auto; }
     .cover-privacy-form .button { width: 100%; }
+    .kana-keyboard-toggle { width: 100%; }
+    .kana-keyboard {
+        top: auto;
+        right: 10px;
+        bottom: 10px;
+        left: 10px;
+        width: auto;
+        max-height: 48vh;
+    }
+    .kana-keyboard-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
     .page { width: min(100% - 20px, 1500px); margin-top: 14px; }
     .form-grid { grid-template-columns: 1fr; }
     .fields.two { grid-template-columns: 1fr; }

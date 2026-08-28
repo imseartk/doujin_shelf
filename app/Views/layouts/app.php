@@ -35,6 +35,7 @@
                 <input type="search" name="q" value="<?= esc($headerSearch) ?>" placeholder="搜尋藏書">
                 <button class="button small" type="submit">搜尋</button>
             </form>
+            <button class="button small ghost kana-keyboard-toggle js-kana-keyboard-toggle" type="button">かな</button>
             <form class="cover-privacy-form" method="post" action="/preferences/cover-privacy">
                 <?= csrf_field() ?>
                 <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
@@ -43,6 +44,18 @@
             </form>
         </div>
     </header>
+
+    <div class="kana-keyboard js-kana-keyboard" hidden>
+        <div class="kana-keyboard-head">
+            <strong>五十音</strong>
+            <div class="kana-keyboard-actions">
+                <button class="button tiny primary js-kana-mode" type="button" data-mode="hiragana">平</button>
+                <button class="button tiny ghost js-kana-mode" type="button" data-mode="katakana">片</button>
+                <button class="kana-keyboard-close js-kana-keyboard-close" type="button" aria-label="關閉">×</button>
+            </div>
+        </div>
+        <div class="kana-keyboard-grid js-kana-keyboard-grid"></div>
+    </div>
 
     <main class="page">
         <?php if (session('message')): ?>

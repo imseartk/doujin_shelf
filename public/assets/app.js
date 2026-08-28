@@ -8,6 +8,7 @@ $(function () {
 
     initBookListState();
     initBookReturnTo();
+    initKanaKeyboard();
 
     $('.js-add-source').on('click', function () {
         var template = document.getElementById('source-row-template');
@@ -820,5 +821,104 @@ $(function () {
         if (!$csrf.length) return;
 
         $('input[type="hidden"][name="' + $csrf.attr('name') + '"]').val(response.csrf);
+    }
+
+    function initKanaKeyboard() {
+        var $panel = $('.js-kana-keyboard');
+        var $grid = $('.js-kana-keyboard-grid');
+        if (!$panel.length || !$grid.length) return;
+
+        var mode = 'hiragana';
+        var activeTextField = null;
+        var kanaRows = {
+            hiragana: [
+                ['あ', 'い', 'う', 'え', 'お', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ'],
+                ['か', 'き', 'く', 'け', 'こ', 'が', 'ぎ', 'ぐ', 'げ', 'ご'],
+                ['さ', 'し', 'す', 'せ', 'そ', 'ざ', 'じ', 'ず', 'ぜ', 'ぞ'],
+                ['た', 'ち', 'つ', 'て', 'と', 'だ', 'ぢ', 'づ', 'で', 'ど'],
+                ['な', 'に', 'ぬ', 'ね', 'の', '', '', '', '', ''],
+                ['は', 'ひ', 'ふ', 'へ', 'ほ', 'ば', 'び', 'ぶ', 'べ', 'ぼ'],
+                ['ま', 'み', 'む', 'め', 'も', 'ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ'],
+                ['や', '', 'ゆ', '', 'よ', 'ゃ', '', 'ゅ', '', 'ょ'],
+                ['ら', 'り', 'る', 'れ', 'ろ', '', '', '', '', ''],
+                ['わ', 'を', 'ん', 'ー', '・', '', '', '', '', '']
+            ],
+            katakana: [
+                ['ア', 'イ', 'ウ', 'エ', 'オ', 'ァ', 'ィ', 'ゥ', 'ェ', 'ォ'],
+                ['カ', 'キ', 'ク', 'ケ', 'コ', 'ガ', 'ギ', 'グ', 'ゲ', 'ゴ'],
+                ['サ', 'シ', 'ス', 'セ', 'ソ', 'ザ', 'ジ', 'ズ', 'ゼ', 'ゾ'],
+                ['タ', 'チ', 'ツ', 'テ', 'ト', 'ダ', 'ヂ', 'ヅ', 'デ', 'ド'],
+                ['ナ', 'ニ', 'ヌ', 'ネ', 'ノ', '', '', '', '', ''],
+                ['ハ', 'ヒ', 'フ', 'ヘ', 'ホ', 'バ', 'ビ', 'ブ', 'ベ', 'ボ'],
+                ['マ', 'ミ', 'ム', 'メ', 'モ', 'パ', 'ピ', 'プ', 'ペ', 'ポ'],
+                ['ヤ', '', 'ユ', '', 'ヨ', 'ャ', '', 'ュ', '', 'ョ'],
+                ['ラ', 'リ', 'ル', 'レ', 'ロ', '', '', '', '', ''],
+                ['ワ', 'ヲ', 'ン', 'ー', '・', '', '', '', '', '']
+            ]
+        };
+
+        $(document).on('focusin', 'input[type="text"], input[type="search"], input:not([type]), textarea', function () {
+            activeTextField = this;
+        });
+
+        $('.js-kana-keyboard-toggle').on('click', function () {
+            $panel.prop('hidden', !$panel.prop('hidden'));
+            renderKanaKeyboard();
+        });
+
+        $('.js-kana-keyboard-close').on('click', function () {
+            $panel.prop('hidden', true);
+        });
+
+        $('.js-kana-mode').on('click', function () {
+            mode = String($(this).data('mode') || 'hiragana');
+            $('.js-kana-mode')
+                .toggleClass('primary', false)
+                .toggleClass('ghost', true);
+            $(this)
+                .toggleClass('primary', true)
+                .toggleClass('ghost', false);
+            renderKanaKeyboard();
+        });
+
+        function renderKanaKeyboard() {
+            $grid.empty();
+            kanaRows[mode].forEach(function (row) {
+                row.forEach(function (kana) {
+                    if (!kana) {
+                        $('<span class="kana-key kana-key-empty"></span>').appendTo($grid);
+                        return;
+                    }
+
+                    $('<button type="button" class="kana-key"></button>')
+                        .text(kana)
+                        .on('click', function () {
+                            insertKana(kana);
+                        })
+                        .appendTo($grid);
+                });
+            });
+        }
+
+        function insertKana(kana) {
+            var field = activeTextField;
+            if (!field || !document.body.contains(field)) {
+                field = $('.topbar-search input[type="search"]').get(0) || $('input[type="text"], input[type="search"], textarea').filter(':visible').get(0);
+            }
+            if (!field) return;
+
+            field.focus();
+            var value = field.value || '';
+            var start = typeof field.selectionStart === 'number' ? field.selectionStart : value.length;
+            var end = typeof field.selectionEnd === 'number' ? field.selectionEnd : start;
+            field.value = value.slice(0, start) + kana + value.slice(end);
+            var next = start + kana.length;
+            if (typeof field.setSelectionRange === 'function') {
+                field.setSelectionRange(next, next);
+            }
+            $(field).trigger('input').trigger('change');
+        }
+
+        renderKanaKeyboard();
     }
 });
