@@ -1,35 +1,21 @@
-# Personal Doujin Helper Android Shell
+# Personal Doujin Helper Android App
 
-Personal Android client for Doujin Shelf books and offline map data.
+Native-first Android client for Circle.ms catalog data, offline maps, favorites, and circles.
 
-The app reads only the private Doujin Shelf API under `/api/app/books` and `/api/app/c108/map(s)`. It does not call Circle.ms directly and does not store Circle.ms OAuth credentials.
+The Android app is intentionally independent from the existing Doujin Shelf website. Its catalog data is designed to be downloaded into a local SQLite database after Circle.ms app authorization. The current debug build includes a C108 preview mode while the C109 API authorization interval is unavailable.
 
 ## Local Setup
 
-Install Node.js LTS and Android Studio on your development PC.
+The repository already contains the Gradle wrapper and Android project. A JDK 17 and Android SDK 35 installation are enough to build it; Android Studio is optional.
 
 ```powershell
-cd mobile/c108-helper
-npm install
-npm run build
-npm run cap:add:android
-npm run cap:sync
-npm run cap:open
+cd mobile/c108-helper/android
+$env:JAVA_HOME = 'C:\Android\jdk17\jdk-17.0.20+8'
+./gradlew.bat assembleDebug
 ```
 
-In the app settings, set:
-
-- API URL: `https://doujin.artick.tw`
-- Passcode: your Doujin Shelf app/admin passcode
+The debug APK is generated at `android/app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Build Flow
 
-After changing the web app:
-
-```powershell
-npm run build
-npm run cap:sync
-npm run cap:open
-```
-
-Then build/run the APK from Android Studio.
+The Circle.ms callback placeholder is `tw.artick.doujinhelper://auth?status=success`. The final authorization URL and token exchange must be connected after developer registration provides the private API specification.
