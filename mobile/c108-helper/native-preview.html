@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Personal Doujin Helper Native Preview</title>
+  <style>
+    :root { --paper:#f7f9f7; --ink:#1d2b2e; --teal:#1f4c4e; --accent:#2b7e84; --line:#d0dcda; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif; }
+    button { border:1px solid var(--line); border-radius:12px; background:#fff; color:var(--ink); font:inherit; padding:12px 14px; cursor:pointer; }
+    .shell { width:min(100%, 520px); min-height:100vh; margin:auto; padding:20px; display:flex; flex-direction:column; }
+    .eyebrow { color:var(--accent); font-size:13px; }
+    h1 { margin:5px 0 8px; font-size:28px; }
+    h2 { margin:0; font-size:20px; }
+    p { color:#4f5c5e; line-height:1.55; }
+    .login { flex:1; display:flex; flex-direction:column; justify-content:center; text-align:center; }
+    .login-card,.card { background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px; text-align:left; }
+    .login-card button.primary,.primary { width:100%; background:var(--accent); border-color:var(--accent); color:#fff; margin-top:18px; }
+    .notice { margin-top:14px; font-size:13px; color:#6e5028; }
+    .preview { width:100%; background:#647070; border-color:#647070; color:#fff; margin-top:18px; }
+    .main { display:none; flex:1; flex-direction:column; }
+    .toolbar { margin:16px 0 14px; }
+    .content { flex:1; }
+    .tabs { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:12px 0 16px; }
+    .tabs button.active { background:var(--teal); border-color:var(--teal); color:#fff; }
+    .controls { margin-top:18px; }
+    .label { color:#788486; font-size:13px; }
+    .value { font-size:19px; margin:4px 0 16px; }
+    .halls { display:flex; gap:8px; overflow:auto; padding:8px 0 4px; }
+    .halls button { white-space:nowrap; }
+    .halls button.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .map-placeholder { height:180px; margin-top:14px; border:1px dashed #8eb1b0; border-radius:12px; display:grid; place-items:center; color:var(--accent); background:linear-gradient(90deg,transparent 49.5%,#dfeae8 50%,transparent 50.5%),linear-gradient(0deg,transparent 49.5%,#dfeae8 50%,transparent 50.5%); background-size:34px 34px; }
+    .list { display:grid; gap:12px; margin-top:18px; }
+    .circle { padding:16px 18px; }
+    .circle strong { display:block; font-size:18px; }
+    .circle small { display:block; color:#536164; margin-top:5px; }
+    .setting-action { width:100%; margin-top:12px; }
+    .danger { background:#914b4a; border-color:#914b4a; color:#fff; }
+    .tag { display:inline-block; margin-top:12px; padding:5px 9px; border:1px solid #a9cbc6; border-radius:999px; color:#276c6c; font-size:13px; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="login" id="login">
+      <div class="eyebrow">Personal Doujin Helper</div>
+      <h1>你的同人誌活動工具</h1>
+      <p>登入 Circle.ms 後，將目錄資料保存在這台手機，離線查看地圖、喜愛社團與活動資訊。</p>
+      <div class="login-card">
+        <h2>尚未登入</h2>
+        <p>正式版會在這裡開啟 Circle.ms 官方登入與 App 授權。完成授權後，APK 才會進入目錄功能。</p>
+        <button class="primary" onclick="alert('目前 C109 授權區間尚未開放')">前往 Circle.ms 登入與授權</button>
+        <div class="notice">目前 C109 授權區間尚未開放，因此授權回傳可能會失敗。</div>
+      </div>
+      <button class="preview" onclick="showApp()">開發預覽：使用 C108 本機資料</button>
+    </section>
+
+    <section class="main" id="main">
+      <div class="toolbar"><div class="eyebrow">C108 開發預覽</div><h1 id="title">地圖</h1></div>
+      <div class="content" id="content"></div>
+      <nav class="tabs">
+        <button data-tab="map" class="active">地圖</button>
+        <button data-tab="favorites">喜愛清單</button>
+        <button data-tab="circles">所有社團</button>
+        <button data-tab="settings">設定</button>
+      </nav>
+    </section>
+  </div>
+  <script>
+    const titles={map:'地圖',favorites:'喜愛清單',circles:'所有社團',settings:'設定'};
+    const content=document.querySelector('#content'), title=document.querySelector('#title');
+    function render(tab){
+      title.textContent=titles[tab];
+      document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+      if(tab==='map') content.innerHTML=`<p>先選活動與館別，再開啟離線地圖。未來會由 Circle.ms 授權後下載資料。</p><div class="card controls"><div class="label">活動</div><div class="value">C108 · 夏コミ</div><div class="label">館別</div><div class="halls"><button class="active">東123</button><button>東456</button><button>西12</button><button>南12</button></div></div><div class="card" style="margin-top:18px"><h2>1日目 / E123</h2><p>地圖預覽將在下載 C108 資料後顯示。</p><div class="map-placeholder">可縮放、旋轉、點選攤位的原生地圖</div></div>`;
+      if(tab==='favorites') content.innerHTML=`<p>你的收藏會儲存在手機本機，之後可以與 Circle.ms 收藏同步。</p><div class="list">${['身から出た鱧','Frenchletter','Personal Doujin Helper'].map(x=>`<div class="card circle"><strong>${x}</strong><small>2日目 · 東 セ32a</small><span class="tag">喜愛</span></div>`).join('')}</div>`;
+      if(tab==='circles') content.innerHTML=`<p>全部社團資料會在目錄下載後存於本機。</p><div class="card" style="color:#788486">搜尋社團名稱、作者或攤位</div><div class="list">${['身から出た鱧','Frenchletter','R.S.I.','White-Wind'].map(x=>`<div class="card circle"><strong>${x}</strong><small>未設定 · 可加入喜愛清單</small></div>`).join('')}</div>`;
+      if(tab==='settings') content.innerHTML=`<div class="card"><div class="label">Circle.ms 帳號</div><div class="value">C108 開發預覽</div><button class="primary">重新進行 Circle.ms 授權</button></div><div class="card" style="margin-top:12px"><div class="label">本機資料</div><div class="value">SQLite 離線資料庫</div><p>目錄、收藏與地圖標記會保存在這台手機。</p></div><button class="danger setting-action">登出並清除授權狀態</button>`;
+    }
+    function showApp(){ document.querySelector('#login').style.display='none'; document.querySelector('#main').style.display='flex'; render('map'); }
+    document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>render(b.dataset.tab)));
+    if(new URLSearchParams(location.search).get('preview')==='1') showApp();
+  </script>
+</body>
+</html>
