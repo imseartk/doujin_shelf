@@ -15,6 +15,9 @@
 .cart-item[hidden] { display: none; }
 .cart-cover, .cart-cover-empty { width: 102px; height: 142px; border-radius: 4px; margin: 0 auto 4px; }
 .cart-cover { object-fit: cover; border: 1px solid var(--line); background: #f0f2f0; }
+.cart-cover-action { display: block; width: 102px; height: 142px; padding: 0; margin: 0 auto 4px; border: 0; border-radius: 4px; background: transparent; cursor: pointer; }
+.cart-cover-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.cart-cover-action .cart-cover { display: block; margin: 0; }
 .cart-cover-empty { display: grid; place-items: center; border: 1px dashed #b8c2bd; color: var(--muted); font-size: 12px; }
 .cart-remove { position: absolute; top: -6px; right: 10px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent url("/assets/cancel-icon.svg") center / contain no-repeat; cursor: pointer; overflow: hidden; text-indent: -9999px; }
 .cart-title { display: -webkit-box; overflow: hidden; color: var(--text); font-size: 13px; font-weight: 700; line-height: 1.35; text-decoration: none; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -64,7 +67,9 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
                                         <input class="js-cart-book-id" type="hidden" name="book_ids[]" value="<?= (int) $item['book_id'] ?>" form="<?= esc($formId) ?>">
                                         <button class="cart-remove js-cart-remove" type="button" aria-label="從本頁試算移除">取消</button>
                                         <?php if (! empty($item['cover_url'])): ?>
-                                            <img class="cart-cover" src="<?= esc($displayCoverUrl) ?>" alt="">
+                                            <button class="cart-cover-action js-cart-shop-search-open" type="button" data-title="<?= esc($item['title']) ?>" aria-label="搜尋店鋪">
+                                                <img class="cart-cover" src="<?= esc($displayCoverUrl) ?>" alt="">
+                                            </button>
                                         <?php else: ?>
                                             <div class="cart-cover-empty">no image</div>
                                         <?php endif; ?>
@@ -103,8 +108,58 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
     </div>
 <?php endif; ?>
 
+<div class="shop-search-modal js-cart-shop-search-modal" hidden>
+    <div class="shop-search-modal-backdrop js-cart-shop-search-close"></div>
+    <section class="shop-search-modal-card" role="dialog" aria-modal="true" aria-labelledby="cart-shop-search-title">
+        <button class="shop-search-modal-close js-cart-shop-search-close" type="button" aria-label="Close">×</button>
+        <h2 id="cart-shop-search-title">Search shops</h2>
+        <p class="muted js-cart-shop-search-book-title"></p>
+        <div class="shop-search-link-list js-cart-shop-search-link-list"></div>
+    </section>
+</div>
+
 <script>
 $(function () {
+    var shopSearchLinks = [
+        ['Mandarake', 'https://order.mandarake.co.jp/order/listPage/list?categoryCode=03&keyword={name}'],
+        ['駿河屋', 'https://www.suruga-ya.jp/search?searchbox=1&category=11000002&search_word={name}'],
+        ['らしんばん', 'https://shop.lashinbang.com/products/list?keyword={name}'],
+        ['秋コミ', 'https://akicomi.com/products/list?category_id=3&name={name}'],
+        ['Melonbooks', 'https://www.melonbooks.co.jp/search/search.php?mode=search&search_disp=&chara=&orderby=&disp_number=100&pageno=1&is_sp_view=0&name={name}&text_type=all&fromagee_flg=0&search_target%5B%5D=1&additional%5B%5D=r18&category_ids%5B%5D=1&is_end_of_sale2=1&sale_date_before=&sale_date_after=&publication_date_before=&publication_date_after=&co_name=&ci_name=&price_low=0&price_high=0'],
+        ['とらのあな', 'https://ec.toranoana.jp/tora_r/ec/app/catalog/list?searchDisplay=12&searchBackorderFlg=1&searchCategoryCode=04&searchChildrenCategoryCode=cot&searchWord={name}']
+    ];
+    var $shopSearchModal = $('.js-cart-shop-search-modal');
+    var $shopSearchBookTitle = $('.js-cart-shop-search-book-title');
+    var $shopSearchLinkList = $('.js-cart-shop-search-link-list');
+
+    function closeShopSearchModal() {
+        $shopSearchModal.prop('hidden', true);
+        $shopSearchBookTitle.text('');
+        $shopSearchLinkList.empty();
+    }
+
+    $('.js-cart-shop-search-open').on('click', function () {
+        var title = String($(this).data('title') || '').trim();
+        var encodedTitle = encodeURIComponent(title);
+        $shopSearchBookTitle.text(title);
+        $shopSearchLinkList.empty();
+
+        shopSearchLinks.forEach(function (item) {
+            $('<a></a>').attr({
+                href: item[1].replace('{name}', encodedTitle),
+                target: '_blank',
+                rel: 'noopener noreferrer'
+            }).text(item[0]).appendTo($shopSearchLinkList);
+        });
+
+        $shopSearchModal.prop('hidden', false);
+    });
+
+    $('.js-cart-shop-search-close').on('click', closeShopSearchModal);
+    $(document).on('keydown', function (event) {
+        if (event.key === 'Escape') closeShopSearchModal();
+    });
+
     function syncOrderRow($row) {
         var total = 0;
         var visibleItems = 0;
