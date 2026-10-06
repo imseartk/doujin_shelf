@@ -19,7 +19,22 @@
 .cart-cover-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .cart-cover-action .cart-cover { display: block; margin: 0; }
 .cart-item.is-lowest-price .cart-cover-action,
-.cart-item.is-lowest-price > .cart-cover-empty { box-shadow: 0 0 0 1px #a8d5b5, 0 0 5px rgba(22, 163, 74, 0.14); }
+.cart-item.is-lowest-price > .cart-cover-empty {
+    position: relative;
+    box-shadow: 0 0 0 1px #fff6d8, 0 0 0 3px #d6b967, 0 0 0 4px #fff3ce, 0 0 10px rgba(211, 176, 82, 0.3);
+}
+.cart-item.is-lowest-price .cart-cover-action::after,
+.cart-item.is-lowest-price > .cart-cover-empty::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border: 2px solid transparent;
+    border-top-color: #fff8df;
+    border-bottom-color: #c6a451;
+    border-radius: 7px;
+    pointer-events: none;
+}
+.cart-remove { z-index: 1; }
 .cart-cover-empty { display: grid; place-items: center; border: 1px dashed #b8c2bd; color: var(--muted); font-size: 12px; }
 .cart-remove { position: absolute; top: -6px; right: 10px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent url("/assets/cancel-icon.svg") center / contain no-repeat; cursor: pointer; overflow: hidden; text-indent: -9999px; }
 .cart-title { display: -webkit-box; overflow: hidden; color: var(--text); font-size: 13px; font-weight: 700; line-height: 1.35; text-decoration: none; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
