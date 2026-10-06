@@ -43,6 +43,16 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
 .cart-actions { display: grid; gap: 8px; justify-items: end; margin-top: 10px; }
 .cart-actions form { margin: 0; }
 .cart-actions .button { width: 100%; justify-content: center; }
+.cart-planner { padding: 16px 0; border-block: 1px solid var(--line); margin-bottom: 20px; }
+.cart-planner-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cart-planner [hidden] { display: none; }
+.cart-planner-result { margin-top: 12px; }
+.cart-planner-result summary { cursor: pointer; padding: 8px 0; font-weight: 700; }
+.cart-planner-result li { overflow-wrap: anywhere; margin-bottom: 4px; }
+.cart-planner-settings { display: grid; gap: 8px; margin-top: 12px; font-size: 13px; }
+.cart-planner-settings label { display: flex; align-items: center; gap: 6px; }
+.cart-planner-settings input[type="checkbox"] { width: 18px; height: 18px; }
+.cart-planner-settings input[type="number"] { width: 110px; min-width: 0; }
 @media (max-width: 900px) {
     .cart-table { min-width: 760px; }
     .cart-items { min-height: 0; }
@@ -55,9 +65,24 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
     </div>
 </section>
 
+<?php if ($shops !== []): ?>
+<section class="cart-planner" aria-label="下單組合">
+    <div class="cart-planner-actions">
+        <button class="button ghost" type="button" id="cart-plan-all">全選店家</button>
+        <button class="button ghost" type="button" id="cart-plan-none">清除選取</button>
+        <button class="button primary" type="button" id="cart-plan-run">運算</button>
+        <button class="button ghost" type="button" id="cart-plan-cancel" hidden>取消運算</button>
+        <button class="button primary" type="button" id="cart-plan-apply" hidden>套用組合</button>
+        <button class="button ghost" type="button" id="cart-plan-undo" hidden>還原套用前清單</button>
+    </div>
+    <p id="cart-plan-status" role="status" aria-live="polite"></p>
+    <div class="cart-planner-result" id="cart-plan-result"></div>
+</section>
+<?php endif; ?>
+
 <?php foreach ($shops as $shop): ?>
     <?php $formId = 'cart-order-' . (int) $shop['id']; ?>
-    <section class="cart-shop-block js-cart-shop-row">
+    <section class="cart-shop-block js-cart-shop-row" data-shop-id="<?= (int) $shop['id'] ?>">
         <div class="table-wrap">
             <table class="data-table cart-table">
                 <thead>
@@ -71,6 +96,10 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
                     <tr>
                         <td>
                             <div class="cart-shop-name"><?= esc($shop['name']) ?></div>
+                            <div class="cart-planner-settings">
+                                <label><input type="checkbox" class="js-plan-shop"> 納入運算</label>
+                                <label>最低金額 ¥ <input type="number" class="js-plan-minimum" min="0" step="1" value="0" aria-label="<?= esc($shop['name']) ?> 最低金額"></label>
+                            </div>
                             <div class="cart-shop-meta">
                                 <span>目前保留 <strong class="js-cart-count"><?= number_format(count($shop['items'])) ?></strong> 本</span>
                                 <?php if (! empty($shop['website_url'])): ?><a href="<?= esc($shop['website_url']) ?>" target="_blank" rel="noreferrer">店鋪網站</a><?php endif; ?>
@@ -80,7 +109,7 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
                             <div class="cart-items">
                                 <?php foreach ($shop['items'] as $item): ?>
                                     <?php $displayCoverUrl = cover_display_url($item['cover_url'] ?? ''); ?>
-                                    <article class="cart-item js-cart-item" data-book-id="<?= (int) $item['book_id'] ?>" data-price="<?= $item['price'] === null ? '' : (int) $item['price'] ?>">
+                                    <article class="cart-item js-cart-item" data-source-id="<?= (int) $item['source_id'] ?>" data-book-id="<?= (int) $item['book_id'] ?>" data-price="<?= $item['price'] === null ? '' : (int) $item['price'] ?>">
                                         <input class="js-cart-book-id" type="hidden" name="book_ids[]" value="<?= (int) $item['book_id'] ?>" form="<?= esc($formId) ?>">
                                         <button class="cart-remove js-cart-remove" type="button" aria-label="從本頁試算移除">取消</button>
                                         <?php if (! empty($item['cover_url'])): ?>
@@ -235,6 +264,11 @@ $(function () {
         syncOrderRow($(this));
     });
     syncLowestPrices();
+    document.addEventListener('cart:allocation-applied', function () {
+        $('.js-cart-shop-row').each(function () { syncOrderRow($(this)); });
+        syncLowestPrices();
+    });
 });
 </script>
+<script src="/assets/cart-allocation.js?v=<?= filemtime(FCPATH . 'assets/cart-allocation.js') ?>" defer></script>
 <?= $this->endSection() ?>
