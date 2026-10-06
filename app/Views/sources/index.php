@@ -18,6 +18,8 @@
 .cart-cover-action { display: block; width: 102px; height: 142px; padding: 0; margin: 0 auto 4px; border: 0; border-radius: 4px; background: transparent; cursor: pointer; }
 .cart-cover-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .cart-cover-action .cart-cover { display: block; margin: 0; }
+.cart-item.is-lowest-price .cart-cover-action,
+.cart-item.is-lowest-price > .cart-cover-empty { box-shadow: 0 0 0 3px #16a34a, 0 0 8px rgba(22, 163, 74, 0.4); }
 .cart-cover-empty { display: grid; place-items: center; border: 1px dashed #b8c2bd; color: var(--muted); font-size: 12px; }
 .cart-remove { position: absolute; top: -6px; right: 10px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent url("/assets/cancel-icon.svg") center / contain no-repeat; cursor: pointer; overflow: hidden; text-indent: -9999px; }
 .cart-title { display: -webkit-box; overflow: hidden; color: var(--text); font-size: 13px; font-weight: 700; line-height: 1.35; text-decoration: none; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -63,7 +65,7 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
                             <div class="cart-items">
                                 <?php foreach ($shop['items'] as $item): ?>
                                     <?php $displayCoverUrl = cover_display_url($item['cover_url'] ?? ''); ?>
-                                    <article class="cart-item js-cart-item" data-price="<?= (int) ($item['price'] ?? 0) ?>">
+                                    <article class="cart-item js-cart-item" data-book-id="<?= (int) $item['book_id'] ?>" data-price="<?= $item['price'] === null ? '' : (int) $item['price'] ?>">
                                         <input class="js-cart-book-id" type="hidden" name="book_ids[]" value="<?= (int) $item['book_id'] ?>" form="<?= esc($formId) ?>">
                                         <button class="cart-remove js-cart-remove" type="button" aria-label="從本頁試算移除">取消</button>
                                         <?php if (! empty($item['cover_url'])): ?>
@@ -160,6 +162,26 @@ $(function () {
         if (event.key === 'Escape') closeShopSearchModal();
     });
 
+    function syncLowestPrices() {
+        var items = Array.from(document.querySelectorAll('.js-cart-item'));
+        var minimums = new Map();
+
+        items.forEach(function (item) {
+            var price = Number(item.dataset.price);
+            if (item.hidden || item.dataset.price === '' || !Number.isFinite(price) || price < 0) return;
+            var bookId = item.dataset.bookId;
+            if (!minimums.has(bookId) || price < minimums.get(bookId)) {
+                minimums.set(bookId, price);
+            }
+        });
+
+        items.forEach(function (item) {
+            var lowest = !item.hidden && item.dataset.price !== '' &&
+                minimums.has(item.dataset.bookId) && Number(item.dataset.price) === minimums.get(item.dataset.bookId);
+            item.classList.toggle('is-lowest-price', lowest);
+        });
+    }
+
     function syncOrderRow($row) {
         var total = 0;
         var visibleItems = 0;
@@ -183,6 +205,7 @@ $(function () {
         $item.prop('hidden', true);
         $item.find('.js-cart-book-id').prop('disabled', true);
         syncOrderRow($row);
+        syncLowestPrices();
     });
 
     $('.js-cart-restore').on('click', function () {
@@ -190,11 +213,13 @@ $(function () {
         $row.find('.js-cart-item').prop('hidden', false);
         $row.find('.js-cart-book-id').prop('disabled', false);
         syncOrderRow($row);
+        syncLowestPrices();
     });
 
     $('.js-cart-shop-row').each(function () {
         syncOrderRow($(this));
     });
+    syncLowestPrices();
 });
 </script>
 <?= $this->endSection() ?>
