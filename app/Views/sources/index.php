@@ -19,7 +19,7 @@
 .cart-cover-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .cart-cover-action .cart-cover { display: block; margin: 0; }
 .cart-item.is-lowest-price .cart-cover-action,
-.cart-item.is-lowest-price > .cart-cover-empty { box-shadow: 0 0 0 3px #16a34a, 0 0 8px rgba(22, 163, 74, 0.4); }
+.cart-item.is-lowest-price > .cart-cover-empty { box-shadow: 0 0 0 1px #a8d5b5, 0 0 5px rgba(22, 163, 74, 0.14); }
 .cart-cover-empty { display: grid; place-items: center; border: 1px dashed #b8c2bd; color: var(--muted); font-size: 12px; }
 .cart-remove { position: absolute; top: -6px; right: 10px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent url("/assets/cancel-icon.svg") center / contain no-repeat; cursor: pointer; overflow: hidden; text-indent: -9999px; }
 .cart-title { display: -webkit-box; overflow: hidden; color: var(--text); font-size: 13px; font-weight: 700; line-height: 1.35; text-decoration: none; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
