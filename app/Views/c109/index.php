@@ -123,6 +123,8 @@
         <option value="must" <?= $priority === 'must' ? 'selected' : '' ?>>必看</option>
         <option value="high" <?= $priority === 'high' ? 'selected' : '' ?>>優先</option>
         <option value="normal" <?= $priority === 'normal' ? 'selected' : '' ?>>普通</option>
+        <option value="ignore" <?= $priority === 'ignore' ? 'selected' : '' ?>>忽略</option>
+        <option value="blacklist" <?= $priority === 'blacklist' ? 'selected' : '' ?>>黑名單</option>
     </select>
     <button class="button primary" type="submit">搜尋</button>
     <a class="button ghost" href="/c109">清除</a>
@@ -182,7 +184,7 @@
                     </td>
                     <td>
                         <?php if (! empty($row['priority'])): ?>
-                            <?= esc(['must' => '必看', 'high' => '優先', 'normal' => '普通'][$row['priority']] ?? $row['priority']) ?>
+                            <?= esc(\App\Libraries\CirclePriority::OPTIONS[$row['priority']] ?? $row['priority']) ?>
                         <?php else: ?>
                             <span class="muted">未設定</span>
                         <?php endif; ?>

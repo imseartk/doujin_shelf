@@ -13,26 +13,8 @@
         ];
     }
 
-    $markerClass = static function (array $row): string {
-        if (! empty($row['is_tracked'])) {
-            return 'c108-map-marker-tracked';
-        }
-        if (! empty($row['local_circle_id'])) {
-            return 'c108-map-marker-known';
-        }
-
-        return 'c108-map-marker-unknown';
-    };
-    $markerRank = static function (array $row): int {
-        if (! empty($row['is_tracked'])) {
-            return 3;
-        }
-        if (! empty($row['local_circle_id'])) {
-            return 2;
-        }
-
-        return 1;
-    };
+    $markerClass = static fn (array $row): string => 'c109-priority-' . \App\Libraries\CirclePriority::mapKey($row);
+    $markerRank = static fn (array $row): int => \App\Libraries\CirclePriority::mapRank($row);
     $labelText = static function (array $row): string {
         $parts = [];
         if (! empty($row['note'])) {
@@ -135,6 +117,7 @@
         unset($row);
     }
 ?>
+<?= $this->include('c109/priority_legend') ?>
 <section class="page-head export-map-head">
     <div>
         <h1>C109 離線地圖輸出</h1>
@@ -172,6 +155,8 @@
         <option value="must" <?= $priority === 'must' ? 'selected' : '' ?>>必看</option>
         <option value="high" <?= $priority === 'high' ? 'selected' : '' ?>>優先</option>
         <option value="normal" <?= $priority === 'normal' ? 'selected' : '' ?>>普通</option>
+        <option value="ignore" <?= $priority === 'ignore' ? 'selected' : '' ?>>忽略</option>
+        <option value="blacklist" <?= $priority === 'blacklist' ? 'selected' : '' ?>>黑名單</option>
     </select>
     <button class="button primary" type="submit">產生輸出圖</button>
 </form>
@@ -191,7 +176,7 @@
                     <?php foreach ($markerRows as $row): ?>
                         <?php if (empty($row['_label_visible'])) { continue; } ?>
                         <line
-                            class="<?= ! empty($row['is_tracked']) ? 'tracked' : 'known' ?>"
+                            class="<?= esc($markerClass($row)) ?>"
                             x1="<?= (int) $row['_marker_left'] ?>"
                             y1="<?= (int) $row['_marker_top'] ?>"
                             x2="<?= (int) $row['_line_x2'] ?>"
@@ -207,7 +192,7 @@
                     ></div>
                     <?php if (empty($row['_label_visible'])) { continue; } ?>
                     <article
-                        class="export-map-label <?= ! empty($row['is_tracked']) ? 'tracked' : 'known' ?>"
+                        class="export-map-label <?= esc($markerClass($row)) ?>"
                         style="left: <?= (int) $row['_label_x'] ?>px; top: <?= (int) $row['_label_y'] ?>px;"
                     >
                         <h2><?= esc($row['circle_name'] ?? '') ?></h2>

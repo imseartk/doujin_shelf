@@ -22,11 +22,7 @@ class AppApi extends BaseController
         'wishlist' => '願望清單',
     ];
 
-    private const PRIORITY_OPTIONS = [
-        'normal' => '普通',
-        'high' => '優先',
-        'must' => '必看',
-    ];
+    private const PRIORITY_OPTIONS = \App\Libraries\CirclePriority::OPTIONS;
 
     public function books(): ResponseInterface
     {
@@ -218,7 +214,7 @@ class AppApi extends BaseController
             ->join('books b', 'b.circle_id = c.id', 'left'))
             ->groupBy('c.id')
             ->orderBy('c.is_tracked', 'DESC')
-            ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+            ->orderBy("FIELD(c.priority, 'must', 'high', 'normal', 'ignore', 'blacklist')", '', false)
             ->orderBy('c.name', 'ASC')
             ->limit($limit, ($page - 1) * $limit)
             ->get()

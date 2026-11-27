@@ -243,7 +243,7 @@ class C109 extends BaseController
 
             $rows = $builder
                 ->orderBy('c.is_tracked', 'DESC')
-                ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+                ->orderBy("FIELD(c.priority, 'must', 'high', 'normal', 'ignore', 'blacklist')", '', false)
                 ->orderBy('c108.block_id', 'ASC')
                 ->orderBy('c108.space_no', 'ASC')
                 ->orderBy('c108.space_no_sub', 'ASC')
@@ -348,7 +348,7 @@ class C109 extends BaseController
 
             $rows = $builder
                 ->orderBy('c.is_tracked', 'DESC')
-                ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+                ->orderBy("FIELD(c.priority, 'must', 'high', 'normal', 'ignore', 'blacklist')", '', false)
                 ->orderBy('c108.block_id', 'ASC')
                 ->orderBy('c108.space_no', 'ASC')
                 ->orderBy('c108.space_no_sub', 'ASC')
@@ -424,7 +424,7 @@ class C109 extends BaseController
 
             $rows = $builder
                 ->orderBy('c.is_tracked', 'DESC')
-                ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+                ->orderBy("FIELD(c.priority, 'must', 'high', 'normal', 'ignore', 'blacklist')", '', false)
                 ->orderBy('c108.block_id', 'ASC')
                 ->orderBy('c108.space_no', 'ASC')
                 ->orderBy('c108.space_no_sub', 'ASC')
@@ -486,7 +486,7 @@ class C109 extends BaseController
 
             $rows = $builder
                 ->orderBy('c.is_tracked', 'DESC')
-                ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+                ->orderBy("FIELD(c.priority, 'must', 'high', 'normal', 'ignore', 'blacklist')", '', false)
                 ->orderBy('c108.block_id', 'ASC')
                 ->orderBy('c108.space_no', 'ASC')
                 ->orderBy('c108.space_no_sub', 'ASC')
@@ -775,7 +775,7 @@ class C109 extends BaseController
             $builder->where('c.id IS NULL', null, false);
         }
 
-        if (in_array($priority, ['normal', 'high', 'must'], true)) {
+        if (array_key_exists($priority, \App\Libraries\CirclePriority::OPTIONS)) {
             $builder->where('c.priority', $priority);
         }
     }
@@ -837,7 +837,7 @@ class C109 extends BaseController
 
         $row = $builder
             ->orderBy('c.is_tracked', 'DESC')
-            ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+            ->orderBy("FIELD(c.priority, 'must', 'high', 'normal', 'ignore', 'blacklist')", '', false)
             ->orderBy('c108.day', 'ASC')
             ->orderBy('c108.map_id', 'ASC')
             ->orderBy('c108.block_id', 'ASC')

@@ -13,17 +13,12 @@
         ];
     }
 
-    $markerClass = static function (array $row): string {
-        if (! empty($row['is_tracked'])) {
-            return 'c108-map-marker-tracked';
-        }
-        if (! empty($row['local_circle_id'])) {
-            return 'c108-map-marker-known';
-        }
-
-        return 'c108-map-marker-unknown';
-    };
+    $markerClass = static fn (array $row): string => 'c109-priority-' . \App\Libraries\CirclePriority::mapKey($row);
     $statusLabel = static function (array $row): string {
+        $key = \App\Libraries\CirclePriority::mapKey($row);
+        if (isset(\App\Libraries\CirclePriority::OPTIONS[$key])) {
+            return \App\Libraries\CirclePriority::OPTIONS[$key] . (!empty($row['is_tracked']) ? ' / 追蹤中' : '');
+        }
         if (! empty($row['is_tracked'])) {
             return '追蹤中';
         }
@@ -33,16 +28,7 @@
 
         return '一般社團';
     };
-    $markerRank = static function (array $row): int {
-        if (! empty($row['is_tracked'])) {
-            return 3;
-        }
-        if (! empty($row['local_circle_id'])) {
-            return 2;
-        }
-
-        return 1;
-    };
+    $markerRank = static fn (array $row): int => \App\Libraries\CirclePriority::mapRank($row);
 
     $mapSelectData = json_encode($mapsByDay, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     $currentDay = (string) $day;
@@ -68,6 +54,7 @@
         }
     }
 ?>
+<?= $this->include('c109/priority_legend') ?>
 <section class="page-head">
     <div>
         <h1>C109 地圖</h1>
@@ -108,6 +95,8 @@
         <option value="must" <?= $priority === 'must' ? 'selected' : '' ?>>必看</option>
         <option value="high" <?= $priority === 'high' ? 'selected' : '' ?>>優先</option>
         <option value="normal" <?= $priority === 'normal' ? 'selected' : '' ?>>普通</option>
+        <option value="ignore" <?= $priority === 'ignore' ? 'selected' : '' ?>>忽略</option>
+        <option value="blacklist" <?= $priority === 'blacklist' ? 'selected' : '' ?>>黑名單</option>
     </select>
     <button class="button primary" type="submit">顯示地圖</button>
     <a class="button ghost" href="/c109/map">重置</a>
@@ -151,6 +140,7 @@
                     data-id="<?= esc((string) ($row['id'] ?? '')) ?>"
                     data-local-circle-id="<?= esc((string) ($row['local_circle_id'] ?? '')) ?>"
                     data-is-tracked="<?= ! empty($row['is_tracked']) ? '1' : '0' ?>"
+                    data-priority="<?= esc($row['priority'] ?? 'normal') ?>"
                     data-name="<?= esc($row['circle_name'] ?? '') ?>"
                     data-kana="<?= esc($row['circle_kana'] ?? '') ?>"
                     data-pen-name="<?= esc($row['pen_name'] ?? '') ?>"
@@ -317,7 +307,12 @@ $(function () {
         currentIsTracked = !!(circle && circle.is_tracked);
         var note = circle && circle.note ? circle.note : '';
         var isLinked = !!currentLocalCircleId;
-        var label = statusLabel(isLinked, currentIsTracked);
+        var priority = (circle && circle.priority) || $currentMarker.data('priority') || 'normal';
+        var priorityLabels = {high: '優先', must: '必看', ignore: '忽略', blacklist: '黑名單'};
+        var key = priorityLabels[priority] ? priority : (isLinked ? 'known' : 'unknown');
+        var label = priorityLabels[priority]
+            ? priorityLabels[priority] + (currentIsTracked ? ' / 追蹤中' : '')
+            : statusLabel(isLinked, currentIsTracked);
 
         $('.js-c108-map-modal-status').text(label);
         $('.js-c108-map-modal-note').text(note || '未設定');
@@ -331,8 +326,9 @@ $(function () {
 
         if ($currentMarker.length) {
             $currentMarker
-                .removeClass('c108-map-marker-unknown c108-map-marker-known c108-map-marker-tracked')
-                .addClass(currentIsTracked ? 'c108-map-marker-tracked' : (isLinked ? 'c108-map-marker-known' : 'c108-map-marker-unknown'))
+                .removeClass('c109-priority-unknown c109-priority-known c109-priority-high c109-priority-must c109-priority-ignore c109-priority-blacklist')
+                .addClass('c109-priority-' + key)
+                .data('priority', priority)
                 .data('local-circle-id', currentLocalCircleId)
                 .data('is-tracked', currentIsTracked ? 1 : 0)
                 .data('status', label)

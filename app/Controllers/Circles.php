@@ -11,11 +11,7 @@ use RuntimeException;
 
 class Circles extends BaseController
 {
-    private const PRIORITY_OPTIONS = [
-        'normal' => '普通',
-        'high' => '優先',
-        'must' => '必看',
-    ];
+    private const PRIORITY_OPTIONS = \App\Libraries\CirclePriority::OPTIONS;
 
     public function books(int $id): ResponseInterface
     {
@@ -112,7 +108,7 @@ class Circles extends BaseController
         $circles = $builder
             ->groupBy('c.id')
             ->orderBy('c.is_tracked', 'DESC')
-            ->orderBy("FIELD(c.priority, 'must', 'high', 'normal')", '', false)
+            ->orderBy("FIELD(c.priority, 'must', 'high', 'normal', 'ignore', 'blacklist')", '', false)
             ->orderBy('c.name', 'ASC')
             ->limit($perPage, $offset)
             ->get()
