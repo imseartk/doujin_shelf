@@ -1,9 +1,9 @@
-.c109-priority-unknown { --priority-fill: #ffffff; --priority-edge: #7d8a90; --priority-text: #263238; }
-.c109-priority-known { --priority-fill: #88d89c; --priority-edge: #287742; --priority-text: #153e24; }
-.c109-priority-high { --priority-fill: #619fe9; --priority-edge: #205ba1; --priority-text: #102f55; }
-.c109-priority-must { --priority-fill: #ef7777; --priority-edge: #ad2525; --priority-text: #541111; }
-.c109-priority-ignore { --priority-fill: #e0e2e5; --priority-edge: #959ba3; --priority-text: #42474d; }
-.c109-priority-blacklist { --priority-fill: #151515; --priority-edge: #000000; --priority-text: #ffffff; }
+.c109-priority-unknown { --priority-fill: rgba(255, 255, 255, .48); --priority-edge: #7d8a90; --priority-text: #263238; }
+.c109-priority-known { --priority-fill: rgba(136, 216, 156, .62); --priority-edge: #287742; --priority-text: #153e24; }
+.c109-priority-high { --priority-fill: rgba(97, 159, 233, .66); --priority-edge: #205ba1; --priority-text: #102f55; }
+.c109-priority-must { --priority-fill: rgba(239, 119, 119, .66); --priority-edge: #ad2525; --priority-text: #541111; }
+.c109-priority-ignore { --priority-fill: rgba(224, 226, 229, .55); --priority-edge: #959ba3; --priority-text: #42474d; }
+.c109-priority-blacklist { --priority-fill: rgba(21, 21, 21, .55); --priority-edge: #000000; --priority-text: #ffffff; }
 .c108-map-marker[class*="c109-priority-"] { background: var(--priority-fill); border-color: var(--priority-edge); color: var(--priority-text); }
 .export-map-label[class*="c109-priority-"] { border-color: var(--priority-edge); border-left: 5px solid var(--priority-edge); }
 .export-map-lines line[class*="c109-priority-"] { stroke: var(--priority-edge); }
