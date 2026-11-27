@@ -40,3 +40,24 @@ garmin-weekly-artick.json
 /mobile/**/android/.gradle/
 /mobile/**/android/build/
 /mobile/**/android/app/build/
+
+# Private catalog data and local verification output
+/writable/circlems/
+/.codex-remote-attachments/
+/artifacts/
+/reports/
+__pycache__/
+*.pyc
+
+# Unrelated forum workspace and migration scratch files
+/.talkasustor-*
+/_migrate_staging_archives/
+/discourse-asustor-*/
+/asustor-forum.*
+/category-*.png
+/home-*.png
+/docs/discourse-legacy-forum-reimport-runbook.md
+/docs/forum-migration-notice*
+/=
+/tools/*
+!/tools/shop-browser/

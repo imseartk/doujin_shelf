@@ -1,0 +1,40 @@
+[Unit]
+Description=Private shop verification browser (read-only prototype)
+After=network-online.target
+
+[Service]
+User=doujin-browser
+Group=www-data
+Environment=HOME=/var/lib/doujin-shop-browser
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/doujin-shop-browser/browsers
+WorkingDirectory=/opt/doujin-shop-browser
+ExecStart=/usr/bin/xvfb-run -a -s "-screen 0 1200x800x24 -nolisten tcp" /opt/doujin-shop-browser/venv/bin/python /opt/doujin-shop-browser/server.py
+RuntimeDirectory=doujin-shop-browser
+RuntimeDirectoryMode=0750
+StateDirectory=doujin-shop-browser
+StateDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=10
+MemoryHigh=600M
+MemoryMax=800M
+MemorySwapMax=256M
+CPUQuota=100%
+TasksMax=256
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectProc=invisible
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+InaccessiblePaths=/var/www /root /home /run/php /run/mysqld /run/redis
+ReadWritePaths=/var/lib/doujin-shop-browser /run/doujin-shop-browser
+BindReadOnlyPaths=/opt/doujin-shop-browser/resolv.conf:/etc/resolv.conf
+IPAddressDeny=10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16
+IPAddressDeny=0.0.0.0/8 224.0.0.0/4 240.0.0.0/4 ::/128 ::1/128 fc00::/7 fe80::/10 ff00::/8
+
+[Install]
+WantedBy=multi-user.target

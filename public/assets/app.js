@@ -292,14 +292,14 @@ $(function () {
             var response = xhr.responseJSON || {};
             refreshCsrf(response);
             $('.js-c108-bind-results').empty();
-            $('.js-c108-bind-error').prop('hidden', false).text(response.message || xhr.responseText || 'C108 攤位搜尋失敗。');
+            $('.js-c108-bind-error').prop('hidden', false).text(response.message || xhr.responseText || 'C109 攤位搜尋失敗。');
         });
     }
 
     function renderC108Candidates(candidates) {
         var $results = $('.js-c108-bind-results').empty();
         if (!candidates.length) {
-            $results.html('<div class="empty">沒有 C108 攤位候選結果。</div>');
+            $results.html('<div class="empty">沒有 C109 攤位候選結果。</div>');
             return;
         }
 
@@ -345,18 +345,19 @@ $(function () {
             dataType: 'json',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             data: withCsrf({
-                c108_id: candidate.id
+                c109_id: candidate.id
             })
         }).done(function (response) {
             refreshCsrf(response);
             if (c108ModalState.$row && c108ModalState.$row.length) {
-                c108ModalState.$row.find('.js-c108-binding-state').text('C108 ' + (response.binding_count || 0) + ' 攤位');
+                c108ModalState.$row.find('.js-c108-binding-state').text('C109 ' + (response.binding_count || 0) + ' 攤位');
             }
             $c108Modal.prop('hidden', true);
+            window.location.reload();
         }).fail(function (xhr) {
             var response = xhr.responseJSON || {};
             refreshCsrf(response);
-            $('.js-c108-bind-error').prop('hidden', false).text(response.message || 'C108 攤位連動失敗。');
+            $('.js-c108-bind-error').prop('hidden', false).text(response.message || 'C109 攤位連動失敗。');
         });
     }
 

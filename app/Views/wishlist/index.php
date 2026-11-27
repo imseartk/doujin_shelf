@@ -120,6 +120,7 @@
                             <div id="<?= esc($summaryId) ?>" class="wishlist-source-summary">
                                 <div class="wishlist-source-text">
                                     <span class="shop"><?= esc($source['shop_name'] ?? '') ?></span>
+                                    <?php if (($source['availability_status'] ?? '') === 'unavailable'): ?><span class="muted">缺貨（已移出購物車，編輯儲存可恢復）</span><?php endif; ?>
                                     <?php if ($source['price'] !== null): ?><span class="price">¥<?= number_format((int) $source['price']) ?></span><?php endif; ?>
                                     <?php if (! empty($source['item_url'])): ?><a href="<?= esc($source['item_url']) ?>" target="_blank" rel="noreferrer">商品頁</a><?php endif; ?>
                                     <?php if (! empty($source['note'])): ?><span class="muted"><?= esc($source['note']) ?></span><?php endif; ?>

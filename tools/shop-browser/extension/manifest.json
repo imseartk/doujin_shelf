@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Doujin Product DOM Inspector",
+  "version": "1.1.0",
+  "description": "Read product elements on the three supported shop pages. No cookies or account fields.",
+  "permissions": ["nativeMessaging"],
+  "background": {"service_worker": "background.js"},
+  "content_scripts": [{
+    "matches": [
+      "https://www.suruga-ya.jp/product/detail/*",
+      "https://suruga-ya.jp/product/detail/*",
+      "https://www.melonbooks.co.jp/detail/detail.php*",
+      "https://melonbooks.co.jp/detail/detail.php*",
+      "https://order.mandarake.co.jp/order/detailPage/item*"
+    ],
+    "js": ["capture.js"],
+    "run_at": "document_idle",
+    "all_frames": false
+  }]
+}

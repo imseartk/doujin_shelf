@@ -7,6 +7,8 @@
         'q' => $q,
         'tracked' => $tracked,
         'priority' => $priority,
+        'c109' => $binding,
+        'circlems' => $needsCirclems ? 'missing-with-booth' : '',
         'page' => $page > 1 ? $page : '',
     ], static fn ($value) => $value !== '' && $value !== null);
     if ($queryParams !== []) {
@@ -24,11 +26,13 @@
         ], static fn ($url) => ! empty($url));
     };
 
-    $pageUrl = static function (int $targetPage) use ($q, $tracked, $priority): string {
+    $pageUrl = static function (int $targetPage) use ($q, $tracked, $priority, $binding, $needsCirclems): string {
         $params = array_filter([
             'q' => $q,
             'tracked' => $tracked,
             'priority' => $priority,
+            'c109' => $binding,
+            'circlems' => $needsCirclems ? 'missing-with-booth' : '',
             'page' => $targetPage > 1 ? $targetPage : '',
         ], static fn ($value) => $value !== '' && $value !== null);
 
@@ -54,6 +58,15 @@
         <?php foreach ($priorityOptions as $value => $label): ?>
             <option value="<?= esc($value) ?>" <?= $priority === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
         <?php endforeach; ?>
+    </select>
+    <select name="c109" aria-label="C109 &#36899;&#21205;&#29376;&#24907;">
+        <option value="">C109 &#20840;&#37096;</option>
+        <option value="unlinked" <?= $binding === 'unlinked' ? 'selected' : '' ?>>C109 &#26410;&#36899;&#21205;</option>
+        <option value="linked" <?= $binding === 'linked' ? 'selected' : '' ?>>C109 &#24050;&#36899;&#21205;</option>
+    </select>
+    <select name="circlems" aria-label="Circle.ms &#36899;&#21205;">
+        <option value="">Circle.ms &#20840;&#37096;</option>
+        <option value="missing-with-booth" <?= $needsCirclems ? 'selected' : '' ?>>&#26377;&#25892;&#20301;&#12289;&#26410;&#36899;&#21205; Circle.ms</option>
     </select>
     <button class="button primary" type="submit">搜尋</button>
     <a class="button ghost" href="/circles">清除</a>
@@ -116,9 +129,15 @@
                         <?= ! empty($circle['webcatalog_circle_id']) ? 'Circle.ms ' . esc($circle['webcatalog_circle_id']) : '未連動 Circle.ms' ?>
                     </div>
                     <div class="muted c108-binding-state js-c108-binding-state">
-                        C108 <?= number_format((int) ($circle['c108_binding_count'] ?? 0)) ?> 攤位
+                        C109 <?= number_format((int) ($circle['c108_binding_count'] ?? 0)) ?> 攤位
                     </div>
                     <input class="circle-kana-input" form="<?= esc($formId) ?>" name="name_kana" value="<?= esc($circle['name_kana'] ?? '') ?>" placeholder="首字 / 讀音">
+                    <div class="js-c109-placements">
+                        <?php foreach (($placements[$circleId] ?? []) as $placement): ?>
+                            <div><a href="/c109/map?<?= esc(http_build_query(['day' => $placement['day'], 'map' => $placement['map_filename'], 'q' => $placement['position_label'], 'relation' => 'all'])) ?>">C109 <?= esc($placement['position_label']) ?></a></div>
+                        <?php endforeach; ?>
+                        <?php if (empty($placements[$circleId])): ?><span class="muted">&#23578;&#26410;&#36899;&#21205; C109</span><?php endif; ?>
+                    </div>
                 </td>
                 <td>
                     <div class="circle-social-links">
@@ -165,9 +184,9 @@
                             type="button"
                             data-circle-id="<?= $circleId ?>"
                             data-circle-name="<?= esc($circle['name']) ?>"
-                            data-url="/circles/<?= $circleId ?>/c108/candidates"
-                            data-bind-url="/circles/<?= $circleId ?>/c108/bind"
-                        >C108</button>
+                            data-url="/circles/<?= $circleId ?>/c109/candidates"
+                            data-bind-url="/circles/<?= $circleId ?>/c109/bind"
+                        >C109</button>
                         <form id="<?= esc($formId) ?>" method="post" action="/circles/<?= $circleId ?>">
                             <?= csrf_field() ?>
                             <input type="hidden" name="return_to" value="<?= esc($returnTo) ?>">
@@ -211,7 +230,7 @@
     <section class="circlems-bind-card" role="dialog" aria-modal="true" aria-labelledby="c108-bind-title">
         <button class="circlems-bind-close js-c108-bind-close" type="button" aria-label="關閉">×</button>
         <div class="circlems-bind-head">
-            <h2 id="c108-bind-title">C108 攤位連動</h2>
+            <h2 id="c108-bind-title">C109 攤位連動</h2>
             <div class="muted js-c108-bind-current"></div>
         </div>
         <form class="circlems-bind-search js-c108-bind-search">
@@ -219,6 +238,7 @@
                 <option value="">全部日程</option>
                 <option value="1">1日目</option>
                 <option value="2">2日目</option>
+                <option value="3">3日目</option>
             </select>
             <input type="search" name="q" class="js-c108-bind-q" placeholder="社團、作者、發布物、簡介">
             <button class="button" type="submit">搜尋</button>
@@ -246,7 +266,6 @@
         <div class="circlems-bind-results js-circlems-bind-results"></div>
     </section>
 </div>
-<?= $this->endSection() ?>
 <dialog id="circle-books-dialog" aria-labelledby="circle-books-title">
     <header class="circle-books-heading">
         <h2 id="circle-books-title"></h2>
@@ -256,3 +275,4 @@
 </dialog>
 <link rel="stylesheet" href="/assets/circle-books.css?v=<?= filemtime(FCPATH . 'assets/circle-books.css') ?>">
 <script src="/assets/circle-books.js?v=<?= filemtime(FCPATH . 'assets/circle-books.js') ?>" defer></script>
+<?= $this->endSection() ?>

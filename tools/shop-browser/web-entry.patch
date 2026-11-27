@@ -1,0 +1,14 @@
+diff --git a/app/Config/Routes.php b/app/Config/Routes.php
+--- a/app/Config/Routes.php
++++ b/app/Config/Routes.php
+@@ -31,1 +31,4 @@
+ $routes->get('sources', 'Sources::index');
++$routes->get('tools/shop-browser', 'ShopBrowser::index');
++$routes->get('tools/shop-browser/frame', 'ShopBrowser::frame');
++$routes->post('tools/shop-browser/command', 'ShopBrowser::command', ['filter' => 'csrf']);
+diff --git a/app/Views/sources/index.php b/app/Views/sources/index.php
+--- a/app/Views/sources/index.php
++++ b/app/Views/sources/index.php
+@@ -50,1 +50,2 @@
+         <h1>購物車</h1>
++        <a href="/tools/shop-browser" target="_blank" rel="noopener">店家驗證（唯讀試跑）</a>

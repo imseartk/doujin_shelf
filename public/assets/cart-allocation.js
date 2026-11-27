@@ -105,6 +105,7 @@
         } catch (error) { stop(); status.textContent = '此瀏覽器無法啟動運算，清單未變更。'; }
     });
     function setHidden(item, hidden) {
+        hidden = hidden || item.dataset.unavailable === '1';
         item.hidden = hidden;
         item.querySelector('.js-cart-book-id').disabled = hidden;
     }
@@ -128,4 +129,5 @@
         document.dispatchEvent(new Event('cart:allocation-applied'));
         status.textContent = '已還原套用前清單。';
     });
+    document.addEventListener('cart:sources-updated', invalidate);
 })();

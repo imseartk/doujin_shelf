@@ -9,6 +9,7 @@ use RuntimeException;
 
 class Circlems extends BaseController
 {
+    protected string $catalogTable = 'c108_circles';
     public function index(): string
     {
         if (ENVIRONMENT === 'production') {
@@ -687,12 +688,12 @@ class Circlems extends BaseController
         $token = $this->refreshIfNeeded($token, $client);
         $db = db_connect();
 
-        if (! $db->tableExists('c108_circles')) {
+        if (! $db->tableExists($this->catalogTable)) {
             throw new RuntimeException('找不到 c108_circles，請先執行 migration。');
         }
 
         foreach (['update_notice_text', 'update_detected_at', 'update_read'] as $field) {
-            if (! $db->fieldExists($field, 'c108_circles')) {
+            if (! $db->fieldExists($field, $this->catalogTable)) {
                 throw new RuntimeException('c108_circles 缺少更新通知欄位，請先執行 migration。');
             }
         }
@@ -724,7 +725,7 @@ class Circlems extends BaseController
                 }
 
                 $checked++;
-                $row = $db->table('c108_circles c108')
+                $row = $db->table($this->catalogTable . ' c108')
                     ->select('c108.id, c108.description, c108.source_updated_at, c108.update_read, c.id AS local_circle_id, c.is_tracked')
                     ->join('circles c', 'c.id = c108.circle_id', 'left')
                     ->where('c108.event_id', $eventId)
@@ -754,7 +755,7 @@ class Circlems extends BaseController
                     ? '社團描述更新'
                     : '社團資訊更新';
 
-                $db->table('c108_circles')->where('id', (int) $row['id'])->update([
+                $db->table($this->catalogTable)->where('id', (int) $row['id'])->update([
                     'circlems_id' => $this->nullIfEmpty((string) ($circle['circlemsId'] ?? '')),
                     'genre_id' => $this->nullIfEmpty((string) ($circle['genre'] ?? '')),
                     'circle_name' => (string) ($circle['name'] ?? ''),
@@ -1107,7 +1108,7 @@ class Circlems extends BaseController
         ];
     }
 
-    private function exportCommonImages(int $eventId, int $imageNo): array
+    protected function exportCommonImages(int $eventId, int $imageNo): array
     {
         if (! class_exists('SQLite3')) {
             throw new RuntimeException('PHP SQLite3 extension is not installed.');
@@ -1179,10 +1180,10 @@ class Circlems extends BaseController
         }
 
         $mysql = db_connect();
-        if (! $mysql->tableExists('c108_circles')) {
+        if (! $mysql->tableExists($this->catalogTable)) {
             throw new RuntimeException('找不到 c108_circles，請先執行 migration。');
         }
-        if (! $mysql->fieldExists('cut_image_url', 'c108_circles')) {
+        if (! $mysql->fieldExists('cut_image_url', $this->catalogTable)) {
             throw new RuntimeException('c108_circles 缺少 cut_image_url 欄位，請先執行 migration。');
         }
 
@@ -1248,7 +1249,7 @@ class Circlems extends BaseController
                 file_put_contents($path, $image);
 
                 $url = '/uploads/circlems/event_' . $eventId . '/image' . $imageNo . '/cuts/' . $fileName;
-                $mysql->table('c108_circles')
+                $mysql->table($this->catalogTable)
                     ->where('id', (int) $match['id'])
                     ->update(['cut_image_url' => $url]);
 
@@ -1278,7 +1279,7 @@ class Circlems extends BaseController
 
     private function c108ImageMatchIndex($db, int $eventId, bool $force): array
     {
-        $builder = $db->table('c108_circles')
+        $builder = $db->table($this->catalogTable)
             ->select('id, event_id, comiket_no, catalog_circle_id, wcid, circlems_id, source_update_id, cut_image_url')
             ->where('event_id', $eventId);
 
@@ -1650,13 +1651,13 @@ SQL
         return $rows;
     }
 
-    private function importC108Rows(int $eventId, int $offset, int $limit): array
+    protected function importC108Rows(int $eventId, int $offset, int $limit): array
     {
         if (! class_exists('SQLite3')) {
             throw new RuntimeException('PHP SQLite3 extension is not installed.');
         }
         $mysql = db_connect();
-        if (! $mysql->tableExists('c108_circles')) {
+        if (! $mysql->tableExists($this->catalogTable)) {
             throw new RuntimeException('找不到 c108_circles，請先執行 migration。');
         }
 
@@ -1735,7 +1736,7 @@ SQL
             throw new RuntimeException('Unable to read C108 catalog rows.');
         }
 
-        $table = $mysql->table('c108_circles');
+        $table = $mysql->table($this->catalogTable);
         $now = date('Y-m-d H:i:s');
         $imported = 0;
         $matched = 0;
@@ -1815,7 +1816,7 @@ SQL
         $done = $nextOffset >= $total || ($imported + $skipped) === 0;
 
         return [
-            'table' => 'c108_circles',
+            'table' => $this->catalogTable,
             'event_id' => $eventId,
             'offset' => $offset,
             'limit' => $limit,
@@ -1832,14 +1833,14 @@ SQL
     private function resetC108Rows(int $eventId): void
     {
         $db = db_connect();
-        if (! $db->tableExists('c108_circles')) {
+        if (! $db->tableExists($this->catalogTable)) {
             throw new RuntimeException('找不到 c108_circles，請先執行 migration。');
         }
 
-        $db->table('c108_circles')->where('event_id', $eventId)->delete();
+        $db->table($this->catalogTable)->where('event_id', $eventId)->delete();
     }
 
-    private function localCircleIdsForCatalog($db): array
+    protected function localCircleIdsForCatalog($db): array
     {
         $rows = $db->table('circles')
             ->select('id, name, webcatalog_circle_id')
@@ -1870,7 +1871,7 @@ SQL
     private function convertCircleBindingsToCirclemsId(): array
     {
         $db = db_connect();
-        if (! $db->tableExists('circles') || ! $db->tableExists('c108_circles')) {
+        if (! $db->tableExists('circles') || ! $db->tableExists($this->catalogTable)) {
             throw new RuntimeException('缺少 circles 或 c108_circles 資料表，無法轉換。');
         }
 
@@ -1917,8 +1918,8 @@ SQL
             ->countAllResults();
 
         $linked = 0;
-        if ($db->tableExists('c108_circles')) {
-            $linked = $db->table('c108_circles c108')
+        if ($db->tableExists($this->catalogTable)) {
+            $linked = $db->table($this->catalogTable . ' c108')
                 ->join('circles c', 'c.webcatalog_circle_id = c108.circlems_id', 'inner')
                 ->where('c.webcatalog_circle_id IS NOT NULL', null, false)
                 ->where('c.webcatalog_circle_id <>', '')

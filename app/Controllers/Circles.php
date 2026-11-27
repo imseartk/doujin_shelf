@@ -46,6 +46,9 @@ class Circles extends BaseController
         $q = trim((string) $this->request->getGet('q'));
         $tracked = trim((string) $this->request->getGet('tracked'));
         $priority = trim((string) $this->request->getGet('priority'));
+        $binding = (string) $this->request->getGet('c109');
+        if (!in_array($binding, ['linked', 'unlinked'], true)) $binding = '';
+        $needsCirclems = $this->request->getGet('circlems') === 'missing-with-booth';
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = 30;
         $db = db_connect();
@@ -54,7 +57,7 @@ class Circles extends BaseController
             ->select('c.*')
             ->select('COUNT(b.id) AS book_count', false)
             ->select("SUM(CASE WHEN b.status = 'wishlist' THEN 1 ELSE 0 END) AS wishlist_count", false)
-            ->select("(SELECT COUNT(*) FROM c108_circles c108 WHERE c108.circle_id = c.id) AS c108_binding_count", false)
+            ->select("(SELECT COUNT(*) FROM c109_circles c109 WHERE c109.circle_id = c.id) AS c108_binding_count", false)
             ->join('books b', "b.circle_id = c.id AND b.type <> 'comic'", 'left');
 
         if ($q !== '') {
@@ -88,6 +91,19 @@ class Circles extends BaseController
             $countBuilder->where('c.priority', $priority);
         }
 
+        if ($binding !== '') {
+            $condition = ($binding === 'unlinked' ? 'NOT ' : '')
+                . 'EXISTS (SELECT 1 FROM c109_circles binding WHERE binding.circle_id = c.id AND binding.event_id = 240)';
+            $builder->where($condition, null, false);
+            $countBuilder->where($condition, null, false);
+        }
+        if ($needsCirclems) {
+            $condition = "(c.webcatalog_circle_id IS NULL OR TRIM(c.webcatalog_circle_id) = '')"
+                . ' AND (EXISTS (SELECT 1 FROM c109_circles p WHERE p.circle_id = c.id)'
+                . ' OR EXISTS (SELECT 1 FROM c108_circles p WHERE p.circle_id = c.id))';
+            $builder->where($condition, null, false);
+            $countBuilder->where($condition, null, false);
+        }
         $total = (int) $countBuilder->get()->getRow('total');
         $totalPages = max(1, (int) ceil($total / $perPage));
         $page = min($page, $totalPages);
@@ -102,7 +118,19 @@ class Circles extends BaseController
             ->get()
             ->getResultArray();
 
+        $placements = [];
+        if ($circles !== []) {
+            $rows = $db->table('c109_circles')->select('id, circle_id, day, map_filename, position_label, circle_name')
+                ->whereIn('circle_id', array_column($circles, 'id'))->orderBy('day')->orderBy('position_label')->get()->getResultArray();
+            foreach ($rows as $row) {
+                $placements[(int) $row['circle_id']][] = $row;
+            }
+        }
+
         return view('circles/index', [
+            'placements' => $placements,
+            'binding' => $binding,
+            'needsCirclems' => $needsCirclems,
             'circles' => $circles,
             'q' => $q,
             'tracked' => $tracked,
@@ -345,6 +373,121 @@ class Circles extends BaseController
         return $this->response->setJSON([
             'message' => '已連動 C108 攤位。',
             'binding_count' => $this->c108BindingCount($id),
+            'csrf' => csrf_hash(),
+        ]);
+    }
+
+    public function c109CandidatesJson(int $id): ResponseInterface
+    {
+        $circleModel = new CircleModel();
+        $circle = $circleModel->find($id);
+        if (! $circle) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '找不到這個社團。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $db = db_connect();
+        if (! $db->tableExists('c109_circles')) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '找不到 C109 匯入資料。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $q = trim((string) ($this->request->getGet('q') ?: $circle['name']));
+        $day = trim((string) $this->request->getGet('day'));
+        $limit = 50;
+
+        $builder = $db->table('c109_circles c108')
+            ->select('c108.id, c108.wcid, c108.circlems_id, c108.circle_name, c108.circle_kana, c108.pen_name, c108.day, c108.map_name, c108.block_name, c108.space_no, c108.space_no_sub, c108.position_label, c108.book_name, c108.description, c108.circle_id')
+            ->select('c.name AS local_circle_name, c.note AS local_note', false)
+            ->join('circles c', 'c.id = c108.circle_id', 'left');
+
+        if ($q !== '') {
+            $this->applyC108CandidateSearch($builder, $q);
+        }
+
+        if (in_array($day, ['1','2','3'], true)) {
+            $builder->where('c108.day', (int) $day);
+        }
+
+        try {
+            $rows = $builder
+                ->orderBy('c108.day', 'ASC')
+                ->orderBy('c108.map_id', 'ASC')
+                ->orderBy('c108.block_id', 'ASC')
+                ->orderBy('c108.space_no', 'ASC')
+                ->orderBy('c108.space_no_sub', 'ASC')
+                ->limit($limit)
+                ->get()
+                ->getResultArray();
+        } catch (\Throwable $exception) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'message' => 'C109 攤位搜尋錯誤：' . $exception->getMessage(),
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        return $this->response->setJSON([
+            'circle' => [
+                'id' => (int) $circle['id'],
+                'name' => (string) $circle['name'],
+            ],
+            'q' => $q,
+            'day' => $day,
+            'candidates' => array_map([$this, 'c108CandidateRow'], $rows),
+            'csrf' => csrf_hash(),
+        ]);
+    }
+
+    public function bindC109(int $id): ResponseInterface
+    {
+        $circleModel = new CircleModel();
+        $circle = $circleModel->find($id);
+        if (! $circle) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '找不到這個社團。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $c109Id = (int) $this->request->getPost('c109_id');
+        if ($c109Id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'message' => '缺少 C109 攤位 ID。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $db = db_connect();
+        $row = $db->table('c109_circles')
+            ->select('id, circle_id')
+            ->where('id', $c109Id)
+            ->get()
+            ->getRowArray();
+        if (! $row) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => '找不到這個 C109 攤位。',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        if (!empty($row['circle_id']) && (int) $row['circle_id'] !== $id) {
+            return $this->response->setStatusCode(409)->setJSON([
+                'message' => 'This C109 booth is already linked to another circle.',
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        $db->table('c109_circles')
+            ->where('id', $c109Id)
+            ->update(['circle_id' => $id]);
+
+        return $this->response->setJSON([
+            'message' => '已連動 C109 攤位。',
+            'binding_count' => $db->table('c109_circles')->where('circle_id', $id)->countAllResults(),
             'csrf' => csrf_hash(),
         ]);
     }

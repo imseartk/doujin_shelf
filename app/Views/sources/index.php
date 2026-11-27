@@ -53,6 +53,9 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
 .cart-planner-settings label { display: flex; align-items: center; gap: 6px; }
 .cart-planner-settings input[type="checkbox"] { width: 18px; height: 18px; }
 .cart-planner-settings input[type="number"] { width: 110px; min-width: 0; }
+.cart-refresh-controls { display: grid; gap: 8px; margin-top: 12px; font-size: 13px; }
+.cart-refresh-status, .cart-source-status { overflow-wrap: anywhere; white-space: normal; font-size: 12px; }
+.cart-refresh-log { padding-left: 18px; max-height: 220px; overflow: auto; font-size: 12px; }
 @media (max-width: 900px) {
     .cart-table { min-width: 760px; }
     .cart-items { min-height: 0; }
@@ -61,6 +64,7 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
 <section class="page-head">
     <div>
         <h1>購物車</h1>
+        <a href="/tools/shop-browser" target="_blank" rel="noopener">店家驗證（唯讀試跑）</a>
         <p>比較各店鋪目前能買到的願望清單來源，先在這裡試算下單組合。</p>
     </div>
 </section>
@@ -82,6 +86,7 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
 
 <?php foreach ($shops as $shop): ?>
     <?php $formId = 'cart-order-' . (int) $shop['id']; ?>
+    <?php $platforms = array_unique(array_map(static fn ($item) => \App\Libraries\ShopProductReader::identify((string) ($item['item_url'] ?? ''))['site'] ?? '其他', $shop['items'])); ?>
     <section class="cart-shop-block js-cart-shop-row" data-shop-id="<?= (int) $shop['id'] ?>">
         <div class="table-wrap">
             <table class="data-table cart-table">
@@ -96,6 +101,13 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
                     <tr>
                         <td>
                             <div class="cart-shop-name"><?= esc($shop['name']) ?></div>
+                            <div class="cart-refresh-controls">
+                                <span><?= esc(implode(' / ', $platforms)) ?></span>
+                                <button class="button small ghost js-shop-refresh" type="button">更新價格／庫存</button>
+                                <button class="button small ghost js-shop-refresh-stop" type="button" hidden>停止更新</button>
+                                <span class="cart-refresh-status" role="status" aria-live="polite"></span>
+                                <ol class="cart-refresh-log" hidden></ol>
+                            </div>
                             <div class="cart-planner-settings">
                                 <label><input type="checkbox" class="js-plan-shop"> 納入運算</label>
                                 <label>最低金額 ¥ <input type="number" class="js-plan-minimum" min="0" step="1" value="0" aria-label="<?= esc($shop['name']) ?> 最低金額"></label>
@@ -125,6 +137,8 @@ a.cart-title { color: var(--accent-dark); text-decoration: underline; }
                                             <span class="cart-title" title="<?= esc($item['title']) ?>"><?= esc($item['title']) ?></span>
                                         <?php endif; ?>
                                         <span class="cart-price"><?= $item['price'] === null ? '未填價格' : '¥' . number_format((int) $item['price']) ?></span>
+                                        <span class="cart-source-status" role="status"></span>
+                                        <label class="cart-html-import" hidden>匯入商品 HTML<input class="js-source-html" type="file" accept=".html,.htm,text/html" aria-label="匯入商品 HTML" style="max-width:138px"></label>
                                     </article>
                                 <?php endforeach; ?>
                             </div>
@@ -212,7 +226,7 @@ $(function () {
 
         items.forEach(function (item) {
             var price = Number(item.dataset.price);
-            if (item.hidden || item.dataset.price === '' || !Number.isFinite(price) || price < 0) return;
+            if (item.hidden || item.dataset.unavailable === '1' || item.dataset.price === '' || !Number.isFinite(price) || price < 0) return;
             var bookId = item.dataset.bookId;
             if (!minimums.has(bookId) || price < minimums.get(bookId)) {
                 minimums.set(bookId, price);
@@ -220,7 +234,7 @@ $(function () {
         });
 
         items.forEach(function (item) {
-            var lowest = !item.hidden && item.dataset.price !== '' &&
+            var lowest = !item.hidden && item.dataset.unavailable !== '1' && item.dataset.price !== '' &&
                 minimums.has(item.dataset.bookId) && Number(item.dataset.price) === minimums.get(item.dataset.bookId);
             item.classList.toggle('is-lowest-price', lowest);
         });
@@ -254,8 +268,10 @@ $(function () {
 
     $('.js-cart-restore').on('click', function () {
         var $row = $(this).closest('.js-cart-shop-row');
-        $row.find('.js-cart-item').prop('hidden', false);
-        $row.find('.js-cart-book-id').prop('disabled', false);
+        $row.find('.js-cart-item').each(function () {
+            var unavailable = this.dataset.unavailable === '1';
+            $(this).prop('hidden', unavailable).find('.js-cart-book-id').prop('disabled', unavailable);
+        });
         syncOrderRow($row);
         syncLowestPrices();
     });
@@ -271,4 +287,5 @@ $(function () {
 });
 </script>
 <script src="/assets/cart-allocation.js?v=<?= filemtime(FCPATH . 'assets/cart-allocation.js') ?>" defer></script>
+<script src="/assets/cart-source-refresh.js?v=<?= filemtime(FCPATH . 'assets/cart-source-refresh.js') ?>" defer></script>
 <?= $this->endSection() ?>

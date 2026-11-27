@@ -1,0 +1,8 @@
+abi <abi/4.0>,
+include <tunables/global>
+
+# Allow the dedicated Chromium binary to create its sandbox on Ubuntu 24.04.
+# Does not change the global unprivileged-userns policy.
+profile doujin-shop-chromium /opt/doujin-shop-browser/browsers/chromium-*/chrome-linux*/chrome flags=(unconfined) {
+    userns,
+}

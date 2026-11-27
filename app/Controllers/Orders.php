@@ -45,6 +45,7 @@ class Orders extends BaseController
             ->join('book_sources bs', 'bs.book_id = b.id')
             ->join('shops s', 's.id = bs.shop_id')
             ->where('bs.shop_id', $shopId)
+            ->where('bs.availability_status !=', 'unavailable')
             ->where('s.is_active', 1)
             ->where('b.status', 'wishlist')
             ->whereIn('b.id', $bookIds)

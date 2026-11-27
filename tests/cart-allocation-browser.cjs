@@ -8,6 +8,7 @@ const assert = require('node:assert/strict');
 (async () => {
     const jquery = await (await fetch('https://code.jquery.com/jquery-3.7.1.min.js')).text();
     const php = `define('FCPATH', getcwd().'/public/');
+require 'app/Libraries/ShopProductReader.php';
 function esc($s){return htmlspecialchars((string)$s, ENT_QUOTES);}
 function csrf_field(){return '';}
 function cover_display_url($s){return $s;}
@@ -29,6 +30,10 @@ include 'app/Views/sources/index.php';
         if (url.pathname === '/') {
             res.setHeader('Content-Type','text/html; charset=utf-8');
             res.end('<meta name="viewport" content="width=device-width,initial-scale=1"><script src="/jquery.js"></script>'+view);
+        } else if (url.pathname.match(/^\/sources\/\d+\/refresh$/)) {
+            const id = url.pathname.split('/')[2];
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(id === '11' ? {status:'available',price:80} : id === '12' ? {status:'unavailable'} : {status:'verification'}));
         } else if (url.pathname === '/jquery.js') { res.setHeader('Content-Type','text/javascript'); res.end(jquery); }
         else if (url.pathname.startsWith('/assets/')) {
             const file = path.join(process.cwd(),'public',url.pathname);
@@ -60,10 +65,22 @@ include 'app/Views/sources/index.php';
         assert.equal(await page.locator('#cart-plan-apply').isVisible(),false);
         await page.click('#cart-plan-run');
         await page.waitForFunction(() => document.querySelector('#cart-plan-status').textContent.includes('無法達到'));
+        page.on('dialog', dialog => dialog.accept());
+        await page.locator('.js-shop-refresh').first().click();
+        await page.waitForFunction(() => document.querySelector('.cart-refresh-status').textContent.includes('更新完成'));
+        assert.equal(await page.locator('[data-source-id="11"]').getAttribute('data-price'),'80');
+        assert.equal(await page.locator('[data-source-id="12"]').getAttribute('data-unavailable'),'1');
+        await page.locator('.js-cart-restore').first().click();
+        assert.equal(await page.locator('[data-source-id="12"]').isVisible(),false);
+        assert.equal(await page.locator('.js-cart-total').first().textContent(),'80');
+        await page.locator('.js-shop-refresh').nth(1).click();
+        await page.waitForFunction(() => document.querySelectorAll('.cart-refresh-status')[1].textContent.includes('已停止'));
+        assert.equal(await page.locator('.cart-refresh-log').nth(1).locator('li').count(),1);
+        assert.equal(await page.locator('[data-source-id="21"] .cart-html-import').isVisible(),true);
         await page.setViewportSize({width:390,height:844});
         await page.screenshot({path:require('node:os').tmpdir()+'/cart-planner-mobile.png'});
         assert.deepEqual(errors,[]);
-        console.log('Browser preview/apply/undo/remove/invalidate/infeasible checks passed.');
+        console.log('Browser allocation and refresh/update/out-of-stock/verification-stop checks passed.');
     } finally {
         if (browser) await browser.close();
         await new Promise(resolve => server.close(resolve));
