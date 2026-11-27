@@ -143,7 +143,7 @@
                     <textarea form="<?= esc($formId) ?>" name="note" rows="3" placeholder="備註"><?= esc($circle['note'] ?? '') ?></textarea>
                 </td>
                 <td>
-                    <a href="/books?q=<?= rawurlencode($circle['name']) ?>" target="_blank" rel="noopener noreferrer">
+                    <a class="js-circle-books" href="/circles/<?= $circleId ?>/books" data-circle-name="<?= esc($circle['name'], 'attr') ?>" aria-haspopup="dialog">
                         <?= number_format((int) $circle['book_count']) ?> 本
                     </a>
                     <?php if ((int) $circle['wishlist_count'] > 0): ?>
@@ -247,3 +247,12 @@
     </section>
 </div>
 <?= $this->endSection() ?>
+<dialog id="circle-books-dialog" aria-labelledby="circle-books-title">
+    <header class="circle-books-heading">
+        <h2 id="circle-books-title"></h2>
+        <button type="button" class="button ghost" data-close aria-label="關閉" title="關閉">&#215;</button>
+    </header>
+    <div class="circle-books-content" aria-live="polite"></div>
+</dialog>
+<link rel="stylesheet" href="/assets/circle-books.css?v=<?= filemtime(FCPATH . 'assets/circle-books.css') ?>">
+<script src="/assets/circle-books.js?v=<?= filemtime(FCPATH . 'assets/circle-books.js') ?>" defer></script>

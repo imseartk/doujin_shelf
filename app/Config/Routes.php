@@ -38,6 +38,7 @@ $routes->post('circles/(:num)', 'Circles::update/$1');
 $routes->post('circles/(:num)/track', 'Circles::toggleTrack/$1');
 $routes->post('circles/(:num)/circlems/bind', 'Circles::bindCirclems/$1');
 $routes->post('circles/(:num)/c108/bind', 'Circles::bindC108/$1');
+$routes->get('circles/(:num)/books', 'Circles::books/$1');
 
 $routes->get('c108', 'C108::index');
 $routes->get('c108/map', 'C108::map');

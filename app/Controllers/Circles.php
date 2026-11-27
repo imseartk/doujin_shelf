@@ -17,6 +17,30 @@ class Circles extends BaseController
         'must' => '必看',
     ];
 
+    public function books(int $id): ResponseInterface
+    {
+        $circle = (new CircleModel())->find($id);
+        if (! $circle) {
+            return $this->response->setStatusCode(404)->setBody('Circle not found');
+        }
+        helper('cover');
+        $books = db_connect()->table('books b')
+            ->select('b.id, b.title, b.author, b.status, b.cover_url')
+            ->where('b.circle_id', $id)->where('b.type !=', 'comic')
+            ->orderBy('b.title', 'ASC')->orderBy('b.id', 'ASC')->get()->getResultArray();
+        $tags = [];
+        if ($books) {
+            $rows = db_connect()->table('book_tags bt')->select('bt.book_id, t.name')
+                ->join('tags t', 't.id = bt.tag_id')->whereIn('bt.book_id', array_column($books, 'id'))
+                ->orderBy('t.name', 'ASC')->get()->getResultArray();
+            foreach ($rows as $row) {
+                $tags[$row['book_id']][] = $row['name'];
+            }
+        }
+        return $this->response->setHeader('Cache-Control', 'private, no-store')
+            ->setBody(view('circles/books', ['books' => $books, 'tags' => $tags]));
+    }
+
     public function index(): string
     {
         $q = trim((string) $this->request->getGet('q'));

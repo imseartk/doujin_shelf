@@ -1,0 +1,15 @@
+#circle-books-dialog { width: min(860px, calc(100vw - 32px)); max-height: 85vh; padding: 0; border: 1px solid #a5b6b8; border-radius: 8px; color: #20383b; background: #fff; }
+#circle-books-dialog::backdrop { background: rgb(0 0 0 / 48%); }
+#circle-books-dialog[open] { display: flex; flex-direction: column; }
+.circle-books-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid #d6dede; }
+.circle-books-heading h2 { font-size: 20px; margin: 0; overflow-wrap: anywhere; }
+.circle-books-heading button { flex: 0 0 40px; height: 40px; padding: 0; font-size: 24px; }
+.circle-books-content { overflow-y: auto; padding: 0 20px 20px; overscroll-behavior: contain; }
+.circle-books-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+.circle-book { display: flex; gap: 12px; padding: 16px 0; border-bottom: 1px solid #d6dede; min-width: 0; }
+.circle-book-cover { width: 88px; height: 125px; object-fit: contain; flex: 0 0 88px; background: #f0f3f3; }
+.circle-book-empty { display: grid; place-items: center; font-size: 13px; }
+.circle-book-details { min-width: 0; overflow-wrap: anywhere; }
+.circle-book h3 { font-size: 16px; margin: 8px 0; }
+.circle-book p { font-size: 14px; margin: 4px 0; }
+@media (max-width: 620px) { .circle-books-list { grid-template-columns: minmax(0, 1fr); } }
